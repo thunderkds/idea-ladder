@@ -41,9 +41,9 @@
 - [ ] **T006** — Repo reader agent (3 read-only tools: list, read, search; step cap; token budget) picks core files; scored on golden set | backend-developer | C2 | Risk: Medium | P0 | Phase: v1 (after Gate 1) | Started 2026-11-01: branch `T006-repo-reader` | Blocked 2026-11-01: AC 7 needs `ANTHROPIC_API_KEY`, `MODEL_A_ID` and a price in `eval/prices.json`
 
 ### Ready for Review
-- [ ] **T011** — Daily 5-minute review with FSRS (ts-fsrs 5.4.2), review log stored | frontend-developer | C2 | Risk: Medium | P0 | Phase: v1 (after Gate 1) | Started 2026-11-01: branch `T011-daily-review`
 
 ### Done
+- [x] **T011** — Daily 5-minute review with FSRS (ts-fsrs 5.4.2), review log stored | frontend-developer | C2 | Risk: Medium | P0 | Phase: v1 (after Gate 1) | Started 2026-11-01: branch `T011-daily-review` | Done 2026-11-01: auto verify pass (session 841657e4-ecac-4792-a408-9f8a5abb7b8c, commit 570fbb137513dd8d94ad709d09134f6bfd76cf50)
 - [x] **T010** — Ladder view — L0–L4, locked levels, status unverified, link out to README/DeepWiki | frontend-developer | C2 | Risk: Low | P0 | Phase: v1 (after Gate 1) | Started 2026-11-01: branch `T010-ladder-view` | Done 2026-11-01: auto verify pass (session c1384577-e7e9-41b8-aaa1-74a6f94229c8, commit fe8d46b1610058b54b6c9b68c33271f660d02109)
 - [x] **T005** — /start?url= → read repo with token, pin SHA, cache by repo+SHA, background job (Inngest), status page | backend-developer | C2 | Risk: Medium | P0 | Phase: v1 (after Gate 1) | Started 2026-11-01: branch `T005-start-flow` | Done 2026-11-01: auto verify pass (session b2534dc5-bdf9-4df1-b1a0-7d534ff40c21, commit 3732255a1d5b6984615660ddb15edf93cbb191e6)
 - [x] **T004** — Golden set of 20 hand-checked repos, eval harness, per-step cost logging | qa-expert | C2 | Risk: Low | P0 | Phase: v1 (after Gate 1) | Started 2026-11-01: branch `T004-golden-set` | Done 2026-11-01: auto verify pass (session 2f0d3687-8b08-494d-b645-405508a22d81, commit 7e9d10bdef12b47af1aa144892e9e30745a69b6d)
