@@ -10,11 +10,13 @@ import { createSession, deleteSession, findSession, upsertUser } from './auth/se
 import { issueState, verifyState } from './auth/state.js';
 import type { Config } from './config.js';
 import { type GithubOptions } from './start/github.js';
-import { getLadderView, listMyLadders } from './ladder/view.js';
+import { getLadderView, listMyLadders, type ReadPassed } from './ladder/view.js';
+import { isReviewRating } from './review/scheduler.js';
+import { getReviewQueue, submitReviewRating } from './review/store.js';
 import { findLadderId, getJob } from './start/jobs.js';
 import { parseRepoUrl, UnsupportedUrlError } from './start/repo-url.js';
 import { type Enqueue, StartError, type StartErrorCode, startLadder } from './start/service.js';
-import { HomePage, JobPage, LadderPage, LaddersPage, MessagePage, UnsupportedUrlPage } from './views.js';
+import { HomePage, JobPage, LadderPage, LaddersPage, MessagePage, ReviewPage, UnsupportedUrlPage } from './views.js';
 import { createLadderGenerate, inngest, sendLadderRequested } from './workflow/ladder-generate.js';
 
 const MAX_URL_LENGTH = 2048;
@@ -37,9 +39,15 @@ export interface AppDeps {
   fetchImpl?: typeof fetch;
   /** Sends the ladder/generate.requested event. Defaults to the Inngest client; tests pass a spy. */
   enqueue?: Enqueue;
+  /** Replaces the pass lookup for review. T012 makes the default real. */
+  readPassed?: ReadPassed;
+  /** Server clock for reviews. Tests pass a fixed one. */
+  now?: () => Date;
 }
 
-export function createApp({ config, pool, fetchImpl, enqueue = sendLadderRequested }: AppDeps) {
+const MAX_ELAPSED_MS = 86_400_000;
+
+export function createApp({ config, pool, fetchImpl, enqueue = sendLadderRequested, readPassed, now }: AppDeps) {
   const app = new Hono();
   const github: GithubOptions = { baseUrl: config.githubApiBaseUrl, token: config.githubAppToken, fetchImpl };
   const cookieBase = { httpOnly: true, sameSite: 'Lax', secure: config.secureCookies } as const;
@@ -120,6 +128,40 @@ export function createApp({ config, pool, fetchImpl, enqueue = sendLadderRequest
     const ladder = await getLadderView(pool, ladderId, session.userId);
     if (!ladder) return c.html(<MessagePage heading="Ladder not found" message="This ladder does not exist." />, 404);
     return c.html(<LadderPage login={session.githubLogin} ladder={ladder} />);
+  });
+
+  const reviewDeps = { readPassed, now };
+
+  app.get('/review', async (c) => {
+    c.header('cache-control', 'no-store');
+    const session = await findSession(pool, config.sessionSecret, getCookie(c, SESSION_COOKIE));
+    if (!session) return c.redirect('/', 302);
+    return c.html(<ReviewPage login={session.githubLogin} />);
+  });
+
+  app.get('/api/review/queue', async (c) => {
+    c.header('cache-control', 'no-store');
+    const session = await findSession(pool, config.sessionSecret, getCookie(c, SESSION_COOKIE));
+    if (!session) return c.json({ error: 'unauthenticated' }, 401);
+    return c.json(await getReviewQueue(pool, session.userId, reviewDeps));
+  });
+
+  app.post('/api/review/rating', async (c) => {
+    c.header('cache-control', 'no-store');
+    const session = await findSession(pool, config.sessionSecret, getCookie(c, SESSION_COOKIE));
+    if (!session) return c.json({ error: 'unauthenticated' }, 401);
+    // JSON only: a cross-site form cannot send this content type, so a cookie alone cannot rate a card.
+    if (!(c.req.header('content-type') ?? '').toLowerCase().startsWith('application/json')) {
+      return c.json({ error: 'content-type-must-be-json' }, 415);
+    }
+    const body = await c.req.json<{ cardId?: unknown; rating?: unknown; idempotencyKey?: unknown; elapsedMs?: unknown }>().catch(() => null);
+    const { cardId, rating, idempotencyKey, elapsedMs } = body ?? {};
+    if (typeof cardId !== 'string' || !isReviewRating(rating)) return c.json({ error: 'invalid-rating' }, 400);
+    if (typeof idempotencyKey !== 'string' || idempotencyKey.length < 1 || idempotencyKey.length > 128) return c.json({ error: 'invalid-idempotency-key' }, 400);
+    if (typeof elapsedMs !== 'number' || !Number.isInteger(elapsedMs) || elapsedMs < 0 || elapsedMs > MAX_ELAPSED_MS) return c.json({ error: 'invalid-elapsed-ms' }, 400);
+    const result = await submitReviewRating(pool, session.userId, { cardId, rating, idempotencyKey, elapsedMs }, reviewDeps);
+    if (!result.ok) return result.code === 'not-found' ? c.json({ error: 'card-not-found' }, 404) : c.json({ error: 'idempotency-key-reused' }, 409);
+    return c.json({ replayed: result.replayed, card: result.state });
   });
 
   app.on(['GET', 'POST', 'PUT'], '/api/inngest', serveInngest({ client: inngest, functions: [createLadderGenerate(pool, github)] }));

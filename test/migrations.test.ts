@@ -4,7 +4,17 @@ import { createTempDb, runMigrate, type TempDb } from './helpers/db.js';
 
 let db: TempDb;
 
-const APP_TABLES = ['generation_jobs', 'ladders', 'repo_confidence', 'repo_snapshots', 'sessions', 'users'];
+const APP_TABLES = [
+  'card_states',
+  'cards',
+  'generation_jobs',
+  'ladders',
+  'repo_confidence',
+  'repo_snapshots',
+  'review_log',
+  'sessions',
+  'users',
+];
 
 async function query<T extends pg.QueryResultRow>(sql: string): Promise<T[]> {
   const client = new pg.Client({ connectionString: db.url });
