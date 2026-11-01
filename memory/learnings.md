@@ -9,6 +9,9 @@
 
 ## Patterns
 
+- **T006 needs a new migration number at its merge (2026-11-01).** T006 and T011 both use `1762000002000`. Rename T006's file to a later number, or its migration runs out of order.
+- **Cache-hit learners have no started record (2026-11-01).** `startLadder` writes no row on a hit, and `listMyLadders` and `getReviewQueue` read `generation_jobs.started_by`. Every learner after the first gets no My ladders row and no reviews. Fix before T008 saves real ladders.
+
 - **Check the exit code of a frozen install (2026-11-01).** An agent can pin a dependency in `package.json` and leave a caret in the lockfile. Tests still pass in a worktree that has its packages. T010 merged this way; only the run on merged `main` caught it.
 
 - **The merge gate checks the whole Bash command (2026-11-01).** A call that edits the board and merges is refused before anything runs. Move the row in one call and merge in the next. A row under Blocked does not hold the gate.
