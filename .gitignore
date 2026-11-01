@@ -8,3 +8,9 @@ docs/archive/
 memory/event-trace/
 .claude/worktrees/
 .claude/verify-runs/
+node_modules/
+dist/
+.env*
+!.env.example
+test-results/
+playwright-report/

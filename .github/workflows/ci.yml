@@ -1,0 +1,38 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: pgvector/pgvector:0.8.6-pg17-bookworm
+        env:
+          POSTGRES_USER: idea_ladder
+          POSTGRES_PASSWORD: idea_ladder
+          POSTGRES_DB: idea_ladder
+        ports:
+          - 54329:5432
+        options: >-
+          --health-cmd "pg_isready -U idea_ladder -d idea_ladder"
+          --health-interval 2s --health-timeout 3s --health-retries 30
+    env:
+      DATABASE_URL: postgres://idea_ladder:idea_ladder@localhost:54329/idea_ladder
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - name: Migrations up, down, up
+        run: pnpm db:migrate && pnpm db:migrate:down && pnpm db:migrate
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
