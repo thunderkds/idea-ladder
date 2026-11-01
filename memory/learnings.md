@@ -9,6 +9,9 @@
 
 ## Patterns
 
+- **`security-review` needs `origin/HEAD` (2026-11-01).** This repo's remote is `github`, so the built-in skill stops at launch with `fatal: ambiguous argument 'origin/HEAD...'`. To run it: in the task worktree, `git update-ref refs/remotes/origin/HEAD main`, run the skill, then delete that ref.
+- **The merge gate also blocks trial merges (2026-11-01).** Any `git merge` in a Bash call is blocked while a task is In Progress, even in a scratch worktree. Check overlap from `git diff --name-only` lists until the tasks are through review.
+
 - 2026-11-01 — Gate 5 trace check (`.claude/hooks/pre_bash_block_unsafe_merge.py` TEST_INVOCATION_PATTERN) counts `npm test` / `pnpm test` / pytest, not `node --test`; and the trace summary is truncated, so a long command line can hide the runner. Give every package a `test` script and run it as a short `cd <dir> && pnpm test`. (T001, T002; experiments/v0-kit/package.json)
 - 2026-11-01 — Built-in `security-review` diffs against `origin/HEAD`; with no remote it fails. Work-around used: a temporary local `refs/remotes/origin/HEAD`, deleted after. (T001)
 - 2026-11-01 — Kit `__pycache__/*.pyc` files are tracked, and hooks rewrite them, so worktrees show them modified. Restore with `git checkout -- <pyc>` before committing; never commit them. (.gitignore)
