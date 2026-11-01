@@ -1,0 +1,43 @@
+{
+ "recordedAt": "2026-11-01T04:29:36.889Z",
+ "entries": {
+  "https://api.github.com/repos/rxi/json.lua": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "13",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "{\"default_branch\":\"master\",\"topics\":[]}"
+  },
+  "https://api.github.com/repos/rxi/json.lua/git/trees/dbf4b2dd2eb7c23be2773c89eb059dadd6436f94?recursive=1": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "12",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "{\"truncated\":false,\"tree\":[{\"path\":\".github\",\"type\":\"tree\"},{\"path\":\".github/FUNDING.yml\",\"type\":\"blob\"},{\"path\":\"LICENSE\",\"type\":\"blob\"},{\"path\":\"README.md\",\"type\":\"blob\"},{\"path\":\"bench\",\"type\":\"tree\"},{\"path\":\"bench/bench_all.lua\",\"type\":\"blob\"},{\"path\":\"bench/bench_decode.lua\",\"type\":\"blob\"},{\"path\":\"bench/bench_encode.lua\",\"type\":\"blob\"},{\"path\":\"bench/get_json_libs.sh\",\"type\":\"blob\"},{\"path\":\"bench/util\",\"type\":\"tree\"},{\"path\":\"bench/util/bench.lua\",\"type\":\"blob\"},{\"path\":\"json.lua\",\"type\":\"blob\"},{\"path\":\"test\",\"type\":\"tree\"},{\"path\":\"test/test.lua\",\"type\":\"blob\"}]}"
+  },
+  "https://raw.githubusercontent.com/rxi/json.lua/dbf4b2dd2eb7c23be2773c89eb059dadd6436f94/README.md": {
+   "status": 200,
+   "headers": {},
+   "body": "# ![json.lua](https://cloud.githubusercontent.com/assets/3920290/9281532/99e5e0cc-42bd-11e5-8fce-eaff2f7fc681.png)\nA lightweight JSON library for Lua\n\n\n## Features\n* Implemented in pure Lua: works with 5.1, 5.2, 5.3 and JIT\n* Fast: generally outperforms other pure Lua JSON implementations\n  ([benchmark scripts](bench/))\n* Tiny: around 280sloc, 9kb\n* Proper error messages, *eg:* `expected '}' or ',' at line 203 col 30`\n\n\n## Usage\nThe [json.lua](json.lua?raw=1) file should be dropped into an existing project\nand required by it:\n```lua\njson = require \"json\"\n```\nThe library provides the following functions:\n\n#### json.encode(value)\nReturns a string representing `value` encoded in JSON.\n```lua\njson.encode({ 1, 2, 3, { x = 10 } }) -- Returns '[1,2,3,{\"x\":10}]'\n```\n\n#### json.decode(str)\nReturns a value representing the decoded JSON string.\n```lua\njson.decode('[1,2,3,{\"x\":10}]') -- Returns { 1, 2, 3, { x = 10 } }\n```\n\n## Notes\n* Trying to encode values which are unrepresentable in JSON will never result\n  in type conversion or other magic: sparse arrays, tables with mixed key types\n  or invalid numbers (NaN, -inf, inf) will raise an error\n* `null` values contained within an array or object are converted to `nil` and\n  are therefore lost upon decoding\n* *Pretty* encoding is not supported, `json.encode()` only encodes to a compact\n  format\n\n\n## License\nThis library is free software; you can redistribute it and/or modify it under\nthe terms of the MIT license. See [LICENSE](LICENSE) for details.\n\n"
+  },
+  "https://api.github.com/repos/rxi/json.lua/languages": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "11",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "{\"Lua\":20017,\"Shell\":499}"
+  },
+  "https://api.github.com/repos/rxi/json.lua/issues?state=open&per_page=100": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "10",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "[{\"number\":56,\"labels\":[]},{\"number\":54,\"labels\":[]},{\"number\":52,\"pull_request\":{},\"labels\":[]},{\"number\":51,\"pull_request\":{},\"labels\":[]},{\"number\":50,\"labels\":[]},{\"number\":47,\"pull_request\":{},\"labels\":[]},{\"number\":46,\"pull_request\":{},\"labels\":[]},{\"number\":45,\"labels\":[]},{\"number\":44,\"pull_request\":{},\"labels\":[]},{\"number\":43,\"pull_request\":{},\"labels\":[]},{\"number\":42,\"pull_request\":{},\"labels\":[]},{\"number\":41,\"labels\":[]},{\"number\":40,\"pull_request\":{},\"labels\":[]},{\"number\":39,\"labels\":[]},{\"number\":37,\"labels\":[]},{\"number\":34,\"labels\":[]},{\"number\":33,\"labels\":[]},{\"number\":31,\"labels\":[]},{\"number\":30,\"pull_request\":{},\"labels\":[]},{\"number\":29,\"labels\":[]},{\"number\":28,\"pull_request\":{},\"labels\":[]},{\"number\":27,\"labels\":[]},{\"number\":24,\"pull_request\":{},\"labels\":[]},{\"number\":23,\"labels\":[]},{\"number\":20,\"pull_request\":{},\"labels\":[]},{\"number\":19,\"labels\":[]},{\"number\":13,\"labels\":[]}]"
+  }
+ },
+ "sha": "dbf4b2dd2eb7c23be2773c89eb059dadd6436f94"
+}

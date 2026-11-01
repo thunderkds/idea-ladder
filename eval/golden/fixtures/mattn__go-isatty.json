@@ -1,0 +1,48 @@
+{
+ "recordedAt": "2026-11-01T04:29:34.845Z",
+ "entries": {
+  "https://api.github.com/repos/mattn/go-isatty": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "17",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "{\"default_branch\":\"master\",\"topics\":[\"cygwin\",\"go\",\"golang\",\"isatty\",\"msys2\",\"website\"]}"
+  },
+  "https://api.github.com/repos/mattn/go-isatty/git/trees/c44dc0b9c702c76577fdb7898032969e0611efc2?recursive=1": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "16",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "{\"truncated\":false,\"tree\":[{\"path\":\".github\",\"type\":\"tree\"},{\"path\":\".github/FUNDING.yml\",\"type\":\"blob\"},{\"path\":\".github/workflows\",\"type\":\"tree\"},{\"path\":\".github/workflows/test.yml\",\"type\":\"blob\"},{\"path\":\"LICENSE\",\"type\":\"blob\"},{\"path\":\"README.md\",\"type\":\"blob\"},{\"path\":\"doc.go\",\"type\":\"blob\"},{\"path\":\"example_test.go\",\"type\":\"blob\"},{\"path\":\"go.mod\",\"type\":\"blob\"},{\"path\":\"go.sum\",\"type\":\"blob\"},{\"path\":\"go.test.sh\",\"type\":\"blob\"},{\"path\":\"isatty_bsd.go\",\"type\":\"blob\"},{\"path\":\"isatty_others.go\",\"type\":\"blob\"},{\"path\":\"isatty_others_test.go\",\"type\":\"blob\"},{\"path\":\"isatty_plan9.go\",\"type\":\"blob\"},{\"path\":\"isatty_solaris.go\",\"type\":\"blob\"},{\"path\":\"isatty_tiocgwinsz.go\",\"type\":\"blob\"},{\"path\":\"isatty_windows.go\",\"type\":\"blob\"},{\"path\":\"isatty_windows_test.go\",\"type\":\"blob\"}]}"
+  },
+  "https://raw.githubusercontent.com/mattn/go-isatty/c44dc0b9c702c76577fdb7898032969e0611efc2/README.md": {
+   "status": 200,
+   "headers": {},
+   "body": "# go-isatty\n\n[![Godoc Reference](https://godoc.org/github.com/mattn/go-isatty?status.svg)](http://godoc.org/github.com/mattn/go-isatty)\n[![Codecov](https://codecov.io/gh/mattn/go-isatty/branch/master/graph/badge.svg)](https://codecov.io/gh/mattn/go-isatty)\n[![Coverage Status](https://coveralls.io/repos/github/mattn/go-isatty/badge.svg?branch=master)](https://coveralls.io/github/mattn/go-isatty?branch=master)\n[![Go Report Card](https://goreportcard.com/badge/mattn/go-isatty)](https://goreportcard.com/report/mattn/go-isatty)\n\nisatty for golang\n\n## Usage\n\n```go\npackage main\n\nimport (\n\t\"fmt\"\n\t\"github.com/mattn/go-isatty\"\n\t\"os\"\n)\n\nfunc main() {\n\tif isatty.IsTerminal(os.Stdout.Fd()) {\n\t\tfmt.Println(\"Is Terminal\")\n\t} else if isatty.IsCygwinTerminal(os.Stdout.Fd()) {\n\t\tfmt.Println(\"Is Cygwin/MSYS2 Terminal\")\n\t} else {\n\t\tfmt.Println(\"Is Not Terminal\")\n\t}\n}\n```\n\n## Installation\n\n```\n$ go get github.com/mattn/go-isatty\n```\n\n## License\n\nMIT\n\n## Author\n\nYasuhiro Matsumoto (a.k.a mattn)\n\n## Thanks\n\n* k-takata: base idea for IsCygwinTerminal\n\n    https://github.com/k-takata/go-iscygpty\n"
+  },
+  "https://raw.githubusercontent.com/mattn/go-isatty/c44dc0b9c702c76577fdb7898032969e0611efc2/go.mod": {
+   "status": 200,
+   "headers": {},
+   "body": "module github.com/mattn/go-isatty\n\ngo 1.20\n\nrequire golang.org/x/sys v0.28.0\n"
+  },
+  "https://api.github.com/repos/mattn/go-isatty/languages": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "15",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "{\"Go\":8512,\"Shell\":273}"
+  },
+  "https://api.github.com/repos/mattn/go-isatty/issues?state=open&per_page=100": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "14",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "[{\"number\":98,\"pull_request\":{},\"labels\":[]}]"
+  }
+ },
+ "sha": "c44dc0b9c702c76577fdb7898032969e0611efc2"
+}

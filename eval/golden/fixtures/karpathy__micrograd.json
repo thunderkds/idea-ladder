@@ -1,0 +1,43 @@
+{
+ "recordedAt": "2026-11-01T04:29:18.209Z",
+ "entries": {
+  "https://api.github.com/repos/karpathy/micrograd": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "51",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "{\"default_branch\":\"master\",\"topics\":[]}"
+  },
+  "https://api.github.com/repos/karpathy/micrograd/git/trees/7bc720e951fe422b8f8814aa5aa1b64121d26b4c?recursive=1": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "50",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "{\"truncated\":false,\"tree\":[{\"path\":\".gitignore\",\"type\":\"blob\"},{\"path\":\"LICENSE\",\"type\":\"blob\"},{\"path\":\"README.md\",\"type\":\"blob\"},{\"path\":\"demo.ipynb\",\"type\":\"blob\"},{\"path\":\"gout.svg\",\"type\":\"blob\"},{\"path\":\"micrograd\",\"type\":\"tree\"},{\"path\":\"micrograd/__init__.py\",\"type\":\"blob\"},{\"path\":\"micrograd/engine.py\",\"type\":\"blob\"},{\"path\":\"micrograd/nn.py\",\"type\":\"blob\"},{\"path\":\"moon_mlp.png\",\"type\":\"blob\"},{\"path\":\"puppy.jpg\",\"type\":\"blob\"},{\"path\":\"setup.py\",\"type\":\"blob\"},{\"path\":\"test\",\"type\":\"tree\"},{\"path\":\"test/test_engine.py\",\"type\":\"blob\"},{\"path\":\"trace_graph.ipynb\",\"type\":\"blob\"}]}"
+  },
+  "https://raw.githubusercontent.com/karpathy/micrograd/7bc720e951fe422b8f8814aa5aa1b64121d26b4c/README.md": {
+   "status": 200,
+   "headers": {},
+   "body": "\n# micrograd\n\n![awww](puppy.jpg)\n\nA tiny Autograd engine (with a bite! :)). Implements backpropagation (reverse-mode autodiff) over a dynamically built DAG and a small neural networks library on top of it with a PyTorch-like API. Both are tiny, with about 100 and 50 lines of code respectively. The DAG only operates over scalar values, so e.g. we chop up each neuron into all of its individual tiny adds and multiplies. However, this is enough to build up entire deep neural nets doing binary classification, as the demo notebook shows. Potentially useful for educational purposes.\n\n### Installation\n\n```bash\npip install micrograd\n```\n\n### Example usage\n\nBelow is a slightly contrived example showing a number of possible supported operations:\n\n```python\nfrom micrograd.engine import Value\n\na = Value(-4.0)\nb = Value(2.0)\nc = a + b\nd = a * b + b**3\nc += c + 1\nc += 1 + c + (-a)\nd += d * 2 + (b + a).relu()\nd += 3 * d + (b - a).relu()\ne = c - d\nf = e**2\ng = f / 2.0\ng += 10.0 / f\nprint(f'{g.data:.4f}') # prints 24.7041, the outcome of this forward pass\ng.backward()\nprint(f'{a.grad:.4f}') # prints 138.8338, i.e. the numerical value of dg/da\nprint(f'{b.grad:.4f}') # prints 645.5773, i.e. the numerical value of dg/db\n```\n\n### Training a neural net\n\nThe notebook `demo.ipynb` provides a full demo of training an 2-layer neural network (MLP) binary classifier. This is achieved by initializing a neural net from `micrograd.nn` module, implementing a simple svm \"max-margin\" binary classification loss and using SGD for optimization. As shown in the notebook, using a 2-layer neural net with two 16-node hidden layers we achieve the following decision boundary on the moon dataset:\n\n![2d neuron](moon_mlp.png)\n\n### Training a GPT\n\nFor a more advanced example, see [microgpt](https://gist.github.com/karpathy/8627fe009c40f57531cb18360106ce95), which trains and samples from a full GPT-2-like transformer in pure, dependency-free Python. It builds on a more efficient and better version of the autograd engine here (storing local gradients at forward time instead of per-op backward closures), and is the complete algorithm in a single file — everything else is just efficiency. See also the accompanying [explainer post](https://karpathy.github.io/2026/02/12/microgpt/) for a detailed walkthrough.\n\n### Tracing / visualization\n\nFor added convenience, the notebook `trace_graph.ipynb` produces graphviz visualizations. E.g. this one below is of a simple 2D neuron, arrived at by calling `draw_dot` on the code below, and it shows both the data (left number in each node) and the gradient (right number in each node).\n\n```python\nfrom micrograd import nn\nn = nn.Neuron(2)\nx = [Value(1.0), Value(-2.0)]\ny = n(x)\ndot = draw_dot(y)\n```\n\n![2d neuron](gout.svg)\n\n### Running tests\n\nTo run the unit tests you will have to install [PyTorch](https://pytorch.org/), which the tests use as a reference for verifying the correctness of the calculated gradients. Then simply:\n\n```bash\npython -m pytest\n```\n\n### License\n\nMIT\n"
+  },
+  "https://api.github.com/repos/karpathy/micrograd/languages": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "49",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "{\"Jupyter Notebook\":60484,\"Python\":6530}"
+  },
+  "https://api.github.com/repos/karpathy/micrograd/issues?state=open&per_page=100": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "48",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "[{\"number\":133,\"pull_request\":{},\"labels\":[]},{\"number\":131,\"pull_request\":{},\"labels\":[]},{\"number\":130,\"pull_request\":{},\"labels\":[]},{\"number\":129,\"pull_request\":{},\"labels\":[]},{\"number\":126,\"pull_request\":{},\"labels\":[]},{\"number\":125,\"labels\":[]},{\"number\":124,\"labels\":[]},{\"number\":123,\"pull_request\":{},\"labels\":[]},{\"number\":116,\"pull_request\":{},\"labels\":[]},{\"number\":115,\"pull_request\":{},\"labels\":[]},{\"number\":114,\"pull_request\":{},\"labels\":[]},{\"number\":113,\"labels\":[]},{\"number\":112,\"pull_request\":{},\"labels\":[]},{\"number\":109,\"pull_request\":{},\"labels\":[]},{\"number\":108,\"labels\":[]},{\"number\":107,\"pull_request\":{},\"labels\":[]},{\"number\":106,\"labels\":[]},{\"number\":105,\"pull_request\":{},\"labels\":[]},{\"number\":104,\"labels\":[]},{\"number\":103,\"labels\":[]},{\"number\":102,\"pull_request\":{},\"labels\":[]},{\"number\":101,\"labels\":[]},{\"number\":100,\"pull_request\":{},\"labels\":[]},{\"number\":97,\"pull_request\":{},\"labels\":[]},{\"number\":95,\"pull_request\":{},\"labels\":[]},{\"number\":94,\"pull_request\":{},\"labels\":[]},{\"number\":93,\"pull_request\":{},\"labels\":[]},{\"number\":92,\"labels\":[]},{\"number\":91,\"labels\":[]},{\"number\":90,\"pull_request\":{},\"labels\":[]},{\"number\":89,\"labels\":[]},{\"number\":88,\"pull_request\":{},\"labels\":[]},{\"number\":87,\"labels\":[]},{\"number\":86,\"pull_request\":{},\"labels\":[]},{\"number\":85,\"pull_request\":{},\"labels\":[]},{\"number\":83,\"pull_request\":{},\"labels\":[]},{\"number\":82,\"labels\":[]},{\"number\":81,\"labels\":[]},{\"number\":80,\"pull_request\":{},\"labels\":[]},{\"number\":76,\"labels\":[]},{\"number\":74,\"pull_request\":{},\"labels\":[]},{\"number\":73,\"pull_request\":{},\"labels\":[]},{\"number\":72,\"labels\":[]},{\"number\":71,\"pull_request\":{},\"labels\":[]},{\"number\":70,\"pull_request\":{},\"labels\":[]},{\"number\":69,\"labels\":[]},{\"number\":68,\"labels\":[]},{\"number\":67,\"labels\":[]},{\"number\":65,\"labels\":[]},{\"number\":63,\"pull_request\":{},\"labels\":[]},{\"number\":62,\"pull_request\":{},\"labels\":[]},{\"number\":61,\"pull_request\":{},\"labels\":[]},{\"number\":56,\"pull_request\":{},\"labels\":[]},{\"number\":55,\"pull_request\":{},\"labels\":[]},{\"number\":52,\"labels\":[]},{\"number\":50,\"labels\":[]},{\"number\":49,\"pull_request\":{},\"labels\":[]},{\"number\":48,\"pull_request\":{},\"labels\":[]},{\"number\":44,\"labels\":[]},{\"number\":43,\"pull_request\":{},\"labels\":[]},{\"number\":41,\"pull_request\":{},\"labels\":[]},{\"number\":40,\"labels\":[]},{\"number\":39,\"pull_request\":{},\"labels\":[]},{\"number\":37,\"labels\":[]},{\"number\":36,\"pull_request\":{},\"labels\":[]},{\"number\":34,\"pull_request\":{},\"labels\":[]},{\"number\":31,\"labels\":[]},{\"number\":29,\"pull_request\":{},\"labels\":[]},{\"number\":28,\"labels\":[]},{\"number\":27,\"pull_request\":{},\"labels\":[]},{\"number\":26,\"pull_request\":{},\"labels\":[]},{\"number\":22,\"labels\":[]},{\"number\":20,\"labels\":[]},{\"number\":19,\"pull_request\":{},\"labels\":[]},{\"number\":14,\"pull_request\":{},\"labels\":[]},{\"number\":13,\"pull_request\":{},\"labels\":[]},{\"number\":12,\"pull_request\":{},\"labels\":[]},{\"number\":11,\"labels\":[]},{\"number\":10,\"pull_request\":{},\"labels\":[]},{\"number\":9,\"pull_request\":{},\"labels\":[]},{\"number\":8,\"pull_request\":{},\"labels\":[]},{\"number\":3,\"labels\":[]}]"
+  }
+ },
+ "sha": "7bc720e951fe422b8f8814aa5aa1b64121d26b4c"
+}

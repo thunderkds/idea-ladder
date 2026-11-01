@@ -1,0 +1,4 @@
+{"ts":"2026-11-01T05:00:00.000Z","runId":"test-fixture-run","ladderKey":"developit/mitt","step":"repo-reader","model":"test-model","inputTokens":40000,"outputTokens":2000,"cachedInputTokens":0,"usd":0.15}
+{"ts":"2026-11-01T05:00:10.000Z","runId":"test-fixture-run","ladderKey":"developit/mitt","step":"concept-mapper","model":"test-model","inputTokens":8000,"outputTokens":1500,"cachedInputTokens":30000,"usd":0.0555}
+{"ts":"2026-11-01T05:01:00.000Z","runId":"test-fixture-run","ladderKey":"lukeed/dset","step":"repo-reader","model":"test-model","inputTokens":52000,"outputTokens":2500,"cachedInputTokens":0,"usd":0.1935}
+{"ts":"2026-11-01T05:01:10.000Z","runId":"test-fixture-run","ladderKey":"lukeed/dset","step":"concept-mapper","model":"test-model","inputTokens":9000,"outputTokens":1800,"cachedInputTokens":38000,"usd":0.0654}

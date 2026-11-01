@@ -1,0 +1,48 @@
+{
+ "recordedAt": "2026-11-01T04:29:40.706Z",
+ "entries": {
+  "https://api.github.com/repos/tidwall/jsonc": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "5",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "{\"default_branch\":\"master\",\"topics\":[]}"
+  },
+  "https://api.github.com/repos/tidwall/jsonc/git/trees/47bcc8d156812b0ba7ee42372b2259b645e9a092?recursive=1": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "4",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "{\"truncated\":false,\"tree\":[{\"path\":\"LICENSE\",\"type\":\"blob\"},{\"path\":\"README.md\",\"type\":\"blob\"},{\"path\":\"go.mod\",\"type\":\"blob\"},{\"path\":\"jsonc.go\",\"type\":\"blob\"},{\"path\":\"jsonc_test.go\",\"type\":\"blob\"}]}"
+  },
+  "https://raw.githubusercontent.com/tidwall/jsonc/47bcc8d156812b0ba7ee42372b2259b645e9a092/README.md": {
+   "status": 200,
+   "headers": {},
+   "body": "# jsonc\n\n[![GoDoc](https://img.shields.io/badge/api-reference-blue.svg?style=flat-square)](https://pkg.go.dev/github.com/tidwall/jsonc) \n\njsonc is a Go package that converts the jsonc format to standard json.\n\nThe jsonc format is like standard json but allows for comments and trailing\ncommas, such as:\n\n```js\n{\n\n  /* Dev Machine */\n  \"dbInfo\": {\n    \"host\": \"localhost\",\n    \"port\": 5432,          \n    \"username\": \"josh\",\n    \"password\": \"pass123\", // please use a hashed password\n  },\n\n  /* Only SMTP Allowed */\n  \"emailInfo\": {\n    \"email\": \"josh@example.com\", // use full email address\n    \"password\": \"pass123\",\n    \"smtp\": \"smpt.example.com\",\n  }\n\n}\n```\n\nThere's a provided function `jsonc.ToJSON`, which does the conversion.\n\nThe resulting JSON will always be the same length as the input and it will\ninclude all of the same line breaks at matching offsets. This is to ensure\nthe result can be later processed by a external parser and that that\nparser will report messages or errors with the correct offsets.\n\n## Getting Started\n\n### Installing\n\nTo start using jsonc, install Go and run `go get`:\n\n```sh\n$ go get -u github.com/tidwall/jsonc\n```\n\nThis will retrieve the library.\n\n### Example\n\nThe following example uses a JSON document that has comments and trailing\ncommas and converts it just prior to unmarshalling with the standard Go\nJSON library.\n\n```go\n\ndata := `\n{\n  /* Dev Machine */\n  \"dbInfo\": {\n    \"host\": \"localhost\",\n    \"port\": 5432,          // use full email address\n    \"username\": \"josh\",\n    \"password\": \"pass123\", // use a hashed password\n  },\n  /* Only SMTP Allowed */\n  \"emailInfo\": {\n    \"email\": \"josh@example.com\",\n    \"password\": \"pass123\",\n    \"smtp\": \"smpt.example.com\",\n  }\n}\n`\n\nerr := json.Unmarshal(jsonc.ToJSON(data), &config)\n\n```\n\n### Performance\n\nIt's fast and can convert GB/s of jsonc to json.\n\n## Contact\n\nJosh Baker [@tidwall](http://twitter.com/tidwall)\n\n## License\n\njsonc source code is available under the MIT [License](/LICENSE).\n"
+  },
+  "https://raw.githubusercontent.com/tidwall/jsonc/47bcc8d156812b0ba7ee42372b2259b645e9a092/go.mod": {
+   "status": 200,
+   "headers": {},
+   "body": "module github.com/tidwall/jsonc\n\ngo 1.16\n"
+  },
+  "https://api.github.com/repos/tidwall/jsonc/languages": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "3",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "{\"Go\":3229}"
+  },
+  "https://api.github.com/repos/tidwall/jsonc/issues?state=open&per_page=100": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "2",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "[{\"number\":5,\"labels\":[]}]"
+  }
+ },
+ "sha": "47bcc8d156812b0ba7ee42372b2259b645e9a092"
+}

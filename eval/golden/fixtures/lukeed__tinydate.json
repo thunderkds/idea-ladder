@@ -1,0 +1,48 @@
+{
+ "recordedAt": "2026-11-01T04:29:38.667Z",
+ "entries": {
+  "https://api.github.com/repos/lukeed/tinydate": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "9",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "{\"default_branch\":\"master\",\"topics\":[\"date\",\"datetime\",\"format\",\"javascript\",\"time\",\"timestamp\"]}"
+  },
+  "https://api.github.com/repos/lukeed/tinydate/git/trees/a5780e69748fc0f902480ad129438cfee4c1ae3f?recursive=1": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "8",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "{\"truncated\":false,\"tree\":[{\"path\":\".editorconfig\",\"type\":\"blob\"},{\"path\":\".github\",\"type\":\"tree\"},{\"path\":\".github/workflows\",\"type\":\"tree\"},{\"path\":\".github/workflows/ci.yml\",\"type\":\"blob\"},{\"path\":\".gitignore\",\"type\":\"blob\"},{\"path\":\"bench\",\"type\":\"tree\"},{\"path\":\"bench/cheat-array.js\",\"type\":\"blob\"},{\"path\":\"bench/cheat-string.js\",\"type\":\"blob\"},{\"path\":\"bench/index.js\",\"type\":\"blob\"},{\"path\":\"bench/package.json\",\"type\":\"blob\"},{\"path\":\"bench/test-inline.js\",\"type\":\"blob\"},{\"path\":\"index.d.ts\",\"type\":\"blob\"},{\"path\":\"license\",\"type\":\"blob\"},{\"path\":\"package.json\",\"type\":\"blob\"},{\"path\":\"readme.md\",\"type\":\"blob\"},{\"path\":\"src\",\"type\":\"tree\"},{\"path\":\"src/index.js\",\"type\":\"blob\"},{\"path\":\"test\",\"type\":\"tree\"},{\"path\":\"test/index.js\",\"type\":\"blob\"}]}"
+  },
+  "https://raw.githubusercontent.com/lukeed/tinydate/a5780e69748fc0f902480ad129438cfee4c1ae3f/readme.md": {
+   "status": 200,
+   "headers": {},
+   "body": "# tinydate ![CI](https://github.com/lukeed/tinydate/workflows/CI/badge.svg) [![licenses](https://licenses.dev/b/npm/tinydate)](https://licenses.dev/npm/tinydate) [![downloads](https://badgen.now.sh/npm/dm/tinydate)](https://npmjs.org/package/tinydate)\n\n> A tiny (349B) reusable date formatter. Extremely fast!\n\n[Demo](https://jsfiddle.net/lukeed/aoy0xeze/)\n\nInspired by [`tinytime`][tinytime], this module returns a \"render\" function that efficiently re-render your deconstructed template. This allows for [incredibly performant](#benchmarks) results!\n\nHowever, please notice that this only provides a [limited subset of Date methods](#patterns).<br>\nIf you need more, [`tinytime`][tinytime] or [`date-fns`](https://github.com/date-fns/date-fns) are great alternatives!\n\n## Install\n\n```\n$ npm install --save tinydate\n```\n\n\n## Usage\n\n```js\nconst tinydate = require('tinydate');\nconst fooDate = new Date('5/1/2017, 4:30:09 PM');\n\nconst stamp = tinydate('Current time: [{HH}:{mm}:{ss}]');\n\nstamp(fooDate);\n//=> Current time: [16:30:09]\n\nstamp();\n//=> Current time: [17:09:34]\n```\n\n\n## API\n\n### tinydate(pattern, dict?)(date?)\nReturns: `Function`\n\nReturns a rendering function that will optionally accept a [`date`](#date) value as its only argument.\n\n#### pattern\nType: `String`<br>\nRequired: `true`\n\nThe template pattern to be parsed.\n\n#### dict\nType: `Object`<br>\nRequired: `false`\n\nA custom dictionary of template patterns. You may override [existing patterns](#patterns) or declare new ones.\n\n> **Important:** All dictionary items **must be a function** and must control its own formatting.<br>For example, when defining your own `{ss}` template, `tinydate` **will not** pad its value to two digits.\n\n```js\nconst today = new Date('2019-07-04, 5:30:00 PM');\n\n// Example custom dictionary:\n//   - Adds {MMMM}\n//   - Overrides {DD}\nconst stamp = tinydate('Today is: {MMMM} {DD}, {YYYY}', {\n\tMMMM: d => d.toLocaleString('en-US', { month: 'long' }),\n\tDD: d => d.getDate()\n});\n\nstamp(today);\n//=> 'Today is: July 4, 2019'\n```\n\n#### date\nType: `Date`<br>\nDefault: `new Date()`\n\nThe date from which to retrieve values. Defaults to current datetime if no value is provided.\n\n\n## Patterns\n\n- `{YYYY}`: full year; eg: **2017**\n- `{YY}`: short year; eg: **17**\n- `{MM}`: month; eg: **04**\n- `{DD}`: day; eg: **01**\n- `{HH}`: hours; eg: **06** (24h)\n- `{mm}`: minutes; eg: **59**\n- `{ss}`: seconds; eg: **09**\n- `{fff}`: milliseconds; eg: **555**\n\n\n## Benchmarks\n\n```\n# Node v10.13.0\n\ntinydate    x 160,834,214 ops/sec ±0.21% (96 runs sampled)\ntinytime    x  44,602,162 ops/sec ±0.34% (97 runs sampled)\ntime-stamp  x     888,153 ops/sec ±1.27% (86 runs sampled)\n```\n\n## License\n\nMIT © [Luke Edwards](https://lukeed.com)\n\n[tinytime]: https://github.com/aweary/tinytime\n"
+  },
+  "https://raw.githubusercontent.com/lukeed/tinydate/a5780e69748fc0f902480ad129438cfee4c1ae3f/package.json": {
+   "status": 200,
+   "headers": {},
+   "body": "{\n  \"name\": \"tinydate\",\n  \"version\": \"1.3.0\",\n  \"repository\": \"lukeed/tinydate\",\n  \"description\": \"A tiny (349B) reusable date formatter. Extremely fast!\",\n  \"unpkg\": \"dist/tinydate.min.js\",\n  \"module\": \"dist/tinydate.mjs\",\n  \"main\": \"dist/tinydate.js\",\n  \"types\": \"index.d.ts\",\n  \"license\": \"MIT\",\n  \"author\": {\n    \"name\": \"Luke Edwards\",\n    \"email\": \"luke.edwards05@gmail.com\",\n    \"url\": \"https://lukeed.com\"\n  },\n  \"engines\": {\n    \"node\": \">=4\"\n  },\n  \"scripts\": {\n    \"build\": \"bundt\",\n    \"bench\": \"node bench\",\n    \"prebench\": \"npm run build\",\n    \"pretest\": \"npm run build\",\n    \"test\": \"tape test/*.js | tap-spec\"\n  },\n  \"files\": [\n    \"dist\",\n    \"*.d.ts\"\n  ],\n  \"keywords\": [\n    \"date\",\n    \"datestamp\",\n    \"format\",\n    \"stamp\",\n    \"time\",\n    \"timestamp\",\n    \"time-stamp\"\n  ],\n  \"devDependencies\": {\n    \"bundt\": \"0.4.0\",\n    \"tap-spec\": \"5.0.0\",\n    \"tape\": \"4.11.0\"\n  }\n}\n"
+  },
+  "https://api.github.com/repos/lukeed/tinydate/languages": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "7",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "{\"JavaScript\":5246}"
+  },
+  "https://api.github.com/repos/lukeed/tinydate/issues?state=open&per_page=100": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "6",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "[{\"number\":15,\"pull_request\":{},\"labels\":[]},{\"number\":14,\"pull_request\":{},\"labels\":[]},{\"number\":12,\"labels\":[]},{\"number\":11,\"labels\":[]}]"
+  }
+ },
+ "sha": "a5780e69748fc0f902480ad129438cfee4c1ae3f"
+}

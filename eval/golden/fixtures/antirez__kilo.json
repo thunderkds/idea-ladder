@@ -1,0 +1,43 @@
+{
+ "recordedAt": "2026-11-01T04:29:27.232Z",
+ "entries": {
+  "https://api.github.com/repos/antirez/kilo": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "33",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "{\"default_branch\":\"master\",\"topics\":[]}"
+  },
+  "https://api.github.com/repos/antirez/kilo/git/trees/323d93b29bd89a2cb446de90c4ed4fea1764176e?recursive=1": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "32",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "{\"truncated\":false,\"tree\":[{\"path\":\".gitignore\",\"type\":\"blob\"},{\"path\":\"LICENSE\",\"type\":\"blob\"},{\"path\":\"Makefile\",\"type\":\"blob\"},{\"path\":\"README.md\",\"type\":\"blob\"},{\"path\":\"TODO\",\"type\":\"blob\"},{\"path\":\"kilo.c\",\"type\":\"blob\"}]}"
+  },
+  "https://raw.githubusercontent.com/antirez/kilo/323d93b29bd89a2cb446de90c4ed4fea1764176e/README.md": {
+   "status": 200,
+   "headers": {},
+   "body": "Kilo\n===\n\nKilo is a small text editor in less than 1K lines of code (counted with cloc).\n\nA screencast is available here: https://asciinema.org/a/90r2i9bq8po03nazhqtsifksb\n\nUsage: kilo `<filename>`\n\nKeys:\n\n    CTRL-S: Save\n    CTRL-Q: Quit\n    CTRL-F: Find string in file (ESC to exit search, arrows to navigate)\n\nKilo does not depend on any library (not even curses). It uses fairly standard\nVT100 (and similar terminals) escape sequences. The project is in alpha\nstage and was written in just a few hours taking code from my other two\nprojects, load81 and linenoise.\n\nPeople are encouraged to use it as a starting point to write other editors\nor command line interfaces that are more advanced than the usual REPL\nstyle CLI.\n\nKilo was written by Salvatore Sanfilippo aka antirez and is released\nunder the BSD 2 clause license.\n"
+  },
+  "https://api.github.com/repos/antirez/kilo/languages": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "31",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "{\"C\":41602,\"Makefile\":91}"
+  },
+  "https://api.github.com/repos/antirez/kilo/issues?state=open&per_page=100": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "30",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "[{\"number\":129,\"pull_request\":{},\"labels\":[]},{\"number\":128,\"pull_request\":{},\"labels\":[]},{\"number\":127,\"labels\":[]},{\"number\":125,\"pull_request\":{},\"labels\":[]},{\"number\":124,\"labels\":[]},{\"number\":120,\"pull_request\":{},\"labels\":[]},{\"number\":118,\"pull_request\":{},\"labels\":[]},{\"number\":117,\"labels\":[]},{\"number\":115,\"pull_request\":{},\"labels\":[]},{\"number\":114,\"labels\":[]},{\"number\":111,\"pull_request\":{},\"labels\":[]},{\"number\":109,\"labels\":[]},{\"number\":108,\"pull_request\":{},\"labels\":[]},{\"number\":107,\"pull_request\":{},\"labels\":[]},{\"number\":105,\"pull_request\":{},\"labels\":[]},{\"number\":103,\"pull_request\":{},\"labels\":[]},{\"number\":100,\"labels\":[]},{\"number\":99,\"pull_request\":{},\"labels\":[]},{\"number\":98,\"pull_request\":{},\"labels\":[]},{\"number\":97,\"pull_request\":{},\"labels\":[]},{\"number\":95,\"pull_request\":{},\"labels\":[]},{\"number\":94,\"labels\":[]},{\"number\":93,\"pull_request\":{},\"labels\":[]},{\"number\":92,\"pull_request\":{},\"labels\":[]},{\"number\":90,\"pull_request\":{},\"labels\":[]},{\"number\":88,\"pull_request\":{},\"labels\":[]},{\"number\":87,\"pull_request\":{},\"labels\":[]},{\"number\":86,\"pull_request\":{},\"labels\":[]},{\"number\":85,\"pull_request\":{},\"labels\":[]},{\"number\":84,\"labels\":[]},{\"number\":83,\"labels\":[]},{\"number\":81,\"pull_request\":{},\"labels\":[]},{\"number\":78,\"pull_request\":{},\"labels\":[]},{\"number\":77,\"labels\":[]},{\"number\":76,\"labels\":[]},{\"number\":75,\"pull_request\":{},\"labels\":[]},{\"number\":74,\"pull_request\":{},\"labels\":[]},{\"number\":73,\"pull_request\":{},\"labels\":[]},{\"number\":70,\"labels\":[]},{\"number\":69,\"labels\":[]},{\"number\":61,\"pull_request\":{},\"labels\":[]},{\"number\":59,\"labels\":[]},{\"number\":56,\"pull_request\":{},\"labels\":[]},{\"number\":54,\"labels\":[]},{\"number\":50,\"labels\":[]},{\"number\":48,\"labels\":[]},{\"number\":41,\"pull_request\":{},\"labels\":[]},{\"number\":40,\"pull_request\":{},\"labels\":[]},{\"number\":39,\"labels\":[]},{\"number\":38,\"labels\":[]},{\"number\":36,\"labels\":[]},{\"number\":31,\"labels\":[]},{\"number\":29,\"labels\":[]},{\"number\":27,\"pull_request\":{},\"labels\":[]},{\"number\":25,\"labels\":[]},{\"number\":24,\"labels\":[]},{\"number\":22,\"labels\":[]},{\"number\":21,\"pull_request\":{},\"labels\":[]},{\"number\":20,\"pull_request\":{},\"labels\":[]},{\"number\":18,\"labels\":[]},{\"number\":15,\"labels\":[]},{\"number\":14,\"labels\":[]},{\"number\":12,\"labels\":[]},{\"number\":9,\"labels\":[]},{\"number\":7,\"pull_request\":{},\"labels\":[]}]"
+  }
+ },
+ "sha": "323d93b29bd89a2cb446de90c4ed4fea1764176e"
+}
