@@ -1,0 +1,29 @@
+#separator:tab
+#html:false
+#tags column:3
+What problem does a publish/subscribe emitter solve?	It lets one part of a program announce that something happened without knowing who listens. Listeners register by event name, so sender and receiver stay decoupled.	idea-ladder mitt L0
+Why is a Map a safer handler store than a plain object when event names can be Symbols?	A Map accepts any value as a key and never collides with inherited names. A plain object turns most keys into strings and carries inherited properties such as constructor.	idea-ladder mitt L0
+What is a closure, and how does a factory function use one to hide state?	A closure is a function that remembers variables from where it was created. A factory can create a private list, return methods that use it, and give outsiders no other way to touch it.	idea-ladder mitt L0
+Why can you only remove a listener if you kept a reference to the same function?	Removal compares function identity. Two arrow functions with identical text are two different objects, so an inline arrow passed to add cannot be matched later.	idea-ladder mitt L0
+In TypeScript, what does a generic type parameter such as Events buy you?	The caller describes once which event names exist and what payload each carries. The compiler then rejects a wrong event name or a wrong payload type at each call.	idea-ladder mitt L0
+Which file holds the whole library, and about how long is it?	The single source file under src, named index.ts. It is roughly one hundred twenty lines, and most of that is type declarations and comments.	idea-ladder mitt L1
+What are the three methods on the object that mitt returns?	on to register a handler, off to remove one, and emit to fire an event. The returned object also exposes the handler Map as a property called all.	idea-ladder mitt L1
+What does the project's npm test script run, in order, at this commit?	A type check, then lint, then the mocha tests, then a separate compile check of the type tests. If any step fails, the script stops.	idea-ladder mitt L1
+What does a wildcard handler receive that a normal handler does not?	A normal handler gets only the payload. A handler registered under the star name gets the event name first and then the payload.	idea-ladder mitt L1
+Why might the install step fail on a very new Node version?	The dev dependencies are old (a 2020-era bundler and a version 8 test runner). Old tooling can break on new runtimes, so log the error and the Node version.	idea-ladder mitt L1
+Where do the tests live, and what style do they use?	In the test folder, as a mocha file written with chai assertions and sinon spies. Each test registers handlers, calls emit, and checks which spies were called.	idea-ladder mitt L2
+How do you check that a handler was or was not called in these tests?	You create a spy, register it, fire the event, and assert on call count. A spy records every call, so you can also check the arguments.	idea-ladder mitt L2
+Name one behavior of mitt that you could pin down with a new test.	Examples: calling off for a handler that was never added changes nothing; emit with no listeners does not throw; a handler added twice is called twice. Pick one and prove it.	idea-ladder mitt L2
+What belongs in a good small diff for this repo?	One behavior, one test, no new dependency. The library is valued for being tiny, so avoid features that grow the source.	idea-ladder mitt L2
+Before you open a pull request upstream, what should you check first?	Read the open issues and the contribution habits of the repo. Check whether the change fits a tiny library, and whether someone already proposed it.	idea-ladder mitt L2
+How does mitt store handlers?	In a Map from event name to an array of handler functions. The Map is created inside the factory unless the caller passes one in.	idea-ladder mitt L3
+In what order does emit call handlers?	First every handler registered for that exact event name, in registration order. Then every wildcard handler, also in registration order.	idea-ladder mitt L3
+Why does emit copy the handler array before looping?	A handler may remove itself or another handler while the loop runs. Looping over a copy keeps the current emit stable, so no neighbour gets skipped.	idea-ladder mitt L3
+What does off do when you give no handler?	It replaces the array for that event with an empty one, so every handler of that name is gone.	idea-ladder mitt L3
+What does off do when you give a handler that was never added?	Nothing is removed. The index lookup returns minus one, an unsigned shift turns that into a huge number, and splicing at that position deletes nothing.	idea-ladder mitt L3
+What happens if one handler throws during emit?	The error propagates out of emit and the remaining handlers for that call do not run, because the loop has no try block.	idea-ladder mitt L3
+What is the smallest set of behaviors your rebuild must have to count as an emitter?	Register a handler by name, remove one, fire an event with a payload, and call wildcard handlers after named ones. Everything else is optional.	idea-ladder mitt L4
+Which design decision in mitt would you copy, and which would you change?	Write your own answer. A common pair: copy the exposed Map for easy clearing; change error handling so one bad handler does not stop the others.	idea-ladder mitt L4
+How do you test the copy-before-loop rule?	Register a handler that removes a second handler, emit once, and assert the second handler still ran in that emit but not in the next one.	idea-ladder mitt L4
+Why rebuild before reading the answer again?	Retrieval beats re-reading. Forcing yourself to recall the design shows which decisions you truly understood and which you only recognized.	idea-ladder mitt L4
+What would make a pull request to a tiny library likely to be accepted?	It fixes a clear bug or documents a real gap, adds a test, keeps the size small, and links the issue it solves.	idea-ladder mitt L4

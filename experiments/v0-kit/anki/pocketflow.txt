@@ -1,0 +1,30 @@
+#separator:tab
+#html:false
+#tags column:3
+What is a directed graph, and why does it fit a multi-step workflow?	Nodes are steps and arrows say which step may come next. The next step can depend on the outcome, so branching and loops are just extra arrows.	idea-ladder pocketflow L0
+What is the difference between a fixed workflow and an agent?	A workflow follows steps decided in advance by the programmer. An agent lets the model choose the next step at run time. A graph can express both.	idea-ladder pocketflow L0
+What is a shared store (blackboard) and what risk does it carry?	One dictionary that every step reads and writes. It is simple, but steps depend on key names they cannot see, so a typo or a missing key fails late.	idea-ladder pocketflow L0
+What does retry with a fallback mean for a flaky call such as a model request?	Try the call up to a set number of times, optionally waiting between tries. If the last try fails, run a fallback instead of crashing the whole run.	idea-ladder pocketflow L0
+In Python, what does overloading the right-shift operator on a class allow?	Code like a then b can read as a >> b. The class defines what that operator does, so a flow can be written as a chain of steps.	idea-ladder pocketflow L0
+How can you get the framework into a project?	Install the package named pocketflow from PyPI, or copy the one source file into your project because it has no dependencies.	idea-ladder pocketflow L1
+What are the three phases of a node, and in what order do they run?	Prep reads from the shared store, exec does the work using only what prep returned, and post writes results back and returns the name of the next action.	idea-ladder pocketflow L1
+Where do you find ready-made examples to run?	In the cookbook folder at the repo root. Each example is a small app that you can run on its own.	idea-ladder pocketflow L1
+Why does an example usually need an API key or a local model?	Most cookbook steps call a language model. Without a key or a local model the call step fails, so set that up before you judge the framework.	idea-ladder pocketflow L1
+What does the docs site add that the README does not?	Design-pattern pages (agent, workflow, RAG, multi-agent) and the node and flow reference. Use it when a cookbook example is unclear.	idea-ladder pocketflow L1
+Where are the tests, and what do the file names tell you about the features?	In the tests folder at the repo root. Names such as batch node, async flow and fall back show the areas covered: batching, async, flow composition and retries.	idea-ladder pocketflow L2
+What does a flow do when a node returns an action name that has no successor?	It stops and warns that the action was not found. Returning nothing selects the default action.	idea-ladder pocketflow L2
+Name one behavior you could pin down with a new test.	Example: adding a second successor for the same action replaces the first and warns. Or: a node with one retry calls its fallback right after the first failure. Pick one and prove it.	idea-ladder pocketflow L2
+How do you run the test suite locally?	Check the repo's docs and the tests folder for the runner, then run it from the repo root and keep the log. If no runner is documented, the standard library test runner can discover the files.	idea-ladder pocketflow L2
+What makes a small diff here easy to review?	One behavior, one test, no change to the core file unless the test proves a bug. The core is only about 100 lines, so every extra line is noticed.	idea-ladder pocketflow L2
+How does a node know what comes after it?	Each node holds a dictionary from action name to the next node. The operator chain fills it, using the default action unless you name another.	idea-ladder pocketflow L3
+How does a flow decide which node runs next?	It runs the current node, takes the action name that node returned, and looks that name up in the node's successors. No match ends the run.	idea-ladder pocketflow L3
+Why does the flow copy each node before running it?	Nodes keep per-run data such as parameters and the retry counter. Copying keeps a second pass through the same node from reusing stale values.	idea-ladder pocketflow L3
+Why can a flow itself be used as a node inside another flow?	A flow is built on the same base class as a node, so it has the same run interface. That is how flows nest.	idea-ladder pocketflow L3
+How does retry work in a normal node?	Exec runs inside a loop up to the maximum tries, with an optional wait between tries. On the last failure the fallback method runs, and by default it raises the error again.	idea-ladder pocketflow L3
+What is the difference between a batch node and a batch flow?	A batch node maps its exec step over a list of items. A batch flow runs the whole flow once per parameter set returned by its prep step.	idea-ladder pocketflow L3
+How do the parallel async variants run their work?	They start all the items together and wait for all to finish using the async gather call, instead of awaiting items one by one.	idea-ladder pocketflow L3
+What is the smallest set of behaviors your rebuild needs?	A node with prep, exec and post; a way to link nodes by action name; a flow loop that follows the returned action; and retries with a fallback.	idea-ladder pocketflow L4
+Which design choice of the original would you keep, and which would you change?	Write your own answer. A common pair: keep the shared dictionary for simplicity; change silent stops on unknown actions into an explicit error.	idea-ladder pocketflow L4
+How do you test branching without calling a real model?	Use fake nodes that return fixed action names. Assert the order in which they ran and which one the flow stopped on.	idea-ladder pocketflow L4
+Why is the file so short, and what did the author leave out on purpose?	The core keeps only the graph idea. Vendor wrappers, tools and memory are left to the user, which is why the README stresses zero dependencies.	idea-ladder pocketflow L4
+What would a good pull request to this repo contain?	A cookbook example or a fix with a test, a short description of the use case, and no growth of the core file unless a bug demands it.	idea-ladder pocketflow L4
