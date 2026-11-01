@@ -1,0 +1,61 @@
+{
+ "recordedAt": "2026-11-01T02:11:03.211Z",
+ "entries": {
+  "https://api.github.com/repos/lukeed/dset": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "8",
+    "x-ratelimit-reset": "1793500141"
+   },
+   "body": "{\"default_branch\":\"master\",\"topics\":[]}"
+  },
+  "https://api.github.com/repos/lukeed/dset/commits/master": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "7",
+    "x-ratelimit-reset": "1793500141"
+   },
+   "body": "05b1ec0f8cebe3b5d5667285bc7da90f38a7215e"
+  },
+  "https://api.github.com/repos/lukeed/dset/readme?ref=05b1ec0f8cebe3b5d5667285bc7da90f38a7215e": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "6",
+    "x-ratelimit-reset": "1793500141"
+   },
+   "body": "{\"path\":\"readme.md\",\"content\":\"IyBkc2V0IFshW0NJXShodHRwczovL2dpdGh1Yi5jb20vbHVrZWVkL2RzZXQv\\nd29ya2Zsb3dzL0NJL2JhZGdlLnN2Zz9icmFuY2g9bWFzdGVyJmV2ZW50PXB1\\nc2gpXShodHRwczovL2dpdGh1Yi5jb20vbHVrZWVkL2RzZXQvYWN0aW9ucykg\\nWyFbY29kZWNvdl0oaHR0cHM6Ly9iYWRnZW4ubmV0L2NvZGVjb3YvYy9naXRo\\ndWIvbHVrZWVkL2RzZXQpXShodHRwczovL2NvZGVjb3YuaW8vZ2gvbHVrZWVk\\nL2RzZXQpCgo+IEEgdGlueSAoMTk3QikgdXRpbGl0eSBmb3Igc2FmZWx5IHdy\\naXRpbmcgZGVlcCBPYmplY3QgdmFsdWVzfiEKCkZvciBfYWNjZXNzaW5nXyBk\\nZWVwIG9iamVjdCBwcm9wZXJ0aWVzLCBwbGVhc2Ugc2VlIFtgZGx2YF0oaHR0\\ncHM6Ly9naXRodWIuY29tL2RldmVsb3BpdC9kbHYpLgoKPiAqKlVzaW5nIEdy\\nYXBoUUw/KiogWW91IG1heSB3YW50IGBkc2V0L21lcmdlYCDigJMgc2VlIFtN\\nZXJnaW5nXSgjbWVyZ2luZykgZm9yIG1vcmUgaW5mby4KCiMjIEluc3RhbGwK\\nCmBgYHNoCiQgbnBtIGluc3RhbGwgLS1zYXZlIGRzZXQKYGBgCgojIyBNb2Rl\\ncwoKVGhlcmUgYXJlIHR3byAidmVyc2lvbnMiIG9mIGBkc2V0YCBhdmFpbGFi\\nbGU6CgojIyMjIGBkc2V0YAo+ICoqU2l6ZSAoZ3ppcCk6KiogMTk3IGJ5dGVz\\nPGJyPgo+ICoqQXZhaWxhYmlsaXR5OioqIFtDb21tb25KU10oaHR0cHM6Ly91\\nbnBrZy5jb20vZHNldC9kaXN0L2luZGV4LmpzKSwgW0VTIE1vZHVsZV0oaHR0\\ncHM6Ly91bnBrZy5jb20vZHNldC9kaXN0L2luZGV4Lm1qcyksIFtVTURdKGh0\\ndHBzOi8vdW5wa2cuY29tL2RzZXQvZGlzdC9pbmRleC5taW4uanMpCgpgYGBq\\ncwppbXBvcnQgeyBkc2V0IH0gZnJvbSAnZHNldCc7CmBgYAoKIyMjIyBgZHNl\\ndC9tZXJnZWAKPiAqKlNpemUgKGd6aXApOioqIDMwNyBieXRlczxicj4KPiAq\\nKkF2YWlsYWJpbGl0eToqKiBbQ29tbW9uSlNdKGh0dHBzOi8vdW5wa2cuY29t\\nL2RzZXQvbWVyZ2UvaW5kZXguanMpLCBbRVMgTW9kdWxlXShodHRwczovL3Vu\\ncGtnLmNvbS9kc2V0L21lcmdlL2luZGV4Lm1qcyksIFtVTURdKGh0dHBzOi8v\\ndW5wa2cuY29tL2RzZXQvbWVyZ2UvaW5kZXgubWluLmpzKQoKYGBganMKaW1w\\nb3J0IHsgZHNldCB9IGZyb20gJ2RzZXQvbWVyZ2UnOwpgYGAKCgojIyBVc2Fn\\nZQoKYGBganMKaW1wb3J0IHsgZHNldCB9IGZyb20gJ2RzZXQnOwoKbGV0IGZv\\nbyA9IHsgYWJjOiAxMjMgfTsKZHNldChmb28sICdmb28uYmFyJywgJ2hlbGxv\\nJyk7Ci8vIG9yOiBkc2V0KGZvbywgWydmb28nLCAnYmFyJ10sICdoZWxsbycp\\nOwpjb25zb2xlLmxvZyhmb28pOwovLz0+IHsKLy89PiAgIGFiYzogMTIzLAov\\nLz0+ICAgZm9vOiB7IGJhcjogJ2hlbGxvJyB9LAovLz0+IH0KCmRzZXQoZm9v\\nLCAnYWJjLmhlbGxvJywgJ3dvcmxkJyk7Ci8vIG9yOiBkc2V0KGZvbywgWydh\\nYmMnLCAnaGVsbG8nXSwgJ3dvcmxkJyk7CmNvbnNvbGUubG9nKGZvbyk7Ci8v\\nPT4gewovLz0+ICAgYWJjOiB7IGhlbGxvOiAnd29ybGQnIH0sCi8vPT4gICBm\\nb286IHsgYmFyOiAnaGVsbG8nIH0sCi8vPT4gfQoKbGV0IGJhciA9IHsgYTog\\neyB4OiA3IH0sIGI6WzEsIDIsIDNdIH07CmRzZXQoYmFyLCAnYi4xJywgOTk5\\nKTsKLy8gb3I6IGRzZXQoYmFyLCBbJ2InLCAxXSwgOTk5KTsKLy8gb3I6IGRz\\nZXQoYmFyLCBbJ2InLCAnMSddLCA5OTkpOwpjb25zb2xlLmxvZyhiYXIpOwov\\nLz0+IHsKLy89PiAgIGE6IHsgeDogNyB9LAovLz0+ICAgYjogWzEsIDk5OSwg\\nM10sCi8vPT4gfQoKZHNldChiYXIsICdhLnkuMCcsIDgpOwovLyBvcjogZHNl\\ndChiYXIsIFsnYScsICd5JywgMF0sIDgpOwovLyBvcjogZHNldChiYXIsIFsn\\nYScsICd5JywgJzAnXSwgOCk7CmNvbnNvbGUubG9nKGJhcik7Ci8vPT4gewov\\nLz0+ICAgYTogewovLz0+ICAgICB4OiA3LAovLz0+ICAgICB5OiBbOF0sCi8v\\nPT4gICB9LAovLz0+ICAgYjogWzEsIDk5OSwgM10sCi8vPT4gfQoKbGV0IGJh\\neiA9IHt9Owpkc2V0KGJheiwgJ2EuMC5iLjAnLCAxKTsKZHNldChiYXosICdh\\nLjAuYi4xJywgMik7CmNvbnNvbGUubG9nKGJheik7Ci8vPT4gewovLz0+ICAg\\nYTogW3sgYjogWzEsIDJdIH1dCi8vPT4gfQpgYGAKCiMjIE1lcmdpbmcKClRo\\nZSBtYWluL2RlZmF1bHQgYGRzZXRgIG1vZHVsZSBmb3JjaWJseSB3cml0ZXMg\\ndmFsdWVzIGF0IHRoZSBhc3NpZ25lZCBrZXktcGF0aC4gSG93ZXZlciwgaW4g\\nc29tZSBjYXNlcywgeW91IG1heSBwcmVmZXIgdG8gX21lcmdlXyB2YWx1ZXMg\\nYXQgdGhlIGtleS1wYXRoLiBGb3IgZXhhbXBsZSwgd2hlbiB1c2luZyBbR3Jh\\ncGhRTCdzIGBAc3RyZWFtYCBhbmQgYEBkZWZlcmAgZGlyZWN0aXZlc10oaHR0\\ncHM6Ly9mb3VuZGF0aW9uLmdyYXBocWwub3JnL25ld3MvMjAyMC8xMi8wOC9p\\nbXByb3ZpbmctbGF0ZW5jeS13aXRoLWRlZmVyLWFuZC1zdHJlYW0tZGlyZWN0\\naXZlcy8pLCB5b3Ugd2lsbCBuZWVkIHRvIG1lcmdlIHRoZSByZXNwb25zZSBj\\naHVua3MgaW50byBhIHNpbmdsZSBvYmplY3QvbGlzdC4gVGhpcyBpcyB3aHkg\\nYGRzZXQvbWVyZ2VgIGV4aXN0c34hCgpCZWxvdyBpcyBhIHF1aWNrIGlsbHVz\\ndHJhdGlvbiBvZiB0aGUgZGlmZmVyZW5jZSBiZXR3ZWVuIGBkc2V0YCBhbmQg\\nYGRzZXQvbWVyZ2VgOgoKYGBganMKbGV0IGlucHV0ID0gewogIGhlbGxvOiB7\\nCiAgICBhYmM6IDEyMwogIH0KfTsKCmRzZXQoaW5wdXQsICdoZWxsbycsIHsg\\nd29ybGQ6IDEyMyB9KTsKY29uc29sZS5sb2coaW5wdXQpOwoKLy8gdmlhIGBk\\nc2V0YAovLz0+IHsKLy89PiAgIGhlbGxvOiB7Ci8vPT4gICAgIHdvcmxkOiAx\\nMjMKLy89PiAgIH0KLy89PiB9CgovLyB2aWEgYGRzZXQvbWVyZ2VgCi8vPT4g\\newovLz0+ICAgaGVsbG86IHsKLy89PiAgICAgYWJjOiAxMjMsCi8vPT4gICAg\\nIHdvcmxkOiAxMjMKLy89PiAgIH0KLy89PiB9CmBgYAoKCiMjIEltbXV0YWJp\\nbGl0eQoKQXMgc2hvd24gaW4gdGhlIGV4YW1wbGVzIGFib3ZlLCBhbGwgYGRz\\nZXRgIGludGVyYWN0aW9ucyBtdXRhdGUgdGhlIHNvdXJjZSBvYmplY3QuCgpJ\\nZiB5b3UgbmVlZCBpbW11dGFibGUgd3JpdGVzLCBwbGVhc2UgdmlzaXQgW2Bj\\nbGVhbi1zZXRgXShodHRwczovL2dpdGh1Yi5jb20vZndpbGtlcnNvbi9jbGVh\\nbi1zZXQpICgxODJCKS48YnI+CkFsdGVybmF0aXZlbHksIHlvdSBtYXkgcGFp\\nciBgZHNldGAgd2l0aCBbYGtsb25hYF0oaHR0cHM6Ly9naXRodWIuY29tL2x1\\na2VlZC9rbG9uYSksIGEgMzY2QiB1dGlsaXR5IHRvIGNsb25lIHlvdXIgc291\\ncmNlKHMpLiBIZXJlJ3MgYW4gZXhhbXBsZSBwYWlyaW5nOgoKYGBganMKaW1w\\nb3J0IHsgZHNldCB9IGZyb20gJ2RzZXQnOwppbXBvcnQgeyBrbG9uYSB9IGZy\\nb20gJ2tsb25hJzsKCmV4cG9ydCBmdW5jdGlvbiBkZWVwc2V0KG9iaiwgcGF0\\naCwgdmFsKSB7CiAgbGV0IGNvcHkgPSBrbG9uYShvYmopOwogIGRzZXQoY29w\\neSwgcGF0aCwgdmFsKTsKICByZXR1cm4gY29weTsKfQpgYGAKCgojIyBBUEkK\\nCiMjIyBkc2V0KG9iaiwgcGF0aCwgdmFsKQoKUmV0dXJuczogYHZvaWRgCgoj\\nIyMjIG9iagoKVHlwZTogYE9iamVjdGAKClRoZSBPYmplY3QgdG8gdHJhdmVy\\nc2UgJiBtdXRhdGUgd2l0aCBhIHZhbHVlLgoKIyMjIyBwYXRoCgpUeXBlOiBg\\nU3RyaW5nYCBvciBgQXJyYXlgCgpUaGUga2V5IHBhdGggdGhhdCBzaG91bGQg\\ncmVjZWl2ZSB0aGUgdmFsdWUuIE1heSBiZSBpbiBgeC55LnpgIG9yIGBbJ3gn\\nLCAneScsICd6J11gIGZvcm1hdHMuCgo+ICoqTm90ZToqKiBQbGVhc2UgYmUg\\nYXdhcmUgdGhhdCBvbmx5IHRoZSBfbGFzdF8ga2V5IGFjdHVhbGx5IHJlY2Vp\\ndmVzIHRoZSB2YWx1ZSEKCj4gKipJbXBvcnRhbnQ6KiogTmV3IE9iamVjdHMg\\nYXJlIGNyZWF0ZWQgYXQgZWFjaCBzZWdtZW50IGlmIHRoZXJlIGlzIG5vdCBh\\nbiBleGlzdGluZyBzdHJ1Y3R1cmUuPGJyPkhvd2V2ZXIsIHdoZW4gaW50ZWdl\\ncnMgYXJlIGVuY291bnRlZCwgQXJyYXlzIGFyZSBjcmVhdGVkIGluc3RlYWQh\\nCgojIyMjIHZhbHVlCgpUeXBlOiBgQW55YAoKVGhlIHZhbHVlIHRoYXQgeW91\\nIHdhbnQgdG8gc2V0LiBDYW4gYmUgb2YgYW55IHR5cGUhCgoKIyMgQmVuY2ht\\nYXJrcwoKRm9yIGJlbmNobWFya3MgYW5kIGZ1bGwgcmVzdWx0cywgY2hlY2sg\\nb3V0IHRoZSBbYGJlbmNoYF0oL2JlbmNoKSBkaXJlY3RvcnkhCgpgYGAKIyBO\\nb2RlIDEwLjEzLjAKClZhbGlkYXRpb246CiAg4pyUIHNldC12YWx1ZQogIOKc\\nlCBsb2Rhc2gvc2V0CiAg4pyUIGRzZXQKCkJlbmNobWFyazoKICBzZXQtdmFs\\ndWUgICAgeCAxLDcwMSw4MjEgb3BzL3NlYyDCsTEuODElICg5MyBydW5zIHNh\\nbXBsZWQpCiAgbG9kYXNoL3NldCAgIHggICA5NzUsNTMwIG9wcy9zZWMgwrEw\\nLjk2JSAoOTEgcnVucyBzYW1wbGVkKQogIGRzZXQgICAgICAgICB4IDEsNzk3\\nLDkyMiBvcHMvc2VjIMKxMC4zMiUgKDk0IHJ1bnMgc2FtcGxlZCkKYGBgCgoK\\nIyMgUmVsYXRlZAoKLSBbZGx2XShodHRwczovL2dpdGh1Yi5jb20vZGV2ZWxv\\ncGl0L2RsdikgLSBzYWZlbHkgcmVhZCBmcm9tIGRlZXAgcHJvcGVydGllcyBp\\nbiAxMjAgYnl0ZXMKLSBbZGVxdWFsXShodHRwczovL2dpdGh1Yi5jb20vbHVr\\nZWVkL2RlcXVhbCkgLSBzYWZlbHkgY2hlY2sgZm9yIGRlZXAgZXF1YWxpdHkg\\naW4gMjQ3IGJ5dGVzCi0gW2tsb25hXShodHRwczovL2dpdGh1Yi5jb20vbHVr\\nZWVkL2tsb25hKSAtIHF1aWNrbHkgImRlZXAgY2xvbmUiIGRhdGEgaW4gMjAw\\nIHRvIDMzMCBieXRlcwotIFtjbGVhbi1zZXRdKGh0dHBzOi8vZ2l0aHViLmNv\\nbS9md2lsa2Vyc29uL2NsZWFuLXNldCkgLSBmYXN0LCBpbW11dGFibGUgdmVy\\nc2lvbiBvZiBgZHNldGAgaW4gMTgyIGJ5dGVzCgoKIyMgTGljZW5zZQoKTUlU\\nIMKpIFtMdWtlIEVkd2FyZHNdKGh0dHBzOi8vbHVrZWVkLmNvbSkK\\n\"}"
+  },
+  "https://api.github.com/repos/lukeed/dset/languages": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "5",
+    "x-ratelimit-reset": "1793500141"
+   },
+   "body": "{\"JavaScript\":17856}"
+  },
+  "https://api.github.com/repos/lukeed/dset/contents/?ref=05b1ec0f8cebe3b5d5667285bc7da90f38a7215e": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "4",
+    "x-ratelimit-reset": "1793500141"
+   },
+   "body": "[{\"name\":\".editorconfig\",\"type\":\"file\"},{\"name\":\".github\",\"type\":\"dir\"},{\"name\":\".gitignore\",\"type\":\"file\"},{\"name\":\"bench\",\"type\":\"dir\"},{\"name\":\"license\",\"type\":\"file\"},{\"name\":\"package.json\",\"type\":\"file\"},{\"name\":\"readme.md\",\"type\":\"file\"},{\"name\":\"src\",\"type\":\"dir\"},{\"name\":\"test\",\"type\":\"dir\"}]"
+  },
+  "https://api.github.com/repos/lukeed/dset/issues?state=open&per_page=100": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "3",
+    "x-ratelimit-reset": "1793500141"
+   },
+   "body": "[{\"number\":51,\"pull_request\":{},\"labels\":[]},{\"number\":50,\"pull_request\":{},\"labels\":[]},{\"number\":48,\"pull_request\":{},\"labels\":[]},{\"number\":47,\"pull_request\":{},\"labels\":[]},{\"number\":46,\"labels\":[]},{\"number\":44,\"labels\":[]},{\"number\":43,\"pull_request\":{},\"labels\":[{\"name\":\"dependencies\"}]},{\"number\":39,\"labels\":[]},{\"number\":36,\"labels\":[]},{\"number\":35,\"labels\":[]},{\"number\":32,\"labels\":[]},{\"number\":31,\"labels\":[]},{\"number\":27,\"labels\":[]}]"
+  },
+  "https://api.github.com/repos/lukeed/dset/issues?state=open&per_page=100&labels=good%20first%20issue": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "2",
+    "x-ratelimit-reset": "1793500141"
+   },
+   "body": "[]"
+  }
+ }
+}
