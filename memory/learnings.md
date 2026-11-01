@@ -9,6 +9,8 @@
 
 ## Patterns
 
+- **Check the exit code of a frozen install (2026-11-01).** An agent can pin a dependency in `package.json` and leave a caret in the lockfile. Tests still pass in a worktree that has its packages. T010 merged this way; only the run on merged `main` caught it.
+
 - **The merge gate checks the whole Bash command (2026-11-01).** A call that edits the board and merges is refused before anything runs. Move the row in one call and merge in the next. A row under Blocked does not hold the gate.
 
 - **The repo reader needs a GitHub token in real use (2026-11-01).** T005 alone costs about 7 calls per repo, but T006 adds one call per file read and up to 30 per `search`. One job can pass the unauthenticated limit of 60 per hour.
