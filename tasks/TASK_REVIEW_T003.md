@@ -10,20 +10,35 @@
 
 ---
 
+## Auto decisions
+
+Mode: auto
+1. Left the branch unmerged and did not start wave 2 (T005 needs T003 merged) — RULE: `docs/claude-md/tracks.md` `### Never in auto mode`
+2. Dropped the trial merge of T003 + T004 after the merge gate blocked it, and did not retry it another way — RULE: `docs/claude-md/tracks.md` `### Stops that stay`
+3. Left the real GitHub sign-in run open: no OAuth app credentials exist in this session — RULE: `docs/claude-md/tracks.md` `### Stops that stay`
+4. Left the P2 and P3 findings unfixed — RULE: `.claude/skills/code-review/SKILL.md` § Phase 4 — Apply Safe Fixes
+Paused: the merge gate blocked a trial merge (`Tasks still In Progress: T004, T003`); that check did not run. The real GitHub sign-in run waits for an OAuth app.
+Findings: P2 `src/db.ts:4` the pool has no `error` listener, so an idle-connection error (for example a Postgres restart) is an unhandled event and stops the process — add `pool.on('error', ...)`. P3 `src/auth/session.ts` expired sessions are never deleted. P3 `.github/workflows/ci.yml` actions are pinned by tag, not by SHA.
+Checks: tests `pnpm ci:local` — printed `ci:local passed`, 24 unit and 7 browser tests; reviews code-review — 0 P0, 0 P1, 1 P2, 2 P3; migration-safety — GO, reversible, no downtime, no data at risk, production-copy check not applicable because no production data exists; security-review — the skill did not start (`fatal: ambiguous argument 'origin/HEAD...': unknown revision or path not in the working tree.`; the remote is named `github`), so the Supervisor reviewed by hand instead: state cookie, session hashing, cookie flags, parameterised SQL, fixed redirects, JSX escaping, secrets grep — no vulnerability found, and this is not the skill's result; startup-reads check not possible, the implementer report is in the earlier session; real run: not on real GitHub (auto-checked, not /verify)
+Memory: memory/learnings.md — `security-review` needs `origin/HEAD`; merge gate also blocks trial merges
+Not done: merge (yours); auto verify: running (T182); real GitHub sign-in run (yours); Gate 1 ruling (yours): `PROJECT_SPEC.md` § Critical Constraints still says no v1 product code before Gate 1
+
+---
+
 ## Evidence
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass (implementer-run; reviewer to confirm) | `test/config.test.ts`, `test/migrations.test.ts`, `test/auth.test.ts`, `test/tokens.test.ts` (vitest: 4 files, 24 tests passed, 2026-11-01T11:14); `e2e/sign-in.spec.ts`, `e2e/ui.spec.ts` (Playwright: 7 passed). Red first: before `src/` existed, `pnpm test` showed `Test Files 4 failed (4)`. |
-| Verification command run | ☑ pass (implementer-run) | `pnpm ci:local` (docker compose up --wait db; install --frozen-lockfile; migrate up, down, up; typecheck; lint; test; test:e2e) ended with `ci:local passed`. Also: `pnpm build` ok; `node dist/src/server.js` served `/` 200, `/assets/tokens.css` 200, `/ladders` 302 to `/`; missing env prints `Cannot start: DATABASE_URL is missing; ...` exit 1; migration on `postgres:16` (no pgvector) fails with `pgvector is not installed on this Postgres server` and leaves 0 app tables; `db:migrate:down` with 1 user row drops it, up again ok. |
-| Negative cases hold | ☐ pass / ☐ fail | |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | `test/config.test.ts`, `test/migrations.test.ts`, `test/auth.test.ts`, `test/tokens.test.ts`, `e2e/sign-in.spec.ts`, `e2e/ui.spec.ts`. Reviewer rerun 2026-11-01T11:58: `Test Files  4 passed (4)`, `Tests  24 passed (24)`, Playwright `7 passed (2.8s)`. |
+| Verification command run | ☑ pass | Reviewer rerun of `pnpm ci:local` (install, migrate up/down/up, typecheck, lint, test, test:e2e): exit 0, last line `ci:local passed`. `pnpm audit --prod`: `No known vulnerabilities found`. Six sampled dependencies published 2026-10-15 or earlier (rule: at least 2 weeks before 2026-11-01). |
+| Negative cases hold | ☑ pass | `test/auth.test.ts` passes: mismatched/missing/expired/foreign-signed state, failed token exchange, access_denied and replay each return 400 with users and sessions counts unchanged; forged session cookie redirects. |
 | verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
-| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
-| Full smoke suite still green (no regression) | ☐ pass / ☐ fail | |
-| **Companion score (easy-verifier)** | ☐ pass / ☐ fail / ☐ N/A | [`overall` and `change_risk` as the tool returned them, the scope, the ref, and the absolute path of the verifier report after a literal `report:` label — e.g. "overall 86 (>= 80), change_risk pass, scope changes, ref `main...HEAD`, report: `/home/me/.easy-verifier-reports/kit/score_changes_20261028T0530Z.html`". The gate reads the path that follows `report:` and nothing else, so with no label, or a path that is absent, the row is unscored — write ☑ N/A instead. ☑ N/A with a reason when neither companion tool was run: the merge gate blocks on ☑ fail only, never on an absent or N/A row] |
-| **UI: Visual regression (diff or verdict pasted)** | ☑ pass (implementer view) | Screenshots `e2e/screenshots/{home,ladders}-{mobile,tablet,desktop}.png`. Read `ladders-mobile.png` and `home-desktop.png`: heading, `No ladders yet`, login `octo`, Sign out visible; one blue Sign in with GitHub button, app name shown, no overflow. Reviewer to give own verdict. |
-| **UI: Design-system compliance (tokens/colors/typography verified)** | ☑ pass | `e2e/ui.spec.ts` 'computed styles come from the tokens file' (body/h1/button color, font, size, weight, main padding vs `public/tokens.css` via computed probe); `test/tokens.test.ts` finds 0 hex literals outside `public/tokens.css`. |
-| **UI: Responsiveness at target viewports** | ☑ pass | 360x740, 768x1024, 1280x800: `scrollWidth <= viewport`, tap target >= 44px, mobile button > 80% width, desktop column <= 640px. No overflow found. |
+| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☑ pass | Reviewed `src/**`, migration, tests, CI, compose and config (diff of `main...HEAD`). Skipped lockfile and PNG bytes; two screenshots viewed. `lane_check`: `lane: C2, 42 files, 1432 lines, EXCEEDS (files 42 > 14; lines 1432 > 500)` (warn-only; a first scaffold, label kept). Findings: P0 0, P1 0, P2 1, P3 2, listed under Auto decisions. |
+| Full smoke suite still green (no regression) | ☑ pass | Same `pnpm ci:local` run: all unit and browser tests pass. No earlier app code exists to regress. |
+| **Companion score (easy-verifier)** | ☑ N/A | The companion tool was not run for this task. |
+| **UI: Visual regression (diff or verdict pasted)** | ☑ pass | Reviewer verdict after viewing `e2e/screenshots/ladders-mobile.png` and `e2e/screenshots/home-desktop.png`: heading `My ladders`, `No ladders yet`, login `octo`, Sign out; one `Sign in with GitHub` button, app name, no overflow — pass. |
+| **UI: Design-system compliance (tokens/colors/typography verified)** | ☑ pass | `e2e/ui.spec.ts` computed-style test and `test/tokens.test.ts` pass in the reviewer rerun. |
+| **UI: Responsiveness at target viewports** | ☑ pass | `e2e/ui.spec.ts` at 360, 768 and 1280 px pass in the reviewer rerun; no horizontal scroll. |
 
 ---
 
@@ -41,5 +56,4 @@ ls: cannot access 'pnpm-workspace.yaml': No such file or directory` (exit 2)
 
 **DELTA**: A learner can sign in with GitHub (against the test stub; real GitHub run is open) and see an empty `My ladders` page, on a migrated Postgres + pgvector, with CI that runs the same checks.
 
-**WITNESS**: [who ran it and when — derived from `memory/event-trace/Txxx.jsonl`, never the
-implementing agent alone]
+**WITNESS**: Supervisor reran `pnpm ci:local` on 2026-11-01T11:58 in `.claude/worktrees/T003`; trace `memory/event-trace/T003.jsonl`.
