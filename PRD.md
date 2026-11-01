@@ -124,7 +124,7 @@ they stay open (Phase 0 Step 1.5 materiality heuristic). They must be answered b
 | 1 | Goal: portfolio/learning project, or a product meant to grow users? | Hung | before v1 |
 | 2 | Core value (pick one): review habit, proof of skill, or community ladders? | Hung | before v1 |
 | 3 | Name: keep "Idea Ladder"? | Hung | before v1 |
-| 4 | Backend: local-first with optional sync, or accounts from day one? | Hung | before v1 |
-| 5 | AI provider and cost cap per ladder | Hung | before v1 |
+| 4 | ~~Backend~~ **Resolved 2026-11-01 by user: accounts from day one** (GitHub OAuth; progress, reviews, evidence in Postgres). | Hung | done |
+| 5 | ~~AI provider~~ **Resolved 2026-11-01 by user: Claude generates (model A); a second provider blind-solves (model B).** Cost cap: user asked why ladders cost money → not set; v1 task measures real cost per ladder on the golden set first. | Hung | cap after measurement |
 | 6 | Open source from v0, or only the ladder content repo at v2? | Hung | before v1 |
 | 7 | Assumption: the blind-solver check catches wrong keys — "Design choice, not yet tested" (§ LLM strategy). Measured by spike T001. | Supervisor | T001 |

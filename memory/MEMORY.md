@@ -26,3 +26,4 @@
 - [T001 outcome](decisions.md#2026-11-01--v0-runs-as-experiments-only-option-b-narrowed) — key check alone fails (11.3% false-reject) → v1 needs 2nd check; proof + GitHub read keep
 - [Gate 5 trace gotcha](learnings.md#patterns) — hook counts `npm/pnpm test`, not `node --test`; keep test commands short
 - [Source conflicts](learnings.md#requirement-clarifications) — 3 self-contradictions in the requirement doc; see docs/MAIN_FLOW.md § 5
+- [Phase plan T003–T030](decisions.md#2026-11-01--phase-plan-t003t030) — v1 19 tasks, v2 6, v3 5; each phase waits for its gate

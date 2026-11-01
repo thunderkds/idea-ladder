@@ -92,6 +92,7 @@ sequenceDiagram
 |---|---|---|---|
 | C1 | Daily loop says "Review 1, 3, 7, 21 days" (fixed intervals); the stack says FSRS (adaptive intervals, "Deterministic review intervals") | daily-loop diagram vs § Framework stack | FSRS wins; the fixed days are an illustration |
 | C2 | Pass-test diagram names the Issuer an "OB 3.0 signer" issuing a VC; the stack says "Plain signed JSON for v1, upgrade at v2" | pass-test diagram vs § Framework stack | v1 = plain signed JSON (T001 tested this); OB 3.0 at v2 |
+| C4 | Gate 3 (before v3) needs a "first outside ladder PR", but the community ladders repo that receives such a PR is built in v3 (T025) | roadmap diagram | T025 may start once Gate 3's "proof links get shared" part passes; the outside-PR part is then checked after T025 |
 | C3 | Vision says "review daily in 5 minutes"; the daily loop starts with "Learn 20 to 30 min" | § Vision vs daily-loop diagram | 5 min = review only; a level's learn step is longer |
 
 ## 6. Facts from the diagrams that change earlier assumptions
