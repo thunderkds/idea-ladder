@@ -14,6 +14,7 @@ import { findLadderId, getJob } from './start/jobs.js';
 import { parseRepoUrl, UnsupportedUrlError } from './start/repo-url.js';
 import { type Enqueue, StartError, type StartErrorCode, startLadder } from './start/service.js';
 import { HomePage, JobPage, LaddersPage, MessagePage, UnsupportedUrlPage } from './views.js';
+import type { ReaderDeps } from './reader/pick-step.js';
 import { createLadderGenerate, inngest, sendLadderRequested } from './workflow/ladder-generate.js';
 
 const MAX_URL_LENGTH = 2048;
@@ -34,9 +35,11 @@ export interface AppDeps {
   fetchImpl?: typeof fetch;
   /** Sends the ladder/generate.requested event. Defaults to the Inngest client; tests pass a spy. */
   enqueue?: Enqueue;
+  /** The repo reader (model A + limits). Without it the workflow stops after `fetch-repo`. */
+  reader?: ReaderDeps | undefined;
 }
 
-export function createApp({ config, pool, fetchImpl, enqueue = sendLadderRequested }: AppDeps) {
+export function createApp({ config, pool, fetchImpl, enqueue = sendLadderRequested, reader }: AppDeps) {
   const app = new Hono();
   const github: GithubOptions = { baseUrl: config.githubApiBaseUrl, token: config.githubAppToken, fetchImpl };
   const cookieBase = { httpOnly: true, sameSite: 'Lax', secure: config.secureCookies } as const;
@@ -100,7 +103,7 @@ export function createApp({ config, pool, fetchImpl, enqueue = sendLadderRequest
     return c.html(<LaddersPage login={session.githubLogin} />);
   });
 
-  app.on(['GET', 'POST', 'PUT'], '/api/inngest', serveInngest({ client: inngest, functions: [createLadderGenerate(pool, github)] }));
+  app.on(['GET', 'POST', 'PUT'], '/api/inngest', serveInngest({ client: inngest, functions: [createLadderGenerate(pool, github, reader)] }));
 
   function startErrorResponse(err: StartError) {
     const { status, message } = START_ERRORS[err.code];

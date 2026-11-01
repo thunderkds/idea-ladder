@@ -80,11 +80,13 @@ export function UnsupportedUrlPage(props: { url: string }) {
   );
 }
 
-const STATUS_HEADINGS = { queued: 'Queued', running: 'Reading the repo', fetched: 'Done' } as const;
+const STATUS_HEADINGS = { queued: 'Queued', running: 'Reading the repo', fetched: 'Done', picking: 'Picking core files', picked: 'Done' } as const;
 
 const FAILURE_TEXT: Record<string, string> = {
   'repo-not-found': 'GitHub has no public repository with that name.',
   'github-error': 'GitHub did not answer after several tries.',
+  'reader-invalid-output': 'The reader could not pick core files for this repository.',
+  'reader-error': 'Picking core files did not work after several tries.',
   'enqueue-failed': 'The job could not be started.',
 };
 
@@ -95,14 +97,14 @@ function formatResetTime(date: Date): string {
 export interface JobView {
   id: string;
   repoFullName: string;
-  status: 'queued' | 'running' | 'fetched' | 'failed';
+  status: 'queued' | 'running' | 'fetched' | 'picking' | 'picked' | 'failed';
   reason: string | null;
   resetAt: Date | null;
 }
 
 export function JobPage(props: { job: JobView }) {
   const { job } = props;
-  const isFinal = job.status === 'fetched' || job.status === 'failed';
+  const isFinal = job.status === 'fetched' || job.status === 'picked' || job.status === 'failed';
   const heading = job.status === 'failed' ? `Failed: ${job.reason ?? 'unknown'}` : STATUS_HEADINGS[job.status];
   return (
     <Layout title={`${heading} - ${APP_NAME}`}>
@@ -119,7 +121,7 @@ export function JobPage(props: { job: JobView }) {
       {job.status === 'failed' && job.reason !== 'rate-limited' ? (
         <p>{FAILURE_TEXT[job.reason ?? ''] ?? 'Something went wrong.'}</p>
       ) : null}
-      {job.status === 'fetched' ? <p>The repo is read and saved. Building the ladder arrives in a later release.</p> : null}
+      {job.status === 'fetched' || job.status === 'picked' ? <p>The repo is read and saved. Building the ladder arrives in a later release.</p> : null}
       {!isFinal ? <p class="muted">This page updates by itself.</p> : null}
       {job.status === 'failed' ? (
         <p>

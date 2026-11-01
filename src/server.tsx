@@ -2,6 +2,7 @@ import { serve } from '@hono/node-server';
 import { createApp } from './app.js';
 import { ConfigError, loadConfig } from './config.js';
 import { createPool } from './db.js';
+import { readerFromEnv } from './reader/from-env.js';
 
 let config;
 try {
@@ -15,7 +16,7 @@ try {
 }
 
 const pool = createPool(config.databaseUrl);
-const server = serve({ fetch: createApp({ config, pool }).fetch, port: config.port }, (info) => {
+const server = serve({ fetch: createApp({ config, pool, reader: readerFromEnv(process.env) }).fetch, port: config.port }, (info) => {
   console.log(`Idea Ladder listening on http://localhost:${info.port}`);
 });
 

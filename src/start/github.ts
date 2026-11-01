@@ -64,7 +64,7 @@ const DEP_FILES = new Set([
   'Cargo.toml', 'go.mod', 'pom.xml', 'build.gradle', 'Gemfile', 'composer.json', 'deno.json',
 ]);
 
-async function get(opts: GithubOptions, path: string): Promise<Response> {
+export async function get(opts: GithubOptions, path: string): Promise<Response> {
   const headers: Record<string, string> = { accept: 'application/vnd.github+json', 'x-github-api-version': '2022-11-28' };
   if (opts.token) headers.authorization = `Bearer ${opts.token}`;
   const res = await (opts.fetchImpl ?? fetch)(`${opts.baseUrl}${path}`, { headers, redirect: 'follow' });

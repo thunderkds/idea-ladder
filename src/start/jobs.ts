@@ -2,7 +2,7 @@ import type pg from 'pg';
 import { confidenceScore } from './confidence.js';
 import type { RepoSnapshot } from './github.js';
 
-export type JobStatus = 'queued' | 'running' | 'fetched' | 'failed';
+export type JobStatus = 'queued' | 'running' | 'fetched' | 'picking' | 'picked' | 'failed';
 
 export interface Job {
   id: string;
@@ -71,9 +71,13 @@ export async function markJobRunning(pool: pg.Pool, jobId: string): Promise<void
   await pool.query(`UPDATE generation_jobs SET status = 'running', updated_at = now() WHERE id = $1 AND status = 'queued'`, [jobId]);
 }
 
+export async function markJobPicking(pool: pg.Pool, jobId: string): Promise<void> {
+  await pool.query(`UPDATE generation_jobs SET status = 'picking', updated_at = now() WHERE id = $1 AND status IN ('fetched', 'picking')`, [jobId]);
+}
+
 export async function markJobFailed(pool: pg.Pool, jobId: string, reason: string, resetAt?: Date): Promise<void> {
   await pool.query(
-    `UPDATE generation_jobs SET status = 'failed', reason = $2, reset_at = $3, updated_at = now() WHERE id = $1 AND status <> 'fetched'`,
+    `UPDATE generation_jobs SET status = 'failed', reason = $2, reset_at = $3, updated_at = now() WHERE id = $1 AND status NOT IN ('fetched', 'picked')`,
     [jobId, reason, resetAt ?? null],
   );
 }

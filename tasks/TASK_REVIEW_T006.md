@@ -48,7 +48,7 @@ Paused: auto-mode check failed — tasks/TASK_REVIEW_T006.md has no `## Auto dec
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass / ☐ fail | [test file path(s) — required before Done] |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass (AC 1-6, 8; AC 7 paid run pending) | `test/repo-reader.test.ts` (AC 1,2,3,4,6,8), `test/pick-core-files.test.ts` (AC 2 storage, 5, 6, GitHub cache, retry), `eval/test/repo-reader.test.ts` (AC 7 subject, verdict lines). Run output: root 11 files / 151 tests pass; eval 7 files / 71 tests pass. |
 | Verification command run | ☐ pass / ☐ fail | [paste actual output] |
 | Negative cases hold | ☐ pass / ☐ fail | |
 | verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
@@ -84,9 +84,23 @@ $ pnpm test -- repo-reader pick-core-files      (no test file matches; no Postgr
 ```
 There is no `repo-reader` eval subject, no `pickCoreFiles`, and no `pick-core-files` step in `ladder-generate`.
 
-**AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
+**AFTER** (2026-11-01T09:24Z, same worktree, after the change):
 
-**DELTA**: [one sentence — what a user can now do that they could not before]
+```
+$ pnpm test            (root; Postgres container idea-ladder-db-1 on localhost:54329)
+ Test Files  11 passed (11)
+      Tests  151 passed (151)
+$ pnpm test -- repo-reader pick-core-files    (vitest ignores the filter after "--"; it runs the whole suite, 11 files, 151 tests)
+$ cd eval && pnpm test
+ Test Files  7 passed (7)
+      Tests  71 passed (71)
+$ pnpm typecheck && pnpm lint         -> both exit 0
+$ cd eval && pnpm eval -- --step core-files --subject repo-reader
+Error: repo-reader needs ANTHROPIC_API_KEY and MODEL_A_ID in the environment (a live, paid run)
+```
+The eval subject now loads and stops with a clear message. The paid golden-set run (AC 7) did NOT run: ANTHROPIC_API_KEY is not set here. No score exists. Before the run, `eval/prices.json` needs a priced entry for MODEL_A_ID (source URL and date); the cost logger refuses an unpriced model.
+Run when a key is available: `cd eval && ANTHROPIC_API_KEY=... MODEL_A_ID=... pnpm eval -- --step core-files --subject repo-reader` (writes `eval/reports/core-files-<stamp>.{json,md}` and `...-repo-reader-summary.md` with the per-repo table, means and the three VERDICT lines).
 
-**WITNESS**: [who ran it and when — derived from `memory/event-trace/Txxx.jsonl`, never the
-implementing agent alone]
+**DELTA**: A job now continues past fetch-repo into `pick-core-files`: a bounded three-tool reader on model A returns 3 to 10 validated core files with reasons, stored as ranked `core_files`, with every model call cost-logged and a ready golden-set command; without a model configured, the workflow still stops after fetch-repo.
+
+**WITNESS**: backend-developer sub-agent run in worktree T006; confirm against `memory/event-trace/T006.jsonl`.

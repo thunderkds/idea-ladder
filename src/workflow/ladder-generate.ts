@@ -1,7 +1,8 @@
 import { Inngest, NonRetriableError } from 'inngest';
 import type pg from 'pg';
 import { type GithubOptions, RateLimitError, RepoNotFoundError, fetchRepoSnapshot } from '../start/github.js';
-import { markJobFailed, markJobRunning, saveSnapshot } from '../start/jobs.js';
+import { pickCoreFilesStep, type PickCoreFilesStepResult, type ReaderDeps } from '../reader/pick-step.js';
+import { getJob, markJobFailed, markJobRunning, saveSnapshot } from '../start/jobs.js';
 import { LADDER_REQUESTED, type Enqueue, type LadderRequested } from '../start/service.js';
 
 export const inngest = new Inngest({ id: 'idea-ladder' });
@@ -46,7 +47,12 @@ export async function fetchRepo(pool: pg.Pool, github: GithubOptions, data: Ladd
   return { status: 'fetched' };
 }
 
-export function createLadderGenerate(pool: pg.Pool, github: GithubOptions) {
+/**
+ * `reader` is optional: without it (no model configured) the function stops after `fetch-repo`, as before.
+ * With it, step `pick-core-files` runs next. Inngest keeps the result of a finished step, so a retry of
+ * `pick-core-files` does not run `fetch-repo` again.
+ */
+export function createLadderGenerate(pool: pg.Pool, github: GithubOptions, reader?: ReaderDeps) {
   return inngest.createFunction(
     {
       id: 'ladder-generate',
@@ -54,13 +60,17 @@ export function createLadderGenerate(pool: pg.Pool, github: GithubOptions) {
       // Retries are spent: the job must not stay `running` forever.
       onFailure: async ({ event }) => {
         const jobId = (event.data.event?.data as Partial<LadderRequested> | undefined)?.jobId;
-        if (typeof jobId === 'string') await markJobFailed(pool, jobId, 'github-error');
+        if (typeof jobId !== 'string') return;
+        const job = await getJob(pool, jobId);
+        await markJobFailed(pool, jobId, job?.status === 'picking' ? 'reader-error' : 'github-error');
       },
     },
     async ({ event, step }) => {
       const data = readEventData(event.data);
+      const fetched = await step.run('fetch-repo', () => fetchRepo(pool, github, data));
+      if (!reader || fetched.status === 'failed') return fetched;
       // Later tasks add steps after this one.
-      return await step.run('fetch-repo', () => fetchRepo(pool, github, data));
+      return await step.run('pick-core-files', (): Promise<PickCoreFilesStepResult> => pickCoreFilesStep(pool, github, reader, data));
     },
   );
 }

@@ -1,9 +1,9 @@
 // pnpm eval -- --step core-files|concepts --subject baseline-readme   (offline: replays golden/fixtures, no network, no LLM)
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { isAbsolute, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { loadSnapshot } from "../fixtures.js";
-import { renderMarkdown, runEval, writeReport, type Step, type Subject } from "../harness.js";
+import { renderMarkdown, runEval, writeReport, type Report, type RunOptions, type Step, type Subject } from "../harness.js";
 import { checkGolden, goldenFileSchema } from "../schema.js";
 import { parseArgs } from "./args.js";
 
@@ -15,7 +15,7 @@ if ((step !== "core-files" && step !== "concepts") || typeof name !== "string") 
   process.exit(2);
 }
 const specifier = /[/.]/.test(name) ? pathToFileURL(isAbsolute(name) ? name : resolve(process.cwd(), name)).href : new URL(`../subjects/${name}.ts`, import.meta.url).href;
-const mod = (await import(specifier)) as { subject?: Subject; default?: Subject };
+const mod = (await import(specifier)) as { subject?: Subject; default?: Subject; summarize?: (r: Report, ctx: Pick<RunOptions, "repos" | "loadSnapshot">) => Promise<string> };
 const subject = mod.subject ?? mod.default;
 if (!subject) { console.error(`${name} exports neither "subject" nor a default Subject`); process.exit(2); }
 
@@ -29,3 +29,11 @@ const report = await runEval({ step: step as Step, subject, subjectName: name, r
 const files = await writeReport(report, new URL("../../reports/", import.meta.url));
 console.log(renderMarkdown(report));
 console.log(`wrote ${files.json}\nwrote ${files.md}`);
+// A subject may add its own summary (cost, steps, comparison with the baseline).
+if (mod.summarize) {
+  const summary = await mod.summarize(report, { repos: golden, loadSnapshot: async (n) => snaps.get(n)! });
+  const summaryPath = files.md.replace(/\.md$/, `-${name}-summary.md`);
+  await writeFile(summaryPath, summary);
+  console.log(summary);
+  console.log(`wrote ${summaryPath}`);
+}
