@@ -1,0 +1,956 @@
+[
+ {
+  "id": "mitt-00",
+  "kind": "numeric",
+  "question": "Which size does the Mitt tagline claim?",
+  "options": [
+   "200b",
+   "20kb",
+   "2kb",
+   "2mb"
+  ],
+  "key": "200b",
+  "chunk": "Tiny 200b functional event emitter / pubsub.",
+  "source": {
+   "repo": "developit/mitt",
+   "path": "README.md",
+   "sha": "6b41670516ed8e8b738612f60491995470aa63b3"
+  }
+ },
+ {
+  "id": "mitt-01",
+  "kind": "span",
+  "question": "What does a wildcard event type do in Mitt?",
+  "options": [
+   "blocks all events",
+   "clears all handlers",
+   "emits all events",
+   "listens to all events"
+  ],
+  "key": "listens to all events",
+  "chunk": "a wildcard `\"*\"` event type listens to all events",
+  "source": {
+   "repo": "developit/mitt",
+   "path": "README.md",
+   "sha": "6b41670516ed8e8b738612f60491995470aa63b3"
+  }
+ },
+ {
+  "id": "mitt-02",
+  "kind": "span",
+  "question": "Which Node class does Mitt copy names and ideas from?",
+  "options": [
+   "EventEmitter",
+   "EventTarget",
+   "Observable",
+   "Readable"
+  ],
+  "key": "EventEmitter",
+  "chunk": "same names & ideas as [Node's EventEmitter](https://nodejs.org/api/events.html#events_class_eventemitter)",
+  "source": {
+   "repo": "developit/mitt",
+   "path": "README.md",
+   "sha": "6b41670516ed8e8b738612f60491995470aa63b3"
+  }
+ },
+ {
+  "id": "mitt-03",
+  "kind": "span",
+  "question": "What do Mitt methods not rely on?",
+  "options": [
+   "class",
+   "new",
+   "prototype",
+   "this"
+  ],
+  "key": "this",
+  "chunk": "methods don't rely on `this`",
+  "source": {
+   "repo": "developit/mitt",
+   "path": "README.md",
+   "sha": "6b41670516ed8e8b738612f60491995470aa63b3"
+  }
+ },
+ {
+  "id": "mitt-04",
+  "kind": "span",
+  "question": "Which oldest Internet Explorer does Mitt support?",
+  "options": [
+   "Chrome 50+",
+   "Edge 12+",
+   "IE11+",
+   "IE9+"
+  ],
+  "key": "IE9+",
+  "chunk": "It has no dependencies and supports IE9+.",
+  "source": {
+   "repo": "developit/mitt",
+   "path": "README.md",
+   "sha": "6b41670516ed8e8b738612f60491995470aa63b3"
+  }
+ },
+ {
+  "id": "mitt-05",
+  "kind": "span",
+  "question": "How many dependencies does Mitt have?",
+  "options": [
+   "many dependencies",
+   "no dependencies",
+   "one dependency",
+   "two dependencies"
+  ],
+  "key": "no dependencies",
+  "chunk": "It has no dependencies and supports IE9+.",
+  "source": {
+   "repo": "developit/mitt",
+   "path": "README.md",
+   "sha": "6b41670516ed8e8b738612f60491995470aa63b3"
+  }
+ },
+ {
+  "id": "mitt-06",
+  "kind": "span",
+  "question": "Which method fires an event?",
+  "options": [
+   "dispatch",
+   "emit",
+   "publish",
+   "trigger"
+  ],
+  "key": "emit",
+  "chunk": "// fire an event\nemitter.emit('foo', { a: 'b' })",
+  "source": {
+   "repo": "developit/mitt",
+   "path": "README.md",
+   "sha": "6b41670516ed8e8b738612f60491995470aa63b3"
+  }
+ },
+ {
+  "id": "mitt-07",
+  "kind": "span",
+  "question": "Which call clears all events?",
+  "options": [
+   "emitter.all.clear()",
+   "emitter.clear()",
+   "emitter.off('*')",
+   "emitter.reset()"
+  ],
+  "key": "emitter.all.clear()",
+  "chunk": "// clearing all events\nemitter.all.clear()",
+  "source": {
+   "repo": "developit/mitt",
+   "path": "README.md",
+   "sha": "6b41670516ed8e8b738612f60491995470aa63b3"
+  }
+ },
+ {
+  "id": "mitt-08",
+  "kind": "span",
+  "question": "Which method removes a handler?",
+  "options": [
+   "detach",
+   "off",
+   "on",
+   "remove"
+  ],
+  "key": "off",
+  "chunk": "emitter.on('foo', onFoo)   // listen\nemitter.off('foo', onFoo)  // unlisten",
+  "source": {
+   "repo": "developit/mitt",
+   "path": "README.md",
+   "sha": "6b41670516ed8e8b738612f60491995470aa63b3"
+  }
+ },
+ {
+  "id": "mitt-09",
+  "kind": "paraphrase",
+  "question": "What does the on method do?",
+  "options": [
+   "clears the map",
+   "invokes all handlers",
+   "registers a handler",
+   "removes a handler"
+  ],
+  "key": "registers a handler",
+  "chunk": "Register an event handler for the given type.",
+  "source": {
+   "repo": "developit/mitt",
+   "path": "README.md",
+   "sha": "6b41670516ed8e8b738612f60491995470aa63b3"
+  }
+ },
+ {
+  "id": "mitt-10",
+  "kind": "span",
+  "question": "What happens when off gets no handler?",
+  "options": [
+   "all handlers of the given type are removed",
+   "an error is thrown",
+   "nothing happens",
+   "only the first handler is removed"
+  ],
+  "key": "all handlers of the given type are removed",
+  "chunk": "Remove an event handler for the given type.\nIf `handler` is omitted, all handlers of the given type are removed.",
+  "source": {
+   "repo": "developit/mitt",
+   "path": "README.md",
+   "sha": "6b41670516ed8e8b738612f60491995470aa63b3"
+  }
+ },
+ {
+  "id": "mitt-11",
+  "kind": "span",
+  "question": "When do '*' handlers run?",
+  "options": [
+   "after type-matched handlers",
+   "before type-matched handlers",
+   "in parallel with type-matched handlers",
+   "instead of type-matched handlers"
+  ],
+  "key": "after type-matched handlers",
+  "chunk": "If present, `'*'` handlers are invoked after type-matched handlers.",
+  "source": {
+   "repo": "developit/mitt",
+   "path": "README.md",
+   "sha": "6b41670516ed8e8b738612f60491995470aa63b3"
+  }
+ },
+ {
+  "id": "mitt-12",
+  "kind": "span",
+  "question": "What action is not supported for '*' handlers?",
+  "options": [
+   "listening to",
+   "manually firing",
+   "registering",
+   "removing"
+  ],
+  "key": "manually firing",
+  "chunk": "Note: Manually firing '\\*' handlers is not supported.",
+  "source": {
+   "repo": "developit/mitt",
+   "path": "README.md",
+   "sha": "6b41670516ed8e8b738612f60491995470aa63b3"
+  }
+ },
+ {
+  "id": "mitt-13",
+  "kind": "span",
+  "question": "Which tsconfig option improves type inference?",
+  "options": [
+   "noImplicitAny",
+   "skipLibCheck",
+   "strict",
+   "strictNullChecks"
+  ],
+  "key": "strict",
+  "chunk": "Set `\"strict\": true` in your tsconfig.json to get improved type inference for `mitt` instance methods.",
+  "source": {
+   "repo": "developit/mitt",
+   "path": "README.md",
+   "sha": "6b41670516ed8e8b738612f60491995470aa63b3"
+  }
+ },
+ {
+  "id": "mitt-14",
+  "kind": "numeric",
+  "question": "Which TypeScript error code is shown for emitting a number on a string event?",
+  "options": [
+   "2304",
+   "2322",
+   "2339",
+   "2345"
+  ],
+  "key": "2345",
+  "chunk": "emitter.emit('foo', 42); // Error: Argument of type 'number' is not assignable to parameter of type 'string'. (2345)",
+  "source": {
+   "repo": "developit/mitt",
+   "path": "README.md",
+   "sha": "6b41670516ed8e8b738612f60491995470aa63b3"
+  }
+ },
+ {
+  "id": "mitt-15",
+  "kind": "span",
+  "question": "What type does mitt<Events>() infer?",
+  "options": [
+   "Emitter<Events>",
+   "EventBus<Events>",
+   "Handler<Events>",
+   "Store<Events>"
+  ],
+  "key": "Emitter<Events>",
+  "chunk": "const emitter = mitt<Events>(); // inferred as Emitter<Events>",
+  "source": {
+   "repo": "developit/mitt",
+   "path": "README.md",
+   "sha": "6b41670516ed8e8b738612f60491995470aa63b3"
+  }
+ },
+ {
+  "id": "mitt-16",
+  "kind": "paraphrase",
+  "question": "What is notable about the package name?",
+  "options": [
+   "the name was available",
+   "the name was renamed",
+   "the name was reserved",
+   "the name was sold"
+  ],
+  "key": "the name was available",
+  "chunk": "**Great Name:** somehow [mitt](https://npm.im/mitt) wasn't taken",
+  "source": {
+   "repo": "developit/mitt",
+   "path": "README.md",
+   "sha": "6b41670516ed8e8b738612f60491995470aa63b3"
+  }
+ },
+ {
+  "id": "mitt-17",
+  "kind": "span",
+  "question": "Which CDN hosts the UMD build?",
+  "options": [
+   "cdnjs",
+   "jsdelivr",
+   "skypack",
+   "unpkg"
+  ],
+  "key": "unpkg",
+  "chunk": "The [UMD](https://github.com/umdjs/umd) build is also available on [unpkg](https://unpkg.com):",
+  "source": {
+   "repo": "developit/mitt",
+   "path": "README.md",
+   "sha": "6b41670516ed8e8b738612f60491995470aa63b3"
+  }
+ },
+ {
+  "id": "mitt-18",
+  "kind": "span",
+  "question": "Which global holds the library in the UMD build?",
+  "options": [
+   "global.mitt",
+   "self.emitter",
+   "window.emitter",
+   "window.mitt"
+  ],
+  "key": "window.mitt",
+  "chunk": "You can find the library on `window.mitt`.",
+  "source": {
+   "repo": "developit/mitt",
+   "path": "README.md",
+   "sha": "6b41670516ed8e8b738612f60491995470aa63b3"
+  }
+ },
+ {
+  "id": "mitt-19",
+  "kind": "span",
+  "question": "Which command creates a new branch for a feature?",
+  "options": [
+   "git branch -d my-new-feature",
+   "git checkout -b my-new-feature",
+   "git push origin my-new-feature",
+   "git switch my-new-feature"
+  ],
+  "key": "git checkout -b my-new-feature",
+  "chunk": "Create a new branch for the new feature: `git checkout -b my-new-feature`",
+  "source": {
+   "repo": "developit/mitt",
+   "path": "README.md",
+   "sha": "6b41670516ed8e8b738612f60491995470aa63b3"
+  }
+ },
+ {
+  "id": "dset-20",
+  "kind": "numeric",
+  "question": "What size does dset claim?",
+  "options": [
+   "182B",
+   "197B",
+   "307B",
+   "366B"
+  ],
+  "key": "197B",
+  "chunk": "> A tiny (197B) utility for safely writing deep Object values~!",
+  "source": {
+   "repo": "lukeed/dset",
+   "path": "readme.md",
+   "sha": "05b1ec0f8cebe3b5d5667285bc7da90f38a7215e"
+  }
+ },
+ {
+  "id": "dset-21",
+  "kind": "numeric",
+  "question": "What is the gzip size of dset/merge?",
+  "options": [
+   "182 bytes",
+   "197 bytes",
+   "307 bytes",
+   "366 bytes"
+  ],
+  "key": "307 bytes",
+  "chunk": "#### `dset/merge`\n> **Size (gzip):** 307 bytes",
+  "source": {
+   "repo": "lukeed/dset",
+   "path": "readme.md",
+   "sha": "05b1ec0f8cebe3b5d5667285bc7da90f38a7215e"
+  }
+ },
+ {
+  "id": "dset-22",
+  "kind": "span",
+  "question": "Which library reads deep properties?",
+  "options": [
+   "clean-set",
+   "dequal",
+   "dlv",
+   "klona"
+  ],
+  "key": "dlv",
+  "chunk": "For _accessing_ deep object properties, please see [`dlv`](https://github.com/developit/dlv).",
+  "source": {
+   "repo": "lukeed/dset",
+   "path": "readme.md",
+   "sha": "05b1ec0f8cebe3b5d5667285bc7da90f38a7215e"
+  }
+ },
+ {
+  "id": "dset-23",
+  "kind": "span",
+  "question": "Which library offers immutable writes?",
+  "options": [
+   "clean-set",
+   "dequal",
+   "dlv",
+   "klona"
+  ],
+  "key": "clean-set",
+  "chunk": "If you need immutable writes, please visit [`clean-set`](https://github.com/fwilkerson/clean-set) (182B).",
+  "source": {
+   "repo": "lukeed/dset",
+   "path": "readme.md",
+   "sha": "05b1ec0f8cebe3b5d5667285bc7da90f38a7215e"
+  }
+ },
+ {
+  "id": "dset-24",
+  "kind": "span",
+  "question": "Which library does the README pair with dset to clone a source?",
+  "options": [
+   "clean-set",
+   "dequal",
+   "dlv",
+   "klona"
+  ],
+  "key": "klona",
+  "chunk": "Alternatively, you may pair `dset` with [`klona`](https://github.com/lukeed/klona), a 366B utility to clone your source(s).",
+  "source": {
+   "repo": "lukeed/dset",
+   "path": "readme.md",
+   "sha": "05b1ec0f8cebe3b5d5667285bc7da90f38a7215e"
+  }
+ },
+ {
+  "id": "dset-25",
+  "kind": "numeric",
+  "question": "How big is the cloning utility in that pairing?",
+  "options": [
+   "182B",
+   "197B",
+   "307B",
+   "366B"
+  ],
+  "key": "366B",
+  "chunk": "Alternatively, you may pair `dset` with [`klona`](https://github.com/lukeed/klona), a 366B utility to clone your source(s).",
+  "source": {
+   "repo": "lukeed/dset",
+   "path": "readme.md",
+   "sha": "05b1ec0f8cebe3b5d5667285bc7da90f38a7215e"
+  }
+ },
+ {
+  "id": "dset-26",
+  "kind": "span",
+  "question": "Which array path equals the string path 'foo.bar'?",
+  "options": [
+   "'foo/bar'",
+   "['bar', 'foo']",
+   "['foo', 'bar']",
+   "['foo.bar']"
+  ],
+  "key": "['foo', 'bar']",
+  "chunk": "dset(foo, 'foo.bar', 'hello');\n// or: dset(foo, ['foo', 'bar'], 'hello');",
+  "source": {
+   "repo": "lukeed/dset",
+   "path": "readme.md",
+   "sha": "05b1ec0f8cebe3b5d5667285bc7da90f38a7215e"
+  }
+ },
+ {
+  "id": "dset-27",
+  "kind": "numeric",
+  "question": "Which value is written at path b.1?",
+  "options": [
+   "1",
+   "2",
+   "3",
+   "999"
+  ],
+  "key": "999",
+  "chunk": "dset(bar, 'b.1', 999);\n// or: dset(bar, ['b', 1], 999);\n// or: dset(bar, ['b', '1'], 999);",
+  "source": {
+   "repo": "lukeed/dset",
+   "path": "readme.md",
+   "sha": "05b1ec0f8cebe3b5d5667285bc7da90f38a7215e"
+  }
+ },
+ {
+  "id": "dset-28",
+  "kind": "span",
+  "question": "What does the default module do at the key-path?",
+  "options": [
+   "clones values",
+   "forcibly writes values",
+   "freezes values",
+   "merges values"
+  ],
+  "key": "forcibly writes values",
+  "chunk": "The main/default `dset` module forcibly writes values at the assigned key-path.",
+  "source": {
+   "repo": "lukeed/dset",
+   "path": "readme.md",
+   "sha": "05b1ec0f8cebe3b5d5667285bc7da90f38a7215e"
+  }
+ },
+ {
+  "id": "dset-29",
+  "kind": "span",
+  "question": "What is created when an integer segment is met?",
+  "options": [
+   "Arrays",
+   "Maps",
+   "Objects",
+   "Sets"
+  ],
+  "key": "Arrays",
+  "chunk": "> **Important:** New Objects are created at each segment if there is not an existing structure.<br>However, when integers are encounted, Arrays are created instead!",
+  "source": {
+   "repo": "lukeed/dset",
+   "path": "readme.md",
+   "sha": "05b1ec0f8cebe3b5d5667285bc7da90f38a7215e"
+  }
+ },
+ {
+  "id": "dset-30",
+  "kind": "span",
+  "question": "What does dset return?",
+  "options": [
+   "Object",
+   "boolean",
+   "string",
+   "void"
+  ],
+  "key": "void",
+  "chunk": "Returns: `void`",
+  "source": {
+   "repo": "lukeed/dset",
+   "path": "readme.md",
+   "sha": "05b1ec0f8cebe3b5d5667285bc7da90f38a7215e"
+  }
+ },
+ {
+  "id": "dset-31",
+  "kind": "span",
+  "question": "Which types may the path have?",
+  "options": [
+   "Array only",
+   "Object or Array",
+   "String or Array",
+   "String or Number"
+  ],
+  "key": "String or Array",
+  "chunk": "Type: `String` or `Array`",
+  "source": {
+   "repo": "lukeed/dset",
+   "path": "readme.md",
+   "sha": "05b1ec0f8cebe3b5d5667285bc7da90f38a7215e"
+  }
+ },
+ {
+  "id": "dset-32",
+  "kind": "span",
+  "question": "Which key of the path receives the value?",
+  "options": [
+   "every",
+   "first",
+   "last",
+   "middle"
+  ],
+  "key": "last",
+  "chunk": "> **Note:** Please be aware that only the _last_ key actually receives the value!",
+  "source": {
+   "repo": "lukeed/dset",
+   "path": "readme.md",
+   "sha": "05b1ec0f8cebe3b5d5667285bc7da90f38a7215e"
+  }
+ },
+ {
+  "id": "dset-33",
+  "kind": "span",
+  "question": "Which library was fastest in the benchmark?",
+  "options": [
+   "dset",
+   "klona",
+   "lodash/set",
+   "set-value"
+  ],
+  "key": "dset",
+  "chunk": "  set-value    x 1,701,821 ops/sec ±1.81% (93 runs sampled)\n  lodash/set   x   975,530 ops/sec ±0.96% (91 runs sampled)\n  dset         x 1,797,922 ops/sec ±0.32% (94 runs sampled)",
+  "source": {
+   "repo": "lukeed/dset",
+   "path": "readme.md",
+   "sha": "05b1ec0f8cebe3b5d5667285bc7da90f38a7215e"
+  }
+ },
+ {
+  "id": "dset-34",
+  "kind": "numeric",
+  "question": "How many ops/sec did dset reach?",
+  "options": [
+   "1,701,821",
+   "1,797",
+   "1,797,922",
+   "975,530"
+  ],
+  "key": "1,797,922",
+  "chunk": "  dset         x 1,797,922 ops/sec ±0.32% (94 runs sampled)",
+  "source": {
+   "repo": "lukeed/dset",
+   "path": "readme.md",
+   "sha": "05b1ec0f8cebe3b5d5667285bc7da90f38a7215e"
+  }
+ },
+ {
+  "id": "dset-35",
+  "kind": "numeric",
+  "question": "Which Node version ran the benchmark?",
+  "options": [
+   "10.1",
+   "10.13",
+   "10.13.0",
+   "13.0"
+  ],
+  "key": "10.13.0",
+  "chunk": "# Node 10.13.0",
+  "source": {
+   "repo": "lukeed/dset",
+   "path": "readme.md",
+   "sha": "05b1ec0f8cebe3b5d5667285bc7da90f38a7215e"
+  }
+ },
+ {
+  "id": "dset-36",
+  "kind": "paraphrase",
+  "question": "Why does dset/merge exist?",
+  "options": [
+   "to clone sources",
+   "to combine streamed response chunks",
+   "to freeze objects",
+   "to sort keys"
+  ],
+  "key": "to combine streamed response chunks",
+  "chunk": "you will need to merge the response chunks into a single object/list.",
+  "source": {
+   "repo": "lukeed/dset",
+   "path": "readme.md",
+   "sha": "05b1ec0f8cebe3b5d5667285bc7da90f38a7215e"
+  }
+ },
+ {
+  "id": "dset-37",
+  "kind": "span",
+  "question": "Which license does dset use?",
+  "options": [
+   "Apache-2.0",
+   "BSD",
+   "ISC",
+   "MIT"
+  ],
+  "key": "MIT",
+  "chunk": "MIT © [Luke Edwards](https://lukeed.com)",
+  "source": {
+   "repo": "lukeed/dset",
+   "path": "readme.md",
+   "sha": "05b1ec0f8cebe3b5d5667285bc7da90f38a7215e"
+  }
+ },
+ {
+  "id": "pf-38",
+  "kind": "numeric",
+  "question": "How many lines does Pocket Flow claim?",
+  "options": [
+   "10-line",
+   "100-line",
+   "1000-line",
+   "500-line"
+  ],
+  "key": "100-line",
+  "chunk": "Pocket Flow is a [100-line](https://github.com/The-Pocket/PocketFlow/blob/main/pocketflow/__init__.py) minimalist LLM framework",
+  "source": {
+   "repo": "The-Pocket/PocketFlow",
+   "path": "README.md",
+   "sha": "f74d023f93607b8c3268133339a5e532a949898c"
+  }
+ },
+ {
+  "id": "pf-39",
+  "kind": "span",
+  "question": "How many dependencies does Pocket Flow have?",
+  "options": [
+   "one dependency",
+   "ten dependencies",
+   "two dependencies",
+   "zero dependencies"
+  ],
+  "key": "zero dependencies",
+  "chunk": "- **Lightweight**: Just 100 lines. Zero bloat, zero dependencies, zero vendor lock-in.",
+  "source": {
+   "repo": "The-Pocket/PocketFlow",
+   "path": "README.md",
+   "sha": "f74d023f93607b8c3268133339a5e532a949898c"
+  }
+ },
+ {
+  "id": "pf-40",
+  "kind": "span",
+  "question": "Which abstraction is the core of LLM frameworks?",
+  "options": [
+   "Agent",
+   "Chain",
+   "Graph",
+   "Pipeline"
+  ],
+  "key": "Graph",
+  "chunk": "capture the core abstraction of LLM frameworks: Graph!",
+  "source": {
+   "repo": "The-Pocket/PocketFlow",
+   "path": "README.md",
+   "sha": "f74d023f93607b8c3268133339a5e532a949898c"
+  }
+ },
+ {
+  "id": "pf-41",
+  "kind": "numeric",
+  "question": "What size does PocketFlow list in the comparison table?",
+  "options": [
+   "+166MB",
+   "+173MB",
+   "+198MB",
+   "+56KB"
+  ],
+  "key": "+56KB",
+  "chunk": "| **PocketFlow** | **Graph**                    | **None**                                                 | **None**                                                  | **100**       | **+56KB**                  |",
+  "source": {
+   "repo": "The-Pocket/PocketFlow",
+   "path": "README.md",
+   "sha": "f74d023f93607b8c3268133339a5e532a949898c"
+  }
+ },
+ {
+  "id": "pf-42",
+  "kind": "numeric",
+  "question": "How many lines does the table list for LangChain?",
+  "options": [
+   "18K",
+   "37K",
+   "405K",
+   "8K"
+  ],
+  "key": "405K",
+  "chunk": "| LangChain  | Agent, Chain               | Many <br><sup><sub>(e.g., QA, Summarization)</sub></sup>              | Many <br><sup><sub>(e.g., OpenAI, Pinecone, etc.)</sub></sup>                   | 405K          | +166MB                     |",
+  "source": {
+   "repo": "The-Pocket/PocketFlow",
+   "path": "README.md",
+   "sha": "f74d023f93607b8c3268133339a5e532a949898c"
+  }
+ },
+ {
+  "id": "pf-43",
+  "kind": "span",
+  "question": "Which command installs Pocket Flow?",
+  "options": [
+   "cargo add pocketflow",
+   "go get pocketflow",
+   "npm install pocketflow",
+   "pip install pocketflow"
+  ],
+  "key": "pip install pocketflow",
+  "chunk": "- To install, ```pip install pocketflow```or just copy the [source code](https://github.com/The-Pocket/PocketFlow/blob/main/pocketflow/__init__.py) (only 100 lines).",
+  "source": {
+   "repo": "The-Pocket/PocketFlow",
+   "path": "README.md",
+   "sha": "f74d023f93607b8c3268133339a5e532a949898c"
+  }
+ },
+ {
+  "id": "pf-44",
+  "kind": "span",
+  "question": "Which language has a Pocket Flow port?",
+  "options": [
+   "Java",
+   "Kotlin",
+   "Ruby",
+   "Swift"
+  ],
+  "key": "Java",
+  "chunk": "[Typescript](https://github.com/The-Pocket/PocketFlow-Typescript), [Java](https://github.com/The-Pocket/PocketFlow-Java), [C++](https://github.com/The-Pocket/PocketFlow-CPP), [Go](https://github.com/The-Pocket/PocketFlow-Go)",
+  "source": {
+   "repo": "The-Pocket/PocketFlow",
+   "path": "README.md",
+   "sha": "f74d023f93607b8c3268133339a5e532a949898c"
+  }
+ },
+ {
+  "id": "pf-45",
+  "kind": "span",
+  "question": "What does the Chat cookbook demo?",
+  "options": [
+   "A basic chat bot with conversation history",
+   "A search bot with web results",
+   "A translator with batch output",
+   "A voice assistant with speech output"
+  ],
+  "key": "A basic chat bot with conversation history",
+  "chunk": "| [Chat](https://github.com/The-Pocket/PocketFlow/tree/main/cookbook/pocketflow-chat) | ☆☆☆ <sup>*Dummy*</sup>  | A basic chat bot with conversation history |",
+  "source": {
+   "repo": "The-Pocket/PocketFlow",
+   "path": "README.md",
+   "sha": "f74d023f93607b8c3268133339a5e532a949898c"
+  }
+ },
+ {
+  "id": "pf-46",
+  "kind": "numeric",
+  "question": "What speedup does the Parallel demo show?",
+  "options": [
+   "10x",
+   "3x",
+   "5x",
+   "8x"
+  ],
+  "key": "3x",
+  "chunk": "| [Parallel](https://github.com/The-Pocket/PocketFlow/tree/main/cookbook/pocketflow-parallel-batch) |  ★☆☆ <sup>*Beginner*</sup> | A parallel execution demo that shows 3x speedup |",
+  "source": {
+   "repo": "The-Pocket/PocketFlow",
+   "path": "README.md",
+   "sha": "f74d023f93607b8c3268133339a5e532a949898c"
+  }
+ },
+ {
+  "id": "pf-47",
+  "kind": "numeric",
+  "question": "What speedup does the Parallel Flow demo show?",
+  "options": [
+   "12x",
+   "3x",
+   "5x",
+   "8x"
+  ],
+  "key": "8x",
+  "chunk": "| [Parallel Flow](https://github.com/The-Pocket/PocketFlow/tree/main/cookbook/pocketflow-parallel-batch-flow) | ★☆☆ <sup>*Beginner*</sup> | A parallel image processing showing 8x speedup |",
+  "source": {
+   "repo": "The-Pocket/PocketFlow",
+   "path": "README.md",
+   "sha": "f74d023f93607b8c3268133339a5e532a949898c"
+  }
+ },
+ {
+  "id": "pf-48",
+  "kind": "numeric",
+  "question": "How many tools does the Coding Agent have?",
+  "options": [
+   "10",
+   "4",
+   "6",
+   "8"
+  ],
+  "key": "6",
+  "chunk": "| [Coding Agent](https://github.com/The-Pocket/PocketFlow/tree/main/cookbook/pocketflow-coding-agent) | ★★★ <sup>*Advanced*</sup> | Production coding agent with 6 tools, memory, and patch-as-subflow |",
+  "source": {
+   "repo": "The-Pocket/PocketFlow",
+   "path": "README.md",
+   "sha": "f74d023f93607b8c3268133339a5e532a949898c"
+  }
+ },
+ {
+  "id": "pf-49",
+  "kind": "paraphrase",
+  "question": "What does the README say about other frameworks?",
+  "options": [
+   "existing frameworks are too costly",
+   "existing frameworks are too large",
+   "existing frameworks are too new",
+   "existing frameworks are too slow"
+  ],
+  "key": "existing frameworks are too large",
+  "chunk": "Current LLM frameworks are bloated... You only need 100 lines for LLM Framework!",
+  "source": {
+   "repo": "The-Pocket/PocketFlow",
+   "path": "README.md",
+   "sha": "f74d023f93607b8c3268133339a5e532a949898c"
+  }
+ },
+ {
+  "id": "pf-50",
+  "kind": "span",
+  "question": "Who designs in agentic coding?",
+  "options": [
+   "agents design",
+   "humans design",
+   "models design",
+   "teams design"
+  ],
+  "key": "humans design",
+  "chunk": "where *humans design* and *agents code*!",
+  "source": {
+   "repo": "The-Pocket/PocketFlow",
+   "path": "README.md",
+   "sha": "f74d023f93607b8c3268133339a5e532a949898c"
+  }
+ },
+ {
+  "id": "pf-51",
+  "kind": "numeric",
+  "question": "What productivity boost does the Agentic Coding bullet claim?",
+  "options": [
+   "10x",
+   "2x",
+   "3x",
+   "8x"
+  ],
+  "key": "10x",
+  "chunk": "Let AI Agents (e.g., Cursor AI) build Agents—10x productivity boost!",
+  "source": {
+   "repo": "The-Pocket/PocketFlow",
+   "path": "README.md",
+   "sha": "f74d023f93607b8c3268133339a5e532a949898c"
+  }
+ },
+ {
+  "id": "pf-52",
+  "kind": "span",
+  "question": "What does MCP stand for in the cookbook table?",
+  "options": [
+   "Managed Compute Platform",
+   "Message Control Protocol",
+   "Model Context Protocol",
+   "Multi Client Protocol"
+  ],
+  "key": "Model Context Protocol",
+  "chunk": "Agent using Model Context Protocol for numerical operations",
+  "source": {
+   "repo": "The-Pocket/PocketFlow",
+   "path": "README.md",
+   "sha": "f74d023f93607b8c3268133339a5e532a949898c"
+  }
+ }
+]
