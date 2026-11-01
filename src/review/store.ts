@@ -2,6 +2,7 @@ import type pg from 'pg';
 import { LEVEL_IDS, levelLockState } from '../ladder/lock-state.js';
 import { listMyLadders, readPassedLevelIds, type ReadPassed } from '../ladder/view.js';
 import { initialState, scheduleNext, stateToJson, type CardState, type ReviewRating } from './scheduler.js';
+import { resolveReviewedAt } from './sync.js';
 
 export const NEW_CARDS_PER_DAY = 10;
 const QUEUE_LIMIT = 100;
@@ -32,7 +33,7 @@ export interface ReviewQueue {
 }
 
 /** Ladder and level pairs the learner may review: ladders they started, levels not locked. */
-async function unlockedPairs(pool: pg.Pool, userId: string, readPassed: ReadPassed): Promise<{ ladderIds: string[]; levelIds: string[] }> {
+export async function unlockedPairs(pool: pg.Pool, userId: string, readPassed: ReadPassed): Promise<{ ladderIds: string[]; levelIds: string[] }> {
   const ladderIds: string[] = [];
   const levelIds: string[] = [];
   for (const ladder of await listMyLadders(pool, userId)) {
@@ -112,10 +113,12 @@ export interface RatingInput {
   rating: ReviewRating;
   idempotencyKey: string;
   elapsedMs: number;
+  /** When the learner rated the card on their device (a rating made offline). Validated by `resolveReviewedAt`. */
+  reviewedAt?: Date;
 }
 
 export type RatingResult =
-  | { ok: true; replayed: boolean; state: Record<string, unknown> }
+  | { ok: true; replayed: boolean; state: Record<string, unknown>; clientTimeRejected: boolean }
   | { ok: false; code: 'not-found' | 'key-reused' };
 
 interface StateRow {
@@ -164,20 +167,23 @@ export async function submitReviewRating(pool: pg.Pool, userId: string, input: R
     await client.query('BEGIN');
     // Serialises ratings of one learner's card, so a second tab always works on the updated state.
     await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`${userId}:${input.cardId}`]);
-    const existing = await client.query<{ card_id: string; state_after: Record<string, unknown> }>(
-      'SELECT card_id, state_after FROM review_log WHERE user_id = $1 AND idempotency_key = $2',
+    const existing = await client.query<{ card_id: string; state_after: Record<string, unknown>; client_time_rejected: boolean }>(
+      'SELECT card_id, state_after, client_time_rejected FROM review_log WHERE user_id = $1 AND idempotency_key = $2',
       [userId, input.idempotencyKey],
     );
     const logged = existing.rows[0];
     if (logged) {
       await client.query('ROLLBACK');
-      return logged.card_id === input.cardId ? { ok: true, replayed: true, state: logged.state_after } : { ok: false, code: 'key-reused' };
+      return logged.card_id === input.cardId
+        ? { ok: true, replayed: true, state: logged.state_after, clientTimeRejected: logged.client_time_rejected }
+        : { ok: false, code: 'key-reused' };
     }
 
     const now = (deps.now ?? (() => new Date()))();
     const stored = await client.query<StateRow>('SELECT * FROM card_states WHERE user_id = $1 AND card_id = $2', [userId, input.cardId]);
-    const before = stored.rows[0] ? rowToState(stored.rows[0]) : initialState(now);
-    const after = scheduleNext(before, input.rating, now);
+    const { reviewedAt, clientTimeRejected } = resolveReviewedAt(input.reviewedAt, stored.rows[0]?.last_review ?? null, now);
+    const before = stored.rows[0] ? rowToState(stored.rows[0]) : initialState(reviewedAt);
+    const after = scheduleNext(before, input.rating, reviewedAt);
     await client.query(
       `INSERT INTO card_states (user_id, card_id, due, stability, difficulty, elapsed_days, scheduled_days, learning_steps, reps, lapses, state, last_review)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
@@ -187,12 +193,12 @@ export async function submitReviewRating(pool: pg.Pool, userId: string, input: R
       [userId, input.cardId, after.due, after.stability, after.difficulty, after.elapsedDays, after.scheduledDays, after.learningSteps, after.reps, after.lapses, after.state, after.lastReview],
     );
     await client.query(
-      `INSERT INTO review_log (user_id, card_id, rating, state_before, state_after, reviewed_at, elapsed_ms, idempotency_key)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [userId, input.cardId, input.rating, stateToJson(before), stateToJson(after), now, input.elapsedMs, input.idempotencyKey],
+      `INSERT INTO review_log (user_id, card_id, rating, state_before, state_after, reviewed_at, elapsed_ms, idempotency_key, client_time_rejected)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [userId, input.cardId, input.rating, stateToJson(before), stateToJson(after), reviewedAt, input.elapsedMs, input.idempotencyKey, clientTimeRejected],
     );
     await client.query('COMMIT');
-    return { ok: true, replayed: false, state: stateToJson(after) };
+    return { ok: true, replayed: false, state: stateToJson(after), clientTimeRejected };
   } catch (err) {
     await client.query('ROLLBACK').catch(() => undefined);
     // Another learner's request cannot reach this key (unique per learner), so this is the same learner using one key for two cards.
@@ -201,4 +207,39 @@ export async function submitReviewRating(pool: pg.Pool, userId: string, input: R
   } finally {
     client.release();
   }
+}
+
+export const OFFLINE_HORIZON_DAYS = 7;
+
+/** A queue card with the learner's full FSRS state (JSON form), so the device can schedule it offline. `null` for a new card. */
+export interface OfflineCard extends QueueCard {
+  fsrs: Record<string, unknown> | null;
+}
+
+export interface OfflinePack {
+  fetchedAt: string;
+  cards: OfflineCard[];
+  nextDue: string | null;
+  hasCards: boolean;
+}
+
+/** What the device caches at an online visit: today's queue plus every card due in the next 7 days, with states. */
+export async function getOfflinePack(pool: pg.Pool, userId: string, deps: ReviewDeps = {}): Promise<OfflinePack> {
+  const now = (deps.now ?? (() => new Date()))();
+  const queue = await getReviewQueue(pool, userId, deps);
+  const { ladderIds, levelIds } = await unlockedPairs(pool, userId, deps.readPassed ?? readPassedLevelIds);
+  const withState: OfflineCard[] = [];
+  if (ladderIds.length > 0) {
+    const horizon = new Date(now.getTime() + OFFLINE_HORIZON_DAYS * 86_400_000);
+    const rows = await pool.query<QueueRow & StateRow>(
+      `SELECT ${CARD_COLUMNS}, s.due, s.stability, s.difficulty, s.elapsed_days, s.scheduled_days, s.learning_steps, s.reps, s.lapses, s.state, s.last_review
+       FROM card_states s JOIN cards c ON c.id = s.card_id ${PAIRS} JOIN ladders l ON l.id = c.ladder_id
+       WHERE s.user_id = $1 AND s.due <= $4 ORDER BY s.due, c.id LIMIT $5`,
+      [userId, ladderIds, levelIds, horizon, 500],
+    );
+    for (const r of rows.rows) withState.push({ ...toQueueCard(r), fsrs: stateToJson(rowToState(r)) });
+  }
+  const known = new Set(withState.map((c) => c.id));
+  const fresh = queue.cards.filter((c) => c.state === 0 && !known.has(c.id)).map((c): OfflineCard => ({ ...c, fsrs: null }));
+  return { fetchedAt: now.toISOString(), cards: [...withState, ...fresh], nextDue: queue.nextDue, hasCards: queue.hasCards };
 }

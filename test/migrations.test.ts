@@ -9,6 +9,7 @@ const APP_TABLES = [
   'cards',
   'generation_jobs',
   'ladders',
+  'push_subscriptions',
   'repo_confidence',
   'repo_snapshots',
   'review_log',

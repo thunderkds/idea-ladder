@@ -12,6 +12,10 @@ function Layout(props: { title: string; children: Child }) {
         <title>{props.title}</title>
         <link rel="stylesheet" href="/assets/tokens.css" />
         <link rel="stylesheet" href="/assets/app.css" />
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <link rel="apple-touch-icon" href="/assets/icon-192.png" />
+        <script src="/assets/offline-store.js" defer></script>
+        <script src="/assets/pwa.js" defer></script>
       </head>
       <body>
         <main class="page">{props.children}</main>
@@ -49,6 +53,9 @@ export function LaddersPage(props: { login: string; ladders?: LadderListItem[] }
         </form>
       </header>
       <h1>My ladders</h1>
+      <p>
+        <a href="/settings">Settings</a>
+      </p>
       {ladders.length > 0 ? (
         <p>
           <a class="button button-quiet" href="/review">
@@ -152,7 +159,7 @@ export function LadderPage(props: { login: string; ladder: LadderView }) {
   );
 }
 
-export function ReviewPage(props: { login: string }) {
+export function ReviewPage(props: { login: string; learnerId: string }) {
   return (
     <Layout title={`Review - ${APP_NAME}`}>
       <header class="bar">
@@ -162,13 +169,84 @@ export function ReviewPage(props: { login: string }) {
         </span>
       </header>
       <h1>Daily review</h1>
-      <div id="review" class="review" data-session-seconds="300">
+      <p id="sync-status" class="muted" role="status"></p>
+      <div id="review" class="review" data-session-seconds="300" data-learner-id={props.learnerId}>
         <p class="muted">Loading your cards</p>
         <noscript>
           <p>Review needs JavaScript.</p>
         </noscript>
       </div>
+      <script src="/assets/vendor/ts-fsrs.js" defer></script>
+      <script src="/assets/fsrs-client.js" defer></script>
       <script src="/assets/review.js" defer></script>
+    </Layout>
+  );
+}
+
+export const OFFLINE_NOTICE = 'You are offline — this needs a connection';
+
+export function OfflinePage() {
+  return (
+    <Layout title={`Offline - ${APP_NAME}`}>
+      <h1>Offline</h1>
+      <p role="alert">{OFFLINE_NOTICE}</p>
+      <p>
+        <a class="button" href="/review">
+          Daily review
+        </a>
+      </p>
+    </Layout>
+  );
+}
+
+const HOURS = Array.from({ length: 24 }, (_, h) => h);
+
+export function SettingsPage(props: { login: string; vapidPublicKey: string | undefined }) {
+  return (
+    <Layout title={`Settings - ${APP_NAME}`}>
+      <header class="bar">
+        <a href="/ladders">My ladders</a>
+        <span class="muted">
+          Signed in as <strong>{props.login}</strong>
+        </span>
+      </header>
+      <h1>Settings</h1>
+      <section class="settings-section" aria-labelledby="reminders-heading" id="reminders" data-vapid-public-key={props.vapidPublicKey ?? ''}>
+        <h2 id="reminders-heading">Reminders</h2>
+        <p class="muted">One push a day, only when cards are due.</p>
+        <label for="reminder-hour">Reminder time (your local time)</label>
+        <select id="reminder-hour" name="reminderHour">
+          {HOURS.map((h) => (
+            <option value={String(h)} selected={h === 8}>{`${String(h).padStart(2, '0')}:00`}</option>
+          ))}
+        </select>
+        <div class="settings-actions">
+          <button type="button" class="button" id="reminders-on">
+            Turn on reminders
+          </button>
+          <button type="button" class="button button-quiet" id="reminders-off">
+            Turn off reminders
+          </button>
+        </div>
+        <p id="reminders-status" role="status"></p>
+      </section>
+      <section class="settings-section" aria-labelledby="progress-heading">
+        <h2 id="progress-heading">Your progress</h2>
+        <p class="muted">Keep a copy of your review progress. An import adds review data only. It never unlocks a level.</p>
+        <form method="get" action="/api/progress/export">
+          <button type="submit" class="button">
+            Export progress
+          </button>
+        </form>
+        <label for="import-file">Progress file (.json, up to 5 MB)</label>
+        <input type="file" id="import-file" accept="application/json,.json" />
+        <button type="button" class="button button-quiet" id="import-button">
+          Import progress
+        </button>
+        <p id="import-status" role="status"></p>
+        <p id="import-error" role="alert" class="form-error"></p>
+      </section>
+      <script src="/assets/settings.js" defer></script>
     </Layout>
   );
 }

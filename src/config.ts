@@ -10,6 +10,8 @@ export interface Config {
   appBaseUrl: string;
   port: number;
   secureCookies: boolean;
+  /** Web Push (VAPID) keys. Undefined when unset: reminders are then off. The private key is never sent to the client. */
+  vapid: { publicKey: string; privateKey: string; subject: string } | undefined;
 }
 
 export class ConfigError extends Error {
@@ -43,6 +45,13 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
   } catch {
     problems.push('APP_BASE_URL is not a valid URL');
   }
+  const vapidNames = ['VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY', 'VAPID_SUBJECT'] as const;
+  const vapidSet = vapidNames.filter((name) => env[name]);
+  if (vapidSet.length > 0 && vapidSet.length < vapidNames.length) {
+    problems.push(`${vapidNames.filter((name) => !env[name]).join(', ')} missing: set all three VAPID variables or none`);
+  }
+  const subject = env.VAPID_SUBJECT;
+  if (subject && !/^(mailto:|https:\/\/)/.test(subject)) problems.push('VAPID_SUBJECT must start with mailto: or https://');
   if (problems.length > 0) throw new ConfigError(problems);
 
   return {
@@ -56,5 +65,9 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     appBaseUrl,
     port,
     secureCookies: !isLocalUrl(appBaseUrl),
+    vapid:
+      vapidSet.length === vapidNames.length
+        ? { publicKey: env.VAPID_PUBLIC_KEY as string, privateKey: env.VAPID_PRIVATE_KEY as string, subject: subject as string }
+        : undefined,
   };
 }

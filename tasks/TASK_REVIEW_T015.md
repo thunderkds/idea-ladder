@@ -79,9 +79,21 @@ GET /settings -> 404
 GET /api/progress/export -> 404
 ```
 
-**AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
+**AFTER**: same command (plus `/offline`), 2026-11-01T10:59:24Z, after the change:
 
-**DELTA**: [one sentence — what a user can now do that they could not before]
+```
+BEFORE 2026-11-01T10:59:24.469Z
+GET /manifest.webmanifest -> 200
+GET /sw.js -> 200
+GET /assets/pwa.js -> 200
+GET /settings -> 302
+GET /api/progress/export -> 401
+GET /offline -> 200
+```
+
+(`/settings` redirects to `/` and the export returns 401 because the script sends no session cookie; both routes exist.) Playwright run of `pnpm exec playwright test`: 53 passed, of which 8 are T015 (`e2e/pwa.spec.ts`, `e2e/pwa-install.spec.ts`).
+
+**DELTA**: A learner can install the app, do the daily review with the network off (ratings queue on the device and sync on reconnect), turn on a daily reminder, and export or import review progress.
 
 **WITNESS**: [who ran it and when — derived from `memory/event-trace/Txxx.jsonl`, never the
 implementing agent alone]

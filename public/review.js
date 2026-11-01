@@ -17,6 +17,10 @@
   var capped = false;
   var ticker = null;
   var timerEl = null;
+  var learnerId = root.dataset.learnerId;
+  var store = window.ILStore && learnerId ? window.ILStore.create(learnerId) : null;
+  var offlineMode = false; // true while the queue comes from this device's cache
+  var syncEl = document.getElementById('sync-status');
   var card = null; // { key, shownAt, elapsedMs, answerShown, inFlight, backEl, ratingsEl, showBtn, errorEl }
 
   function el(tag, text, className) {
@@ -67,6 +71,39 @@
     });
   }
 
+  function noop() {}
+
+  function updateSyncStatus() {
+    if (!store || !syncEl) return Promise.resolve();
+    return store.pending().then(function (items) {
+      syncEl.textContent = items.length === 0 ? '' : items.length + (items.length === 1 ? ' rating is' : ' ratings are') + ' waiting to sync';
+    }, noop);
+  }
+
+  // Sends ratings queued on this device. The server recomputes each state and stays the source of truth.
+  function syncNow() {
+    if (!store || !navigator.onLine) return Promise.resolve();
+    return store.flush().then(updateSyncStatus, updateSyncStatus);
+  }
+
+  // Keeps the next 7 days of due cards on this device. Skipped while ratings are still waiting to sync.
+  function refreshPack() {
+    if (!store) return;
+    store
+      .pending()
+      .then(function (items) {
+        if (items.length > 0) return null;
+        return fetch('/api/review/offline-pack', { headers: { accept: 'application/json' } })
+          .then(function (res) {
+            return res.ok ? res.json() : null;
+          })
+          .then(function (pack) {
+            if (pack && pack.learnerId === learnerId) return store.savePack(pack);
+          });
+      })
+      .catch(noop);
+  }
+
   function formatLocal(iso) {
     return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
   }
@@ -88,6 +125,8 @@
       ticker = null;
     }
     clear();
+    if (reviewed > 0) document.dispatchEvent(new CustomEvent('il:session-finished'));
+    if (navigator.onLine) syncNow().then(refreshPack);
     root.appendChild(el('h2', 'Session finished'));
     root.appendChild(el('p', 'You rated ' + reviewed + (reviewed === 1 ? ' card.' : ' cards.')));
     var more = el('p');
@@ -118,6 +157,24 @@
     card.errorEl.appendChild(btn);
   }
 
+  // Offline: apply the rating to the local state and queue it with its idempotency key and the time on this device.
+  function queueLocally(current, value, state) {
+    store
+      .enqueue({ cardId: current.id, rating: value, idempotencyKey: state.key, elapsedMs: state.elapsedMs, reviewedAt: new Date().toISOString() })
+      .then(function () {
+        reviewed += 1;
+        index += 1;
+        updateSyncStatus();
+        next();
+      })
+      .catch(function () {
+        state.inFlight = false;
+        setError('The rating could not be saved on this device. Try again.', function () {
+          rate(value);
+        });
+      });
+  }
+
   function rate(value) {
     if (!card || !card.answerShown || card.inFlight) return;
     var current = queue[index];
@@ -125,6 +182,10 @@
     if (state.elapsedMs === null) state.elapsedMs = Math.min(Date.now() - state.shownAt, 3600000);
     state.inFlight = true;
     setError('');
+    if (store && (offlineMode || !navigator.onLine)) {
+      queueLocally(current, value, state);
+      return;
+    }
     fetch('/api/review/rating', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -132,11 +193,19 @@
     })
       .then(function (res) {
         if (!res.ok) throw new Error('rating-' + res.status);
-        reviewed += 1;
-        index += 1;
-        next();
+        return res.json().catch(function () { return null; }).then(function (data) {
+          // The device copy of the card follows the server state.
+          if (store && data && data.card) store.applyServerState(current.id, data.card).catch(noop);
+          reviewed += 1;
+          index += 1;
+          next();
+        });
       })
       .catch(function () {
+        if (store && !navigator.onLine) {
+          queueLocally(current, value, state);
+          return;
+        }
         state.inFlight = false;
         setError('The rating was not saved. Try again.', function () {
           rate(value);
@@ -210,23 +279,54 @@
     }
   });
 
-  function load() {
-    fetchQueue()
-      .then(function (data) {
-        queue = data.cards;
-        timerEl = el('p', undefined, 'review-timer');
-        timerEl.setAttribute('role', 'timer');
-        renderTimer();
-        if (queue.length === 0) {
-          timerEl = null;
-          renderEmpty(data);
-        } else {
+  function start(data) {
+    queue = data.cards;
+    index = 0;
+    timerEl = el('p', undefined, 'review-timer');
+    timerEl.setAttribute('role', 'timer');
+    renderTimer();
+    if (queue.length === 0) {
+      timerEl = null;
+      renderEmpty(data);
+    } else {
+      clear();
+      showCard();
+    }
+  }
+
+  // No connection: review from the cards cached at the last online visit.
+  function loadOffline() {
+    store
+      .readPack(new Date())
+      .then(function (pack) {
+        offlineMode = true;
+        if (!pack) {
           clear();
-          showCard();
+          root.appendChild(el('p', 'No cards are saved on this device yet. Connect once to download them.', 'review-error'));
+          return;
         }
+        start(pack);
+      })
+      .catch(function () {
+        clear();
+        root.appendChild(el('p', 'Your cards could not be loaded.', 'review-error'));
+      });
+  }
+
+  function load() {
+    syncNow()
+      .then(fetchQueue)
+      .then(function (data) {
+        offlineMode = false;
+        start(data);
+        refreshPack();
       })
       .catch(function (err) {
         if (err && err.message === 'unauthenticated') return;
+        if (store && (!navigator.onLine || err instanceof TypeError)) {
+          loadOffline();
+          return;
+        }
         clear();
         root.appendChild(el('p', 'Your cards could not be loaded.', 'review-error'));
         var btn = el('button', 'Retry', 'button button-quiet');
@@ -236,5 +336,10 @@
       });
   }
 
+  window.addEventListener('online', function () {
+    offlineMode = false;
+    syncNow();
+  });
+  updateSyncStatus();
   load();
 })();

@@ -11,13 +11,18 @@ import { issueState, verifyState } from './auth/state.js';
 import type { Config } from './config.js';
 import { type GithubOptions } from './start/github.js';
 import { getLadderView, listMyLadders, type ReadPassed } from './ladder/view.js';
+import { exportProgress, ImportError, type ImportErrorCode, importProgress, MAX_IMPORT_BYTES } from './progress/transfer.js';
+import { type PushSender } from './push/reminders.js';
+import { deleteSubscription, saveSubscription, subscribeSchema } from './push/subscriptions.js';
+import { createWebPushSender } from './push/web-push.js';
 import { isReviewRating } from './review/scheduler.js';
-import { getReviewQueue, submitReviewRating } from './review/store.js';
+import { getOfflinePack, getReviewQueue, submitReviewRating } from './review/store.js';
 import { findLadderId, getJob } from './start/jobs.js';
 import { parseRepoUrl, UnsupportedUrlError } from './start/repo-url.js';
 import { type Enqueue, StartError, type StartErrorCode, startLadder } from './start/service.js';
-import { HomePage, JobPage, LadderPage, LaddersPage, MessagePage, ReviewPage, UnsupportedUrlPage } from './views.js';
+import { HomePage, JobPage, LadderPage, LaddersPage, MessagePage, OfflinePage, ReviewPage, SettingsPage, UnsupportedUrlPage } from './views.js';
 import { createLadderGenerate, inngest, sendLadderRequested } from './workflow/ladder-generate.js';
+import { createReminderTick } from './workflow/reminders.js';
 
 const MAX_URL_LENGTH = 2048;
 export const RETURN_COOKIE = 'il_return';
@@ -43,16 +48,34 @@ export interface AppDeps {
   readPassed?: ReadPassed;
   /** Server clock for reviews. Tests pass a fixed one. */
   now?: () => Date;
+  /** Sends Web Push messages. Defaults to the `web-push` sender when VAPID keys are configured; tests pass a fake. */
+  pushSender?: PushSender;
 }
+
+const IMPORT_ERRORS: Record<ImportErrorCode, { status: 403 | 413 | 422; message: string }> = {
+  'too-large': { status: 413, message: 'This file is larger than 5 MB, so it was not read.' },
+  'malformed-file': { status: 422, message: 'This is not a progress file from Idea Ladder. Nothing was imported.' },
+  'unsupported-version': { status: 422, message: 'This progress file has a version this app does not support. Nothing was imported.' },
+  'wrong-learner': { status: 403, message: 'This file belongs to another account. Nothing was imported.' },
+};
 
 const MAX_ELAPSED_MS = 86_400_000;
 
-export function createApp({ config, pool, fetchImpl, enqueue = sendLadderRequested, readPassed, now }: AppDeps) {
+export function createApp({ config, pool, fetchImpl, enqueue = sendLadderRequested, readPassed, now, pushSender }: AppDeps) {
   const app = new Hono();
   const github: GithubOptions = { baseUrl: config.githubApiBaseUrl, token: config.githubAppToken, fetchImpl };
   const cookieBase = { httpOnly: true, sameSite: 'Lax', secure: config.secureCookies } as const;
 
   app.use(secureHeaders());
+  // The scheduler library is served to the browser so a rating made offline uses the same ts-fsrs as the server.
+  app.get('/assets/vendor/ts-fsrs.js', serveStatic({ path: './node_modules/ts-fsrs/dist/index.umd.js' }));
+  // The service worker sits at the root so its scope is the whole site. It is re-checked on every load.
+  app.get('/sw.js', async (c, next) => {
+    await next();
+    c.header('cache-control', 'no-cache');
+  });
+  app.get('/sw.js', serveStatic({ path: './public/sw.js' }));
+  app.get('/manifest.webmanifest', serveStatic({ path: './public/manifest.webmanifest' }));
   app.use('/assets/*', serveStatic({ root: './public', rewriteRequestPath: (p) => p.replace(/^\/assets/, '') }));
 
   app.get('/', async (c) => {
@@ -136,7 +159,16 @@ export function createApp({ config, pool, fetchImpl, enqueue = sendLadderRequest
     c.header('cache-control', 'no-store');
     const session = await findSession(pool, config.sessionSecret, getCookie(c, SESSION_COOKIE));
     if (!session) return c.redirect('/', 302);
-    return c.html(<ReviewPage login={session.githubLogin} />);
+    return c.html(<ReviewPage login={session.githubLogin} learnerId={session.userId} />);
+  });
+
+  app.get('/offline', (c) => c.html(<OfflinePage />));
+
+  app.get('/settings', async (c) => {
+    c.header('cache-control', 'no-store');
+    const session = await findSession(pool, config.sessionSecret, getCookie(c, SESSION_COOKIE));
+    if (!session) return c.redirect('/', 302);
+    return c.html(<SettingsPage login={session.githubLogin} vapidPublicKey={config.vapid?.publicKey} />);
   });
 
   app.get('/api/review/queue', async (c) => {
@@ -144,6 +176,13 @@ export function createApp({ config, pool, fetchImpl, enqueue = sendLadderRequest
     const session = await findSession(pool, config.sessionSecret, getCookie(c, SESSION_COOKIE));
     if (!session) return c.json({ error: 'unauthenticated' }, 401);
     return c.json(await getReviewQueue(pool, session.userId, reviewDeps));
+  });
+
+  app.get('/api/review/offline-pack', async (c) => {
+    c.header('cache-control', 'no-store');
+    const session = await findSession(pool, config.sessionSecret, getCookie(c, SESSION_COOKIE));
+    if (!session) return c.json({ error: 'unauthenticated' }, 401);
+    return c.json({ learnerId: session.userId, ...(await getOfflinePack(pool, session.userId, reviewDeps)) });
   });
 
   app.post('/api/review/rating', async (c) => {
@@ -154,17 +193,77 @@ export function createApp({ config, pool, fetchImpl, enqueue = sendLadderRequest
     if (!(c.req.header('content-type') ?? '').toLowerCase().startsWith('application/json')) {
       return c.json({ error: 'content-type-must-be-json' }, 415);
     }
-    const body = await c.req.json<{ cardId?: unknown; rating?: unknown; idempotencyKey?: unknown; elapsedMs?: unknown }>().catch(() => null);
-    const { cardId, rating, idempotencyKey, elapsedMs } = body ?? {};
+    const body = await c.req.json<{ cardId?: unknown; rating?: unknown; idempotencyKey?: unknown; elapsedMs?: unknown; reviewedAt?: unknown }>().catch(() => null);
+    const { cardId, rating, idempotencyKey, elapsedMs, reviewedAt } = body ?? {};
     if (typeof cardId !== 'string' || !isReviewRating(rating)) return c.json({ error: 'invalid-rating' }, 400);
     if (typeof idempotencyKey !== 'string' || idempotencyKey.length < 1 || idempotencyKey.length > 128) return c.json({ error: 'invalid-idempotency-key' }, 400);
     if (typeof elapsedMs !== 'number' || !Number.isInteger(elapsedMs) || elapsedMs < 0 || elapsedMs > MAX_ELAPSED_MS) return c.json({ error: 'invalid-elapsed-ms' }, 400);
-    const result = await submitReviewRating(pool, session.userId, { cardId, rating, idempotencyKey, elapsedMs }, reviewDeps);
+    // `reviewedAt` is the time a rating was made offline. The store decides whether it is accepted.
+    let clientTime: Date | undefined;
+    if (reviewedAt !== undefined) {
+      clientTime = typeof reviewedAt === 'string' ? new Date(reviewedAt) : undefined;
+      if (!clientTime || Number.isNaN(clientTime.getTime())) return c.json({ error: 'invalid-reviewed-at' }, 400);
+    }
+    const result = await submitReviewRating(pool, session.userId, { cardId, rating, idempotencyKey, elapsedMs, reviewedAt: clientTime }, reviewDeps);
     if (!result.ok) return result.code === 'not-found' ? c.json({ error: 'card-not-found' }, 404) : c.json({ error: 'idempotency-key-reused' }, 409);
-    return c.json({ replayed: result.replayed, card: result.state });
+    return c.json({ replayed: result.replayed, card: result.state, ...(result.clientTimeRejected ? { clientTimeRejected: true } : {}) });
   });
 
-  app.on(['GET', 'POST', 'PUT'], '/api/inngest', serveInngest({ client: inngest, functions: [createLadderGenerate(pool, github)] }));
+  app.get('/api/progress/export', async (c) => {
+    c.header('cache-control', 'no-store');
+    const session = await findSession(pool, config.sessionSecret, getCookie(c, SESSION_COOKIE));
+    if (!session) return c.json({ error: 'unauthenticated' }, 401);
+    const file = await exportProgress(pool, session.userId, (now ?? (() => new Date()))());
+    c.header('content-disposition', `attachment; filename="idea-ladder-progress-${file.exportedAt.slice(0, 10)}.json"`);
+    return c.json(file);
+  });
+
+  app.post('/api/progress/import', async (c) => {
+    c.header('cache-control', 'no-store');
+    const session = await findSession(pool, config.sessionSecret, getCookie(c, SESSION_COOKIE));
+    if (!session) return c.json({ error: 'unauthenticated' }, 401);
+    // JSON only: a cross-site form cannot send this content type, so a cookie alone cannot import.
+    if (!(c.req.header('content-type') ?? '').toLowerCase().startsWith('application/json')) {
+      return c.json({ error: 'content-type-must-be-json' }, 415);
+    }
+    const declared = Number(c.req.header('content-length'));
+    if (Number.isFinite(declared) && declared > MAX_IMPORT_BYTES) return c.json({ error: 'too-large', message: IMPORT_ERRORS['too-large'].message }, 413);
+    try {
+      return c.json(await importProgress(pool, session.userId, await c.req.text(), reviewDeps));
+    } catch (err) {
+      if (!(err instanceof ImportError)) throw err;
+      const { status, message } = IMPORT_ERRORS[err.code];
+      return c.json({ error: err.code, message }, status);
+    }
+  });
+
+  app.post('/api/push/subscribe', async (c) => {
+    c.header('cache-control', 'no-store');
+    const session = await findSession(pool, config.sessionSecret, getCookie(c, SESSION_COOKIE));
+    if (!session) return c.json({ error: 'unauthenticated' }, 401);
+    if (!(c.req.header('content-type') ?? '').toLowerCase().startsWith('application/json')) {
+      return c.json({ error: 'content-type-must-be-json' }, 415);
+    }
+    const parsed = subscribeSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) return c.json({ error: 'invalid-subscription' }, 400);
+    await saveSubscription(pool, session.userId, parsed.data);
+    return c.json({ ok: true });
+  });
+
+  app.post('/api/push/unsubscribe', async (c) => {
+    c.header('cache-control', 'no-store');
+    const session = await findSession(pool, config.sessionSecret, getCookie(c, SESSION_COOKIE));
+    if (!session) return c.json({ error: 'unauthenticated' }, 401);
+    if (!(c.req.header('content-type') ?? '').toLowerCase().startsWith('application/json')) {
+      return c.json({ error: 'content-type-must-be-json' }, 415);
+    }
+    const body = await c.req.json<{ endpoint?: unknown }>().catch(() => null);
+    if (typeof body?.endpoint !== 'string' || body.endpoint.length === 0 || body.endpoint.length > 2048) return c.json({ error: 'invalid-endpoint' }, 400);
+    await deleteSubscription(pool, session.userId, body.endpoint);
+    return c.json({ ok: true });
+  });
+
+  app.on(['GET', 'POST', 'PUT'], '/api/inngest', serveInngest({ client: inngest, functions: [createLadderGenerate(pool, github), createReminderTick(pool, pushSender ?? createWebPushSender(config.vapid), reviewDeps)] }));
 
   function startErrorResponse(err: StartError) {
     const { status, message } = START_ERRORS[err.code];

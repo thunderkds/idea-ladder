@@ -1,8 +1,12 @@
 import { defineConfig } from '@playwright/test';
+import webpush from 'web-push';
 
 const adminUrl = process.env.DATABASE_URL ?? 'postgres://idea_ladder:idea_ladder@localhost:54329/idea_ladder';
 const e2eDb = new URL(adminUrl);
 e2eDb.pathname = '/il_e2e';
+
+// Throwaway VAPID keys for this run only: the settings screen shows its reminder controls when the server has keys.
+const vapid = webpush.generateVAPIDKeys();
 
 export default defineConfig({
   testDir: 'e2e',
@@ -25,6 +29,9 @@ export default defineConfig({
         GITHUB_API_BASE_URL: 'http://127.0.0.1:4010',
         APP_BASE_URL: 'http://localhost:4011',
         PORT: '4011',
+        VAPID_PUBLIC_KEY: vapid.publicKey,
+        VAPID_PRIVATE_KEY: vapid.privateKey,
+        VAPID_SUBJECT: 'mailto:e2e@example.invalid',
         INNGEST_DEV: '1',
         INNGEST_BASE_URL: 'http://127.0.0.1:8288',
       },

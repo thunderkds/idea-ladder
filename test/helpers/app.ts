@@ -20,7 +20,7 @@ export interface TestApp {
   close: () => Promise<void>;
 }
 
-export async function startTestApp(opts: { fetchImpl?: typeof fetch; enqueue?: Enqueue; apiBaseUrl?: string; oauthBaseUrl?: string } & Pick<AppDeps, 'readPassed' | 'now'> = {}): Promise<TestApp> {
+export async function startTestApp(opts: { fetchImpl?: typeof fetch; enqueue?: Enqueue; apiBaseUrl?: string; oauthBaseUrl?: string } & Pick<AppDeps, 'readPassed' | 'now' | 'pushSender'> = {}): Promise<TestApp> {
   const db = await createTempDb();
   await runMigrate(db.url, 'up');
   const pool = new pg.Pool({ connectionString: db.url });
@@ -36,7 +36,7 @@ export async function startTestApp(opts: { fetchImpl?: typeof fetch; enqueue?: E
   });
   const events: LadderRequested[] = [];
   const enqueue: Enqueue = opts.enqueue ?? (async (data) => void events.push(data));
-  const app = createApp({ config, pool, fetchImpl: opts.fetchImpl, enqueue, readPassed: opts.readPassed, now: opts.now });
+  const app = createApp({ config, pool, fetchImpl: opts.fetchImpl, enqueue, readPassed: opts.readPassed, now: opts.now, pushSender: opts.pushSender });
   return {
     db,
     pool,
