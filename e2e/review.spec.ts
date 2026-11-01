@@ -139,6 +139,22 @@ test('T011 five-minute cap: at 4:59 the shown card can still be rated, then the 
   await page.screenshot({ path: 'e2e/screenshots/review-session-end-desktop.png' });
 });
 
+test('T011 five-minute cap holds when the timer tick is late: a rating after 5:00 shows no new card', async ({ page, request }) => {
+  const l = await learner(page, request);
+  await addCard(l, 'L0', 'Late one', 60);
+  await addCard(l, 'L0', 'Late two', 30);
+  await page.clock.install();
+  await page.goto('/review');
+  await expect(page.getByText('Late one', { exact: true })).toBeVisible();
+  await page.keyboard.press('Space');
+  // A background tab delays timers: the clock passes 5:00 and no timer callback runs.
+  const started = await page.evaluate(() => Date.now());
+  await page.clock.setSystemTime(started + 301_000);
+  await page.keyboard.press('3');
+  await expect(page.getByRole('heading', { name: 'Session finished' })).toBeVisible();
+  await expect(page.getByText('Late two', { exact: true })).toHaveCount(0);
+});
+
 test('T011 empty state without cards: "No cards yet", no error, one queue request', async ({ page, request }) => {
   const errors = watchConsole(page);
   const queueCalls: string[] = [];

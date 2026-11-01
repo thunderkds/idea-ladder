@@ -101,6 +101,8 @@
   }
 
   function next() {
+    // Check the clock here too: a background tab delays the timer callback.
+    if (startedAt !== null && Date.now() - startedAt >= SESSION_MS) capped = true;
     if (index >= queue.length || capped) finish();
     else showCard();
   }
