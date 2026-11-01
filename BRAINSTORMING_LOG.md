@@ -71,7 +71,7 @@ confidence score has no other test. FSRS was cut entirely.
 **Option B — Measured, narrowed.** T001 = deterministic-core spike (key check, proof, GitHub read). T002 =
 v0 ladder kit. Neither is product code. The v1 build is planned only after Gate 1 and the T001 numbers.
 
-v0 repos (taste, ⚠ decided for you): trending `The-Pocket/PocketFlow` (11.3k★, Python, rising LLM topic),
+v0 repos (taste; confirmed by user 2026-11-01, "keep the current repos"): trending `The-Pocket/PocketFlow` (11.3k★, Python, rising LLM topic),
 medium `developit/mitt` (11.9k★, TypeScript, tiny core), lowkey `lukeed/dset` (783★, JavaScript, thin docs —
 exercises the concept fallback).
 
