@@ -10,14 +10,17 @@ import { createSession, deleteSession, findSession, upsertUser } from './auth/se
 import { issueState, verifyState } from './auth/state.js';
 import type { Config } from './config.js';
 import { type GithubOptions } from './start/github.js';
+import { getLadderView, listMyLadders } from './ladder/view.js';
 import { findLadderId, getJob } from './start/jobs.js';
 import { parseRepoUrl, UnsupportedUrlError } from './start/repo-url.js';
 import { type Enqueue, StartError, type StartErrorCode, startLadder } from './start/service.js';
-import { HomePage, JobPage, LaddersPage, MessagePage, UnsupportedUrlPage } from './views.js';
+import { HomePage, JobPage, LadderPage, LaddersPage, MessagePage, UnsupportedUrlPage } from './views.js';
 import { createLadderGenerate, inngest, sendLadderRequested } from './workflow/ladder-generate.js';
 
 const MAX_URL_LENGTH = 2048;
 export const RETURN_COOKIE = 'il_return';
+export const RETURN_LADDER_COOKIE = 'il_return_ladder';
+const LADDER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const RETURN_MAX_AGE_SECONDS = 600;
 
 const START_ERRORS: Record<StartErrorCode, { status: 404 | 422 | 502 | 503; message: string }> = {
@@ -83,6 +86,10 @@ export function createApp({ config, pool, fetchImpl, enqueue = sendLadderRequest
     // Back to /start?url=... when the learner came from there. The target is rebuilt, never copied from the cookie.
     const returnUrl = getCookie(c, RETURN_COOKIE);
     deleteCookie(c, RETURN_COOKIE, { path: '/', secure: config.secureCookies });
+    // Back to /ladders/:id when the learner came from there. Only a UUID is accepted, and the path is rebuilt.
+    const returnLadder = getCookie(c, RETURN_LADDER_COOKIE);
+    deleteCookie(c, RETURN_LADDER_COOKIE, { path: '/', secure: config.secureCookies });
+    if (!returnUrl && returnLadder && LADDER_ID.test(returnLadder)) return c.redirect(`/ladders/${returnLadder.toLowerCase()}`, 302);
     if (returnUrl && returnUrl.length <= MAX_URL_LENGTH) return c.redirect(`/start?url=${encodeURIComponent(returnUrl)}`, 302);
     return c.redirect('/ladders', 302);
   });
@@ -97,7 +104,22 @@ export function createApp({ config, pool, fetchImpl, enqueue = sendLadderRequest
     const session = await findSession(pool, config.sessionSecret, getCookie(c, SESSION_COOKIE));
     if (!session) return c.redirect('/', 302);
     c.header('cache-control', 'no-store');
-    return c.html(<LaddersPage login={session.githubLogin} />);
+    return c.html(<LaddersPage login={session.githubLogin} ladders={await listMyLadders(pool, session.userId)} />);
+  });
+
+  app.get('/ladders/:ladderId', async (c) => {
+    c.header('cache-control', 'no-store');
+    const ladderId = c.req.param('ladderId');
+    const session = await findSession(pool, config.sessionSecret, getCookie(c, SESSION_COOKIE));
+    if (!session) {
+      // The newest target wins: an unfinished sign-in from /start must not send this learner there.
+      deleteCookie(c, RETURN_COOKIE, { path: '/', secure: config.secureCookies });
+      if (LADDER_ID.test(ladderId)) setCookie(c, RETURN_LADDER_COOKIE, ladderId, { ...cookieBase, path: '/', maxAge: RETURN_MAX_AGE_SECONDS });
+      return c.redirect('/auth/github', 302);
+    }
+    const ladder = await getLadderView(pool, ladderId, session.userId);
+    if (!ladder) return c.html(<MessagePage heading="Ladder not found" message="This ladder does not exist." />, 404);
+    return c.html(<LadderPage login={session.githubLogin} ladder={ladder} />);
   });
 
   app.on(['GET', 'POST', 'PUT'], '/api/inngest', serveInngest({ client: inngest, functions: [createLadderGenerate(pool, github)] }));
@@ -116,6 +138,7 @@ export function createApp({ config, pool, fetchImpl, enqueue = sendLadderRequest
     }
     const session = await findSession(pool, config.sessionSecret, getCookie(c, SESSION_COOKIE));
     if (!session) {
+      deleteCookie(c, RETURN_LADDER_COOKIE, { path: '/', secure: config.secureCookies });
       setCookie(c, RETURN_COOKIE, url, { ...cookieBase, path: '/', maxAge: RETURN_MAX_AGE_SECONDS });
       return c.redirect('/auth/github', 302);
     }
