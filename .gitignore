@@ -1,0 +1,9 @@
+node_modules/
+# another project's archived Linear board cache (kept locally, not part of Idea Ladder)
+docs/archive/
+.claude/board.linear.json.bak
+.board/
+# runtime state and traces
+.claude/hooks/.state/
+memory/event-trace/
+.claude/worktrees/
