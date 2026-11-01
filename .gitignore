@@ -7,3 +7,4 @@ docs/archive/
 .claude/hooks/.state/
 memory/event-trace/
 .claude/worktrees/
+.claude/verify-runs/
