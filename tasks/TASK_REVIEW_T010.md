@@ -52,9 +52,10 @@ Mode: auto
 Findings: P1 fixed: auto verify found that an older `il_return` cookie beat `il_return_ladder`, so a learner landed on the wrong page (AC 6); setting one return cookie now clears the other, test added. P1 process: the implementer read only the first 30 lines of `agents/frontend.md`, and skipped the guide's Complexity part. P2 `src/ladder/view.ts:101` `My ladders` lists only ladders whose job the learner started, so a learner who arrives through a cache hit cannot find the ladder again (AC 7 as written; needs a backend follow-up). P2 `src/ladder/view.ts:112` the README link is always `README.md`, so it is a 404 for a repo with `README.rst` or similar, because T005 stores no README path. P3 `src/ladder/view.ts:51` the `to_regclass` check runs on each request and must go when T008 adds `levels`.
 Checks: tests `pnpm test` and `pnpm test:e2e` — 128 unit and 35 browser tests passed; reviews code-review — 0 P0, 1 P1 fixed, 1 P1 process, 2 P2, 1 P3; security-review not required at Risk Low; migration-safety not applicable, no schema change; startup-reads check — partial, see P1; real run: browser tests on the running app with a real Postgres (auto-checked, not /verify)
 Memory: memory/learnings.md — T008 must match the `levels` columns T010 reads
-Not done: merge (yours); auto verify: running (T182); HTML review report not generated; level content and passes are test data until T008 and T012
+Not done: merge (yours); auto verify: ☑ pass (session c1384577-e7e9-41b8-aaa1-74a6f94229c8, commit fe8d46b1610058b54b6c9b68c33271f660d02109, log .claude/verify-runs/T010-fe8d46b16100.log); HTML review report not generated; level content and passes are test data until T008 and T012
 
 ---
+Closed: row moved to Done 2026-11-01 — auto verify pass (session c1384577-e7e9-41b8-aaa1-74a6f94229c8, commit fe8d46b1610058b54b6c9b68c33271f660d02109); Gates 5 and 6 checked
 
 ## Evidence
 
@@ -63,7 +64,7 @@ Not done: merge (yours); auto verify: running (T182); HTML review report not gen
 | **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | `test/level-lock-state.test.ts`, `test/ladder-view.test.ts`, `e2e/ladder-view.spec.ts`. Reviewer rerun 2026-11-01: `Test Files  11 passed (11)`, `Tests  128 passed (128)`; Playwright `35 passed (30.1s)`. |
 | Verification command run | ☑ pass | Reviewer rerun in the worktree: `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm lint` exit 0, `pnpm test`, `pnpm test:e2e`. `@axe-core/playwright` 4.14.0 published 2026-10-15 (rule: at least 2 weeks old). |
 | Negative cases hold | ☑ pass | Tests pass: unknown and malformed ladder id give the 404 page; signed-out learner goes to sign-in and back to the same ladder; a return cookie that is not a UUID is ignored. |
-| verify | ☑ fail | auto-run by hook, session 23190c1e-4a89-4975-a6f7-da004ad6aa27, commit 6d07895500551e510c7e8cbc8e8689d047690c00, log .claude/verify-runs/T010-6d0789550055.log — fail |
+| verify | ☑ pass | auto-run by hook, session c1384577-e7e9-41b8-aaa1-74a6f94229c8, commit fe8d46b1610058b54b6c9b68c33271f660d02109, log .claude/verify-runs/T010-fe8d46b16100.log — pass |
 | Review scope bounded to the change's blast radius (affected set, not whole repo) | ☑ pass | Reviewed `src/ladder/**`, the `src/app.tsx` and `src/views.tsx` diffs, `package.json`. Skipped lockfile; `public/app.css` read through screenshots only. `lane_check`: `lane: C2, 13 files, 712 lines, EXCEEDS (lines 712 > 500)` with an unpredicted list (warn-only; tests and screenshots count). Findings: P0 0, P1 1 fixed, P1 1 process, P2 2, P3 1, listed under Auto decisions. |
 | Full smoke suite still green (no regression) | ☑ pass | Same run: all T003 and T005 unit and browser tests pass. |
 | **Companion score (easy-verifier)** | ☑ N/A | The companion tool was not run for this task. |
