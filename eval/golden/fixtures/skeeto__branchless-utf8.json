@@ -1,0 +1,43 @@
+{
+ "recordedAt": "2026-11-01T04:29:29.262Z",
+ "entries": {
+  "https://api.github.com/repos/skeeto/branchless-utf8": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "29",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "{\"default_branch\":\"master\",\"topics\":[]}"
+  },
+  "https://api.github.com/repos/skeeto/branchless-utf8/git/trees/e4d82fd5ddae98658f8c129006e3bc5acd0ae9f1?recursive=1": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "28",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "{\"truncated\":false,\"tree\":[{\"path\":\".gitignore\",\"type\":\"blob\"},{\"path\":\"Makefile\",\"type\":\"blob\"},{\"path\":\"README.md\",\"type\":\"blob\"},{\"path\":\"UNLICENSE\",\"type\":\"blob\"},{\"path\":\"test\",\"type\":\"tree\"},{\"path\":\"test/benchmark.c\",\"type\":\"blob\"},{\"path\":\"test/bh-utf8.h\",\"type\":\"blob\"},{\"path\":\"test/tests.c\",\"type\":\"blob\"},{\"path\":\"test/utf8-encode.h\",\"type\":\"blob\"},{\"path\":\"utf8.h\",\"type\":\"blob\"}]}"
+  },
+  "https://raw.githubusercontent.com/skeeto/branchless-utf8/e4d82fd5ddae98658f8c129006e3bc5acd0ae9f1/README.md": {
+   "status": 200,
+   "headers": {},
+   "body": "# Branchless UTF-8 Decoder\n\nFull article:\n[A Branchless UTF-8 Decoder](http://nullprogram.com/blog/2017/10/06/)\n\n## Example usage\n\n```c\n#define N (1 << 20)  // 1 MiB\n\n// input buffer with 3 bytes of zero padding\nchar buf[N+3];\nchar *end = buf + fread(buf, 1, N, stdin);\nend[0] = end[1] = end[2] = 0;\n\n// output buffer: parsed code points\nint len = 0;\nuint32_t cp[N];\n\nint errors = 0;\nfor (char *p = buf; p < end;) {\n    int e;\n    p = utf8_decode(p, cp+len++, &e);\n    errors |= e;\n}\nif (errors) {\n    // decode failure\n}\n```\n"
+  },
+  "https://api.github.com/repos/skeeto/branchless-utf8/languages": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "27",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "{\"C\":14694,\"Makefile\":408}"
+  },
+  "https://api.github.com/repos/skeeto/branchless-utf8/issues?state=open&per_page=100": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "26",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "[{\"number\":10,\"labels\":[]},{\"number\":7,\"pull_request\":{},\"labels\":[]},{\"number\":5,\"labels\":[]},{\"number\":4,\"labels\":[]},{\"number\":2,\"pull_request\":{},\"labels\":[]},{\"number\":1,\"labels\":[]}]"
+  }
+ },
+ "sha": "e4d82fd5ddae98658f8c129006e3bc5acd0ae9f1"
+}

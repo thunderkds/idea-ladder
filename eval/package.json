@@ -1,0 +1,23 @@
+{
+  "name": "idea-ladder-eval",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "T004 golden set of 20 hand-checked repos, offline eval harness and per-step cost logger.",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "eval": "tsx src/cli/eval.ts",
+    "eval:record": "tsx src/cli/record.ts",
+    "eval:cost": "tsx src/cli/cost.ts"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "25.9.9",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "vitest": "4.1.12"
+  }
+}

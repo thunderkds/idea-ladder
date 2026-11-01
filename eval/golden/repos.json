@@ -1,0 +1,439 @@
+[
+  {
+    "fullName": "The-Pocket/PocketFlow",
+    "sha": "f74d023f93607b8c3268133339a5e532a949898c",
+    "tier": "trending",
+    "language": "Python",
+    "expectedCoreFiles": [
+      "pocketflow/__init__.py",
+      "pocketflow/__init__.pyi",
+      "docs/core_abstraction/node.md",
+      "docs/core_abstraction/flow.md",
+      "docs/core_abstraction/communication.md"
+    ],
+    "expectedConcepts": [
+      "node lifecycle",
+      "flow graph",
+      "shared store",
+      "batch processing",
+      "async nodes"
+    ],
+    "expectedConfidence": "high",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-01"
+  },
+  {
+    "fullName": "karpathy/nanoGPT",
+    "sha": "3adf61e154c3fe3fca428ad6bc3818b27a3b8291",
+    "tier": "trending",
+    "language": "Python",
+    "expectedCoreFiles": [
+      "model.py",
+      "train.py",
+      "sample.py",
+      "configurator.py",
+      "data/shakespeare_char/prepare.py"
+    ],
+    "expectedConcepts": [
+      "transformer",
+      "causal self-attention",
+      "language modeling",
+      "training loop",
+      "finetuning",
+      "tokenization"
+    ],
+    "expectedConfidence": "high",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-01"
+  },
+  {
+    "fullName": "pmndrs/zustand",
+    "sha": "382d29c485e67018c06e75ec7235130d0968522c",
+    "tier": "trending",
+    "language": "TypeScript",
+    "expectedCoreFiles": [
+      "src/vanilla.ts",
+      "src/react.ts",
+      "src/middleware/persist.ts",
+      "src/middleware/immer.ts",
+      "src/shallow.ts"
+    ],
+    "expectedConcepts": [
+      "store",
+      "selector",
+      "middleware",
+      "subscription",
+      "persistence",
+      "react hook"
+    ],
+    "expectedConfidence": "high",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-01"
+  },
+  {
+    "fullName": "sharkdp/fd",
+    "sha": "8b14e8dc5f1bd8c2656d735e80f1e6335b335bbf",
+    "tier": "trending",
+    "language": "Rust",
+    "expectedCoreFiles": [
+      "src/main.rs",
+      "src/walk.rs",
+      "src/cli.rs",
+      "src/filesystem.rs",
+      "src/filter/mod.rs",
+      "src/exec/mod.rs"
+    ],
+    "expectedConcepts": [
+      "parallel directory walk",
+      "regex and glob patterns",
+      "ignore files",
+      "result filtering",
+      "command execution"
+    ],
+    "expectedConfidence": "high",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-01"
+  },
+  {
+    "fullName": "gin-gonic/gin",
+    "sha": "0f09c3a9b4626d9fe9979cf4d0521d6ae32ab646",
+    "tier": "trending",
+    "language": "Go",
+    "expectedCoreFiles": [
+      "gin.go",
+      "context.go",
+      "routergroup.go",
+      "tree.go",
+      "recovery.go",
+      "binding/binding.go"
+    ],
+    "expectedConcepts": [
+      "radix tree router",
+      "middleware chain",
+      "request context",
+      "route groups",
+      "data binding",
+      "response rendering"
+    ],
+    "expectedConfidence": "high",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-01"
+  },
+  {
+    "fullName": "sindresorhus/ky",
+    "sha": "3541888878c4d303a8bc2ad61815f4e048f55a5d",
+    "tier": "trending",
+    "language": "TypeScript",
+    "expectedCoreFiles": [
+      "source/core/Ky.ts",
+      "source/index.ts",
+      "source/utils/merge.ts",
+      "source/utils/timeout.ts",
+      "source/core/retry-timing.ts",
+      "source/types/hooks.ts"
+    ],
+    "expectedConcepts": [
+      "fetch wrapper",
+      "retry with backoff",
+      "hooks",
+      "timeout",
+      "http errors"
+    ],
+    "expectedConfidence": "medium",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-01"
+  },
+  {
+    "fullName": "developit/mitt",
+    "sha": "6b41670516ed8e8b738612f60491995470aa63b3",
+    "tier": "medium",
+    "language": "TypeScript",
+    "expectedCoreFiles": [
+      "src/index.ts",
+      "test/index_test.ts",
+      "package.json"
+    ],
+    "expectedConcepts": [
+      "event emitter",
+      "publish subscribe",
+      "wildcard handler",
+      "handler map",
+      "typescript generics"
+    ],
+    "expectedConfidence": "high",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-01"
+  },
+  {
+    "fullName": "lukeed/dset",
+    "sha": "05b1ec0f8cebe3b5d5667285bc7da90f38a7215e",
+    "tier": "medium",
+    "language": "JavaScript",
+    "expectedCoreFiles": [
+      "src/index.js",
+      "src/merge.js",
+      "test/suites/pollution.js",
+      "src/index.d.ts"
+    ],
+    "expectedConcepts": [
+      "deep property write",
+      "path segments",
+      "prototype pollution",
+      "object merge"
+    ],
+    "expectedConfidence": "high",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-01"
+  },
+  {
+    "fullName": "karpathy/micrograd",
+    "sha": "7bc720e951fe422b8f8814aa5aa1b64121d26b4c",
+    "tier": "medium",
+    "language": "Python",
+    "expectedCoreFiles": [
+      "micrograd/engine.py",
+      "micrograd/nn.py",
+      "test/test_engine.py"
+    ],
+    "expectedConcepts": [
+      "automatic differentiation",
+      "backpropagation",
+      "computation graph",
+      "neural network",
+      "gradient descent"
+    ],
+    "expectedConfidence": "high",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-01"
+  },
+  {
+    "fullName": "lukeed/polka",
+    "sha": "c36cf8b5d1a57164e64fdd7d4e0d0f80ab262dc0",
+    "tier": "medium",
+    "language": "JavaScript",
+    "expectedCoreFiles": [
+      "packages/polka/index.js",
+      "packages/url/index.js",
+      "packages/send/index.js",
+      "packages/send-type/index.js",
+      "tests/polka.js"
+    ],
+    "expectedConcepts": [
+      "http router",
+      "middleware",
+      "monorepo packages",
+      "request url parsing",
+      "response helpers"
+    ],
+    "expectedConfidence": "high",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-01"
+  },
+  {
+    "fullName": "BurntSushi/walkdir",
+    "sha": "6fd031c82ba5a4204b4ce6eae73dacb00dc072ec",
+    "tier": "medium",
+    "language": "Rust",
+    "expectedCoreFiles": [
+      "src/lib.rs",
+      "src/dent.rs",
+      "src/error.rs",
+      "src/util.rs"
+    ],
+    "expectedConcepts": [
+      "recursive directory walk",
+      "iterator",
+      "symlink following",
+      "pruning entries",
+      "error handling"
+    ],
+    "expectedConfidence": "high",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-01"
+  },
+  {
+    "fullName": "tidwall/btree",
+    "sha": "142fe5941ebbd69a37eddfa5fdc34d197faa188a",
+    "tier": "medium",
+    "language": "Go",
+    "expectedCoreFiles": [
+      "btree.go",
+      "btreeg.go",
+      "map.go",
+      "set.go"
+    ],
+    "expectedConcepts": [
+      "b-tree",
+      "generics",
+      "copy on write",
+      "path hinting",
+      "ordered map"
+    ],
+    "expectedConfidence": "high",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-01"
+  },
+  {
+    "fullName": "antirez/kilo",
+    "sha": "323d93b29bd89a2cb446de90c4ed4fea1764176e",
+    "tier": "lowkey",
+    "language": "C",
+    "expectedCoreFiles": [
+      "kilo.c",
+      "Makefile",
+      "README.md"
+    ],
+    "expectedConcepts": [
+      "terminal raw mode",
+      "vt100 escape sequences",
+      "text editor",
+      "syntax highlighting"
+    ],
+    "expectedConfidence": "low",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-01"
+  },
+  {
+    "fullName": "skeeto/branchless-utf8",
+    "sha": "e4d82fd5ddae98658f8c129006e3bc5acd0ae9f1",
+    "tier": "lowkey",
+    "language": "C",
+    "expectedCoreFiles": [
+      "utf8.h",
+      "test/tests.c",
+      "test/benchmark.c",
+      "README.md"
+    ],
+    "expectedConcepts": [
+      "utf-8 decoding",
+      "branchless code",
+      "code points",
+      "error detection"
+    ],
+    "expectedConfidence": "low",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-01"
+  },
+  {
+    "fullName": "rxi/fe",
+    "sha": "ed4cda96bd582cbb08520964ba627efb40f3dd91",
+    "tier": "lowkey",
+    "language": "C",
+    "expectedCoreFiles": [
+      "src/fe.c",
+      "src/fe.h",
+      "doc/impl.md",
+      "doc/lang.md"
+    ],
+    "expectedConcepts": [
+      "lisp interpreter",
+      "embeddable language",
+      "garbage collection",
+      "fixed memory region",
+      "closures"
+    ],
+    "expectedConfidence": "low",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-01"
+  },
+  {
+    "fullName": "sindresorhus/is-plain-obj",
+    "sha": "666df7c10035f7e26f27ec214fe5ae3173435f34",
+    "tier": "lowkey",
+    "language": "JavaScript",
+    "expectedCoreFiles": [
+      "index.js",
+      "index.d.ts",
+      "test.js"
+    ],
+    "expectedConcepts": [
+      "plain object",
+      "prototype check",
+      "type guard"
+    ],
+    "expectedConfidence": "low",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-01"
+  },
+  {
+    "fullName": "mattn/go-isatty",
+    "sha": "c44dc0b9c702c76577fdb7898032969e0611efc2",
+    "tier": "lowkey",
+    "language": "Go",
+    "expectedCoreFiles": [
+      "doc.go",
+      "isatty_tiocgwinsz.go",
+      "isatty_bsd.go",
+      "isatty_windows.go",
+      "isatty_others.go"
+    ],
+    "expectedConcepts": [
+      "terminal detection",
+      "build tags",
+      "platform specific code",
+      "cygwin pipes"
+    ],
+    "expectedConfidence": "low",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-01"
+  },
+  {
+    "fullName": "rxi/json.lua",
+    "sha": "dbf4b2dd2eb7c23be2773c89eb059dadd6436f94",
+    "tier": "lowkey",
+    "language": "Lua",
+    "expectedCoreFiles": [
+      "json.lua",
+      "test/test.lua",
+      "README.md"
+    ],
+    "expectedConcepts": [
+      "json parsing",
+      "json encoding",
+      "error messages with position",
+      "pure lua"
+    ],
+    "expectedConfidence": "high",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-01"
+  },
+  {
+    "fullName": "lukeed/tinydate",
+    "sha": "a5780e69748fc0f902480ad129438cfee4c1ae3f",
+    "tier": "lowkey",
+    "language": "JavaScript",
+    "expectedCoreFiles": [
+      "src/index.js",
+      "test/index.js",
+      "index.d.ts"
+    ],
+    "expectedConcepts": [
+      "date formatting",
+      "template parsing",
+      "precompiled render function"
+    ],
+    "expectedConfidence": "high",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-01"
+  },
+  {
+    "fullName": "tidwall/jsonc",
+    "sha": "47bcc8d156812b0ba7ee42372b2259b645e9a092",
+    "tier": "lowkey",
+    "language": "Go",
+    "expectedCoreFiles": [
+      "jsonc.go",
+      "jsonc_test.go",
+      "README.md"
+    ],
+    "expectedConcepts": [
+      "jsonc format",
+      "comment stripping",
+      "trailing commas",
+      "byte scanner"
+    ],
+    "expectedConfidence": "high",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-01"
+  }
+]

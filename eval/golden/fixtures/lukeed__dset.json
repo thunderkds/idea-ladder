@@ -1,0 +1,56 @@
+{
+ "recordedAt": "2026-11-01T04:17:16.814Z",
+ "entries": {
+  "https://api.github.com/repos/lukeed/dset": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "33",
+    "x-ratelimit-reset": "1793507351"
+   },
+   "body": "{\"default_branch\":\"master\",\"topics\":[]}"
+  },
+  "https://api.github.com/repos/lukeed/dset/git/trees/05b1ec0f8cebe3b5d5667285bc7da90f38a7215e?recursive=1": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "32",
+    "x-ratelimit-reset": "1793507351"
+   },
+   "body": "{\"truncated\":false,\"tree\":[{\"path\":\".editorconfig\",\"type\":\"blob\"},{\"path\":\".github\",\"type\":\"tree\"},{\"path\":\".github/FUNDING.yml\",\"type\":\"blob\"},{\"path\":\".github/workflows\",\"type\":\"tree\"},{\"path\":\".github/workflows/ci.yml\",\"type\":\"blob\"},{\"path\":\".gitignore\",\"type\":\"blob\"},{\"path\":\"bench\",\"type\":\"tree\"},{\"path\":\"bench/immutable.js\",\"type\":\"blob\"},{\"path\":\"bench/mutable.js\",\"type\":\"blob\"},{\"path\":\"bench/package.json\",\"type\":\"blob\"},{\"path\":\"bench/readme.md\",\"type\":\"blob\"},{\"path\":\"license\",\"type\":\"blob\"},{\"path\":\"package.json\",\"type\":\"blob\"},{\"path\":\"readme.md\",\"type\":\"blob\"},{\"path\":\"src\",\"type\":\"tree\"},{\"path\":\"src/index.d.ts\",\"type\":\"blob\"},{\"path\":\"src/index.js\",\"type\":\"blob\"},{\"path\":\"src/merge.d.ts\",\"type\":\"blob\"},{\"path\":\"src/merge.js\",\"type\":\"blob\"},{\"path\":\"test\",\"type\":\"tree\"},{\"path\":\"test/index.js\",\"type\":\"blob\"},{\"path\":\"test/merge.js\",\"type\":\"blob\"},{\"path\":\"test/suites\",\"type\":\"tree\"},{\"path\":\"test/suites/arrays.js\",\"type\":\"blob\"},{\"path\":\"test/suites/assigns.js\",\"type\":\"blob\"},{\"path\":\"test/suites/basics.js\",\"type\":\"blob\"},{\"path\":\"test/suites/objects.js\",\"type\":\"blob\"},{\"path\":\"test/suites/pollution.js\",\"type\":\"blob\"},{\"path\":\"test/suites/preserve.js\",\"type\":\"blob\"}]}"
+  },
+  "https://raw.githubusercontent.com/lukeed/dset/05b1ec0f8cebe3b5d5667285bc7da90f38a7215e/readme.md": {
+   "status": 200,
+   "headers": {},
+   "body": "# dset [![CI](https://github.com/lukeed/dset/workflows/CI/badge.svg?branch=master&event=push)](https://github.com/lukeed/dset/actions) [![codecov](https://badgen.net/codecov/c/github/lukeed/dset)](https://codecov.io/gh/lukeed/dset)\n\n> A tiny (197B) utility for safely writing deep Object values~!\n\nFor _accessing_ deep object properties, please see [`dlv`](https://github.com/developit/dlv).\n\n> **Using GraphQL?** You may want `dset/merge` – see [Merging](#merging) for more info.\n\n## Install\n\n```sh\n$ npm install --save dset\n```\n\n## Modes\n\nThere are two \"versions\" of `dset` available:\n\n#### `dset`\n> **Size (gzip):** 197 bytes<br>\n> **Availability:** [CommonJS](https://unpkg.com/dset/dist/index.js), [ES Module](https://unpkg.com/dset/dist/index.mjs), [UMD](https://unpkg.com/dset/dist/index.min.js)\n\n```js\nimport { dset } from 'dset';\n```\n\n#### `dset/merge`\n> **Size (gzip):** 307 bytes<br>\n> **Availability:** [CommonJS](https://unpkg.com/dset/merge/index.js), [ES Module](https://unpkg.com/dset/merge/index.mjs), [UMD](https://unpkg.com/dset/merge/index.min.js)\n\n```js\nimport { dset } from 'dset/merge';\n```\n\n\n## Usage\n\n```js\nimport { dset } from 'dset';\n\nlet foo = { abc: 123 };\ndset(foo, 'foo.bar', 'hello');\n// or: dset(foo, ['foo', 'bar'], 'hello');\nconsole.log(foo);\n//=> {\n//=>   abc: 123,\n//=>   foo: { bar: 'hello' },\n//=> }\n\ndset(foo, 'abc.hello', 'world');\n// or: dset(foo, ['abc', 'hello'], 'world');\nconsole.log(foo);\n//=> {\n//=>   abc: { hello: 'world' },\n//=>   foo: { bar: 'hello' },\n//=> }\n\nlet bar = { a: { x: 7 }, b:[1, 2, 3] };\ndset(bar, 'b.1', 999);\n// or: dset(bar, ['b', 1], 999);\n// or: dset(bar, ['b', '1'], 999);\nconsole.log(bar);\n//=> {\n//=>   a: { x: 7 },\n//=>   b: [1, 999, 3],\n//=> }\n\ndset(bar, 'a.y.0', 8);\n// or: dset(bar, ['a', 'y', 0], 8);\n// or: dset(bar, ['a', 'y', '0'], 8);\nconsole.log(bar);\n//=> {\n//=>   a: {\n//=>     x: 7,\n//=>     y: [8],\n//=>   },\n//=>   b: [1, 999, 3],\n//=> }\n\nlet baz = {};\ndset(baz, 'a.0.b.0', 1);\ndset(baz, 'a.0.b.1', 2);\nconsole.log(baz);\n//=> {\n//=>   a: [{ b: [1, 2] }]\n//=> }\n```\n\n## Merging\n\nThe main/default `dset` module forcibly writes values at the assigned key-path. However, in some cases, you may prefer to _merge_ values at the key-path. For example, when using [GraphQL's `@stream` and `@defer` directives](https://foundation.graphql.org/news/2020/12/08/improving-latency-with-defer-and-stream-directives/), you will need to merge the response chunks into a single object/list. This is why `dset/merge` exists~!\n\nBelow is a quick illustration of the difference between `dset` and `dset/merge`:\n\n```js\nlet input = {\n  hello: {\n    abc: 123\n  }\n};\n\ndset(input, 'hello', { world: 123 });\nconsole.log(input);\n\n// via `dset`\n//=> {\n//=>   hello: {\n//=>     world: 123\n//=>   }\n//=> }\n\n// via `dset/merge`\n//=> {\n//=>   hello: {\n//=>     abc: 123,\n//=>     world: 123\n//=>   }\n//=> }\n```\n\n\n## Immutability\n\nAs shown in the examples above, all `dset` interactions mutate the source object.\n\nIf you need immutable writes, please visit [`clean-set`](https://github.com/fwilkerson/clean-set) (182B).<br>\nAlternatively, you may pair `dset` with [`klona`](https://github.com/lukeed/klona), a 366B utility to clone your source(s). Here's an example pairing:\n\n```js\nimport { dset } from 'dset';\nimport { klona } from 'klona';\n\nexport function deepset(obj, path, val) {\n  let copy = klona(obj);\n  dset(copy, path, val);\n  return copy;\n}\n```\n\n\n## API\n\n### dset(obj, path, val)\n\nReturns: `void`\n\n#### obj\n\nType: `Object`\n\nThe Object to traverse & mutate with a value.\n\n#### path\n\nType: `String` or `Array`\n\nThe key path that should receive the value. May be in `x.y.z` or `['x', 'y', 'z']` formats.\n\n> **Note:** Please be aware that only the _last_ key actually receives the value!\n\n> **Important:** New Objects are created at each segment if there is not an existing structure.<br>However, when integers are encounted, Arrays are created instead!\n\n#### value\n\nType: `Any`\n\nThe value that you want to set. Can be of any type!\n\n\n## Benchmarks\n\nFor benchmarks and full results, check out the [`bench`](/bench) directory!\n\n```\n# Node 10.13.0\n\nValidation:\n  ✔ set-value\n  ✔ lodash/set\n  ✔ dset\n\nBenchmark:\n  set-value    x 1,701,821 ops/sec ±1.81% (93 runs sampled)\n  lodash/set   x   975,530 ops/sec ±0.96% (91 runs sampled)\n  dset         x 1,797,922 ops/sec ±0.32% (94 runs sampled)\n```\n\n\n## Related\n\n- [dlv](https://github.com/developit/dlv) - safely read from deep properties in 120 bytes\n- [dequal](https://github.com/lukeed/dequal) - safely check for deep equality in 247 bytes\n- [klona](https://github.com/lukeed/klona) - quickly \"deep clone\" data in 200 to 330 bytes\n- [clean-set](https://github.com/fwilkerson/clean-set) - fast, immutable version of `dset` in 182 bytes\n\n\n## License\n\nMIT © [Luke Edwards](https://lukeed.com)\n"
+  },
+  "https://raw.githubusercontent.com/lukeed/dset/05b1ec0f8cebe3b5d5667285bc7da90f38a7215e/package.json": {
+   "status": 200,
+   "headers": {},
+   "body": "{\n  \"name\": \"dset\",\n  \"version\": \"3.1.4\",\n  \"repository\": \"lukeed/dset\",\n  \"description\": \"A tiny (194B) utility for safely writing deep Object values~!\",\n  \"unpkg\": \"dist/index.min.js\",\n  \"umd:main\": \"dist/index.min.js\",\n  \"module\": \"dist/index.mjs\",\n  \"main\": \"dist/index.js\",\n  \"types\": \"index.d.ts\",\n  \"license\": \"MIT\",\n  \"exports\": {\n    \".\": {\n      \"types\": \"./index.d.ts\",\n      \"import\": \"./dist/index.mjs\",\n      \"require\": \"./dist/index.js\"\n    },\n    \"./merge\": {\n      \"types\": \"./merge/index.d.ts\",\n      \"import\": \"./merge/index.mjs\",\n      \"require\": \"./merge/index.js\"\n    },\n    \"./package.json\": \"./package.json\"\n  },\n  \"author\": {\n    \"name\": \"Luke Edwards\",\n    \"email\": \"luke.edwards05@gmail.com\",\n    \"url\": \"https://lukeed.com\"\n  },\n  \"engines\": {\n    \"node\": \">=4\"\n  },\n  \"scripts\": {\n    \"build\": \"bundt\",\n    \"test\": \"uvu test -r esm -i suites\"\n  },\n  \"files\": [\n    \"*.d.ts\",\n    \"merge\",\n    \"dist\"\n  ],\n  \"modes\": {\n    \"merge\": \"src/merge.js\",\n    \"default\": \"src/index.js\"\n  },\n  \"keywords\": [\n    \"deepset\",\n    \"values\",\n    \"object\",\n    \"write\",\n    \"deep\",\n    \"safe\",\n    \"set\"\n  ],\n  \"devDependencies\": {\n    \"bundt\": \"1.1.2\",\n    \"esm\": \"3.2.25\",\n    \"uvu\": \"0.5.1\"\n  }\n}\n"
+  },
+  "https://api.github.com/repos/lukeed/dset/languages": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "31",
+    "x-ratelimit-reset": "1793507351"
+   },
+   "body": "{\"JavaScript\":17856}"
+  },
+  "https://api.github.com/repos/lukeed/dset/issues?state=open&per_page=100": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "30",
+    "x-ratelimit-reset": "1793507351"
+   },
+   "body": "[{\"number\":51,\"pull_request\":{},\"labels\":[]},{\"number\":50,\"pull_request\":{},\"labels\":[]},{\"number\":48,\"pull_request\":{},\"labels\":[]},{\"number\":47,\"pull_request\":{},\"labels\":[]},{\"number\":46,\"labels\":[]},{\"number\":44,\"labels\":[]},{\"number\":43,\"pull_request\":{},\"labels\":[{\"name\":\"dependencies\"}]},{\"number\":39,\"labels\":[]},{\"number\":36,\"labels\":[]},{\"number\":35,\"labels\":[]},{\"number\":32,\"labels\":[]},{\"number\":31,\"labels\":[]},{\"number\":27,\"labels\":[]}]"
+  },
+  "https://api.github.com/repos/lukeed/dset/issues?state=open&per_page=100&labels=good%20first%20issue": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "29",
+    "x-ratelimit-reset": "1793507351"
+   },
+   "body": "[]"
+  }
+ },
+ "sha": "05b1ec0f8cebe3b5d5667285bc7da90f38a7215e"
+}

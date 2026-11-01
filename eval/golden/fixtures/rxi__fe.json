@@ -1,0 +1,43 @@
+{
+ "recordedAt": "2026-11-01T04:29:30.991Z",
+ "entries": {
+  "https://api.github.com/repos/rxi/fe": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "25",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "{\"default_branch\":\"master\",\"topics\":[]}"
+  },
+  "https://api.github.com/repos/rxi/fe/git/trees/ed4cda96bd582cbb08520964ba627efb40f3dd91?recursive=1": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "24",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "{\"truncated\":false,\"tree\":[{\"path\":\"LICENSE\",\"type\":\"blob\"},{\"path\":\"README.md\",\"type\":\"blob\"},{\"path\":\"build.bat\",\"type\":\"blob\"},{\"path\":\"build.sh\",\"type\":\"blob\"},{\"path\":\"doc\",\"type\":\"tree\"},{\"path\":\"doc/capi.md\",\"type\":\"blob\"},{\"path\":\"doc/impl.md\",\"type\":\"blob\"},{\"path\":\"doc/lang.md\",\"type\":\"blob\"},{\"path\":\"scripts\",\"type\":\"tree\"},{\"path\":\"scripts/fib.fe\",\"type\":\"blob\"},{\"path\":\"scripts/life.fe\",\"type\":\"blob\"},{\"path\":\"scripts/macros.fe\",\"type\":\"blob\"},{\"path\":\"scripts/mandelbrot.fe\",\"type\":\"blob\"},{\"path\":\"src\",\"type\":\"tree\"},{\"path\":\"src/fe.c\",\"type\":\"blob\"},{\"path\":\"src/fe.h\",\"type\":\"blob\"}]}"
+  },
+  "https://raw.githubusercontent.com/rxi/fe/ed4cda96bd582cbb08520964ba627efb40f3dd91/README.md": {
+   "status": 200,
+   "headers": {},
+   "body": "# fe\nA *tiny*, embeddable language implemented in ANSI C\n\n```clojure\n(= reverse (fn (lst)\n  (let res nil)\n  (while lst\n    (= res (cons (car lst) res))\n    (= lst (cdr lst))\n  )\n  res\n))\n\n(= animals '(\"cat\" \"dog\" \"fox\"))\n\n(print (reverse animals)) ; => (\"fox\" \"dog\" \"cat\")\n```\n\n## Overview\n* Supports numbers, symbols, strings, pairs, lambdas, macros\n* Lexically scoped variables, closures\n* Small memory usage within a fixed-sized memory region — no mallocs\n* Simple mark and sweep garbage collector\n* Easy to use C API\n* Portable ANSI C — works on 32 and 64bit\n* Concise — less than 800 sloc\n\n---\n\n* **[Demo Scripts](scripts)**\n* **[C API Overview](doc/capi.md)**\n* **[Language Overview](doc/lang.md)**\n* **[Implementation Overview](doc/impl.md)**\n\n\n## Contributing\nThe library focuses on being lightweight and minimal; pull requests will\nlikely not be merged. Bug reports and questions are welcome.\n\n\n## License\nThis library is free software; you can redistribute it and/or modify it under\nthe terms of the MIT license. See [LICENSE](LICENSE) for details.\n"
+  },
+  "https://api.github.com/repos/rxi/fe/languages": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "23",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "{\"C\":24228,\"Batchfile\":149,\"Shell\":84}"
+  },
+  "https://api.github.com/repos/rxi/fe/issues?state=open&per_page=100": {
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "22",
+    "x-ratelimit-reset": "1793510956"
+   },
+   "body": "[{\"number\":34,\"labels\":[]},{\"number\":32,\"pull_request\":{},\"labels\":[]},{\"number\":31,\"labels\":[]},{\"number\":30,\"labels\":[]},{\"number\":29,\"labels\":[]},{\"number\":28,\"labels\":[]},{\"number\":25,\"pull_request\":{},\"labels\":[]},{\"number\":24,\"pull_request\":{},\"labels\":[]},{\"number\":23,\"pull_request\":{},\"labels\":[]},{\"number\":22,\"pull_request\":{},\"labels\":[]},{\"number\":21,\"pull_request\":{},\"labels\":[]},{\"number\":20,\"labels\":[]},{\"number\":19,\"labels\":[]},{\"number\":16,\"labels\":[]},{\"number\":15,\"labels\":[]},{\"number\":14,\"labels\":[]},{\"number\":12,\"pull_request\":{},\"labels\":[]},{\"number\":11,\"labels\":[]},{\"number\":4,\"labels\":[]},{\"number\":3,\"labels\":[]}]"
+  }
+ },
+ "sha": "ed4cda96bd582cbb08520964ba627efb40f3dd91"
+}
