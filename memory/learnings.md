@@ -9,6 +9,8 @@
 
 ## Patterns
 
+- **The repo reader needs a GitHub token in real use (2026-11-01).** T005 alone costs about 7 calls per repo, but T006 adds one call per file read and up to 30 per `search`. One job can pass the unauthenticated limit of 60 per hour.
+
 - **T008 must match the columns T010 reads (2026-11-01).** `src/ladder/view.ts` reads `levels(ladder_id, level_id, goal, pass_test_kind, pass_test_description)` behind a `to_regclass` check. T008 uses those names or changes the view, and removes the check.
 
 - **The step limit counts every agent of a task (2026-11-01).** `pre_agent_step_limit.py` counts by Task ID, so a reviewer spawned after a long build can be stopped after 3 calls. The T005 security reviewer was stopped this way. Treat that result as incomplete and rerun it; the counter resets itself.

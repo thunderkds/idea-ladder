@@ -4,7 +4,7 @@
 
 ## 2026-11-01 — v1 includes ladders from any URL, as concept-only ladders
 
-**Decision**: v1 builds T031: a public non-GitHub URL gets a concept-only ladder (L0 generated, L1–L4 skipped). `GITHUB_APP_TOKEN` stays optional.
+**Decision**: v1 builds T031: a public non-GitHub URL gets a concept-only ladder (L0 generated, L1–L4 skipped). `GITHUB_APP_TOKEN` stays optional in config, but the T006 reader needs it in real use (memory/learnings.md).
 **Why**: `docs/REQUIREMENT_SOURCE.md` lists "Ladder from any URL (repo, doc, article)" as MVP, but no task built it. The user asked why ideas were GitHub-only, then chose the recommended option. T008's concept-only path already exists, so T006 and T007 need no change. L1–L4 pass tests need a branch or PR.
 **Files**: `tasks/TASK_GUIDE_T031.md`, `PRD.md`, `src/start/service.ts`
 
