@@ -8,6 +8,8 @@ import { z } from 'zod';
 const PUSH_HOST_SUFFIXES = ['fcm.googleapis.com', 'push.services.mozilla.com', 'push.apple.com', 'notify.windows.com'];
 
 export function isAllowedPushEndpoint(endpoint: string): boolean {
+  // web-push reads the raw string with the legacy parser, which finds no host in `https:host/x`, so require `https://`.
+  if (!endpoint.startsWith('https://')) return false;
   let url: URL;
   try {
     url = new URL(endpoint);

@@ -22,7 +22,7 @@ describe('T015 local hour (unit)', () => {
     expect(isAllowedPushEndpoint(ENDPOINT('x'))).toBe(true);
     expect(isAllowedPushEndpoint('https://updates.push.services.mozilla.com/wpush/v2/x')).toBe(true);
     expect(isAllowedPushEndpoint('https://web.push.apple.com/x')).toBe(true);
-    for (const bad of ['http://fcm.googleapis.com/x', 'https://127.0.0.1/x', 'https://localhost/x', 'https://evil.example/fcm.googleapis.com', 'https://fcm.googleapis.com.evil.example/x', 'https://u:p@fcm.googleapis.com/x', 'https://fcm.googleapis.com:8443/x', 'nope']) {
+    for (const bad of ['https:fcm.googleapis.com/x', 'https:/fcm.googleapis.com/x', 'http://fcm.googleapis.com/x', 'https://127.0.0.1/x', 'https://localhost/x', 'https://evil.example/fcm.googleapis.com', 'https://fcm.googleapis.com.evil.example/x', 'https://u:p@fcm.googleapis.com/x', 'https://fcm.googleapis.com:8443/x', 'nope']) {
       expect(isAllowedPushEndpoint(bad)).toBe(false);
     }
   });
