@@ -71,6 +71,7 @@ before v1 builds the MVP PWA (§ Roadmap, § First experiment and kill criteria)
 | FR-015 | The only contract with Idea Radar is `https://<ladder-app>/start?url=<repo or any URL>`; hand-pasted URLs also work (§ Architecture). | US-001 |
 | FR-016 | Anti-cheat: MCQs drawn from a randomized pool; retakes rate-limited (§ Proof architecture). | US-003 |
 | FR-017 | v0: a zero-code experiment kit — 3 ladders (trending, medium, lowkey repo) in the L0–L4 template, cards importable into Anki (FSRS on), and a 14-day log with the kill criteria (§ First experiment and kill criteria). | US-009 |
+| FR-018 | The system must build a concept-only ladder from a public non-GitHub URL (article or doc): L0 generated, L1–L4 skipped, because their pass tests need a repo (§ Brainstorm: feature ideas; user choice 2026-11-01). | US-001 |
 <!-- FLAGGED → auto decision: the source says "Pick 3 repos from Idea Radar", but Idea Radar is not in this repo. Repo choice is decided in brainstorming and logged ⚠ in tasks/TASK_REVIEW_T002.md. -->
 
 ---
