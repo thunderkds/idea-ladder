@@ -42,22 +42,35 @@ Memory: <each entry the memory pass wrote, as `file — entry` | nothing new>
 Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | /verify (yours)>
 
 -->
-Paused: auto-mode check failed — tasks/TASK_REVIEW_T032.md has no `## Auto decisions` section starting with `Mode: auto`; no `Memory:` line in the report — run the memory pass before you stop and record it there (each entry written, or `Memory: nothing new`); no test run in memory/event-trace/T032.jsonl — write /home/hungnguyenhuu/workspace/pets/hungnguyen111/idea-ladder/.claude/hooks/.state/active_task.d/$CLAUDE_CODE_SESSION_ID with the task ID (minimal-track step 1): `mkdir -p /home/hungnguyenhuu/workspace/pets/hungnguyen111/idea-ladder/.claude/hooks/.state/active_task.d && printf '%s\n%s\n' "T032" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > /home/hungnguyenhuu/workspace/pets/hungnguyen111/idea-ladder/.claude/hooks/.state/active_task.d/$CLAUDE_CODE_SESSION_ID`, then rerun the task's tests so the trace records them under the task, then stop
+
+## Auto decisions
+
+Mode: auto
+1. Signed the Requirement Fidelity Gate as `auto (Supervisor)` — RULE: `docs/claude-md/tracks.md` `### Every user stop and its auto rule` (row 13)
+2. Spawned backend-developer on `claude` with this session's model (Opus) — FACT: PROJECT_SPEC.md:82 "Cells stay empty; spawns use the CLI and model this session runs as"
+3. Kept C1 although `lane_check` printed `EXCEEDS (files 10 > 6)`; half the files are test/e2e seeds — RULE: skills/code-review/SKILL.md:74 "It is warn-only"
+4. Accepted the agent's edits to `e2e/ladder-view.spec.ts` and `e2e/review.spec.ts` (seed the new table) — FACT: tasks/TASK_GUIDE_T032.md:116 "`src/auth/**`, `public/**`, service worker files (T015)"
+5. Accepted the unbatched backfill in the migration — FACT: PROJECT_KANBAN.md:24 "**T018** — Deploy v1" (still Todo: no production data yet)
+6. Ran `security-review` with a temporary `refs/remotes/origin/HEAD`, deleted after — RULE: memory/learnings.md:31 "To run it: in the task worktree, `git update-ref refs/remotes/origin/HEAD main`, run the skill, then delete that ref"
+7. Companion score row N/A: MCP cannot read the worktree path, CLI not importable — RULE: skills/score/SKILL.md § The ladder (rung 3)
+Checks: tests `pnpm typecheck && pnpm lint && pnpm test && pnpm test:e2e` — 151/151 unit, 45/45 e2e, typecheck and lint clean; reviews code-review — P0 0, P1 0, P2 1, P3 1; security-review — no findings; migration-safety (by hand, agent) — GO; real run `pnpm test test/ladder-learners.test.ts` — printed `Tests  8 passed (8)` (auto-checked, not /verify)
+Memory: memory/learnings.md — two e2e runs at once collide (port 4010, `il_e2e`); memory/learnings.md — `review_log` append-only blocks shared test cleanup; memory/learnings.md — easy-verifier MCP cannot see worktrees
+Not done: merge (yours); auto verify: running (T182); easy-verifier score (container fix is the operator's)
 
 ## Evidence
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass / ☐ fail | [test file path(s) — required before Done] |
-| Verification command run | ☐ pass / ☐ fail | [paste actual output] |
-| Negative cases hold | ☐ pass / ☐ fail | |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | `test/ladder-learners.test.ts` (AC 1–6 + cascade edge); `test/migrations.test.ts` lists `ladder_learners`. `pnpm test test/ladder-learners.test.ts` → `Tests  8 passed (8)`; full `pnpm test` → `Test Files  13 passed (13)` / `Tests  151 passed (151)`. Six tests fail when the `addLearner` call is removed (agent check). — pass |
+| Verification command run | ☑ pass | Supervisor run 2026-11-01 ~15:10Z in the worktree: `pnpm typecheck` clean, `pnpm lint` clean, `pnpm test` 151 passed, `pnpm test:e2e` `45 passed (29.6s)`. `docker compose up -d db` not needed: `idea-ladder-db-1` already holds 54329. — pass |
+| Negative cases hold | ☑ pass | AC 4: a learner with no record gets `[]` from `listMyLadders` and 404 on `/api/review/rating`. AC 6: an insert failure returns 500, creates no job, sends no event, and hands out no ladder id. — pass |
 | verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
-| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
-| Full smoke suite still green (no regression) | ☐ pass / ☐ fail | |
-| **Companion score (easy-verifier)** | ☐ pass / ☐ fail / ☐ N/A | [`overall` and `change_risk` as the tool returned them, the scope, the ref, and the absolute path of the verifier report after a literal `report:` label — e.g. "overall 86 (>= 80), change_risk pass, scope changes, ref `main...HEAD`, report: `/home/me/.easy-verifier-reports/kit/score_changes_20261028T0530Z.html`". The gate reads the path that follows `report:` and nothing else, so with no label, or a path that is absent, the row is unscored — write ☑ N/A instead. ☑ N/A with a reason when neither companion tool was run: the merge gate blocks on ☑ fail only, never on an absent or N/A row] |
-| **UI: Visual regression (diff or verdict pasted)** | ☐ pass / ☐ fail / ☐ N/A | [screenshot path or LLM verdict — required for UI tasks, Hard-Stop Gate 6] |
-| **UI: Design-system compliance (tokens/colors/typography verified)** | ☐ pass / ☐ fail / ☐ N/A | [method used + output] |
-| **UI: Responsiveness at target viewports** | ☐ pass / ☐ fail / ☐ N/A | [viewports tested, any overflow findings] |
+| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☑ pass | Reviewed the diff `main...HEAD` (10 files) plus direct callers: `src/app.tsx` (`startLadder` at 195, 223), `src/review/store.ts` (`unlockedPairs` → `listMyLadders`), `src/start/github.ts` `resolveHead` (lower-case name). Nothing else. — pass |
+| Full smoke suite still green (no regression) | ☑ pass | `pnpm test:e2e` → `45 passed (29.6s)`; T010 and T011 unit tests in the 151 pass. Regenerated `e2e/screenshots/review-*.png` restored (random seed names, no UI change). — pass |
+| **Companion score (easy-verifier)** | ☑ N/A | MCP `score` returned `target repository path does not exist: /home/hungnguyenhuu/workspace/pets/hungnguyen111/idea-ladder/.claude/worktrees/T032` (container `easy-verifier-mcp-scorer-1` has no workspace mount; `easy-verifier` restarting); `easy_verifier` not importable; stopped at rung 3 |
+| **UI: Visual regression (diff or verdict pasted)** | ☑ N/A | pure backend task: no UI change; e2e screenshots restored to committed versions |
+| **UI: Design-system compliance (tokens/colors/typography verified)** | ☑ N/A | pure backend task: no UI change |
+| **UI: Responsiveness at target viewports** | ☑ N/A | pure backend task: no UI change |
 
 ---
 
@@ -98,9 +111,14 @@ AssertionError: expected [] to deeply equal [ { …(2) } ]
 
 The cache hit answers 200, but the learner's `My ladders` list is empty.
 
-**AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
+**AFTER**: 2026-11-01 ~15:11Z on `cb70495`, the same scenario as AC 1 in `test/ladder-learners.test.ts` (cache-hit learner, then `listMyLadders`, `/ladders`, review queue, rating). Command: `pnpm test test/ladder-learners.test.ts`.
 
-**DELTA**: [one sentence — what a user can now do that they could not before]
+```
+ Test Files  1 passed (1)
+      Tests  8 passed (8)
+   Start at  22:11:28
+```
 
-**WITNESS**: [who ran it and when — derived from `memory/event-trace/Txxx.jsonl`, never the
-implementing agent alone]
+**DELTA**: A learner who reuses a saved ladder, or joins a job that is still building, now sees that ladder on `My ladders` and gets its review cards.
+
+**WITNESS**: BEFORE by backend-developer sub-agent 2026-11-01T15:03:01Z; AFTER re-run by the Supervisor 2026-11-01 ~15:11Z under T032 (`memory/event-trace/T032.jsonl`).
