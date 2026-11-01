@@ -13,14 +13,15 @@
 ## Auto decisions
 
 Mode: auto
-1. Repos for the v0 ladders: trending `The-Pocket/PocketFlow`, medium `developit/mitt`, lowkey `lukeed/dset` — SAFER OPTION: the source says "Pick 3 repos from Idea Radar" and Idea Radar is not in this repo; picked by GitHub API stars/activity, one per class ⚠ decided for you — please review
+1. Repos for the v0 ladders: trending `The-Pocket/PocketFlow`, medium `developit/mitt`, lowkey `lukeed/dset` — SAFER OPTION: the source says "Pick 3 repos from Idea Radar" and Idea Radar is not in this repo; picked by GitHub API stars/activity, one per class ⚠ decided for you — please review · Confirmed by user 2026-11-01: "keep the current repos"
 2. Recommended ladder to climb: `developit/mitt` — SAFER OPTION: smallest core, so L4 rebuild fits inside 14 days ⚠ decided for you — please review
 3. Anki plain-text import (`.txt`) instead of `.apkg` — RULE: guide cut list (no dependency); Anki imports it with FSRS on
 4. Agent fixed the verification path (`test/index.js` + `package.json` type module) because `node --test <dir>/` fails on Node v26.7.0 — FACT: agent report, re-run by Supervisor passes
 5. Added `"test": "node --test test/"` to `experiments/v0-kit/package.json` (agent, commit dbbddbb) so the trace hook recognises the run (it counts `npm test`, not `node --test`) — RULE: `docs/claude-md/tracks.md` `### Auto-mode check (Stop hook)` (check 7: the task's trace must hold a test run)
 Checks: tests `npm test` (in experiments/v0-kit) — 12/12 pass; reviews code-review — 0 P0, 0 P1, 0 P2 for T002; real run `node experiments/v0-kit/build-anki.mjs` — printed `mitt: 26 cards (L0=5 L1=5 L2=5 L3=6 L4=5)` and 2 more lines (auto-checked, not /verify)
 Memory: memory/decisions.md — "v0 runs as experiments only"; memory/MEMORY.md — 2 index lines
-Not done: merge (yours); auto verify: ☑ pass (session 1e8e580f-079a-4d47-afe7-81c4aa8c0405, commit 00d46cbffb9ccac097a2a4f667cb7cb62d2b4d40, log .claude/verify-runs/T002-00d46cbffb9c.log); the 14-day climb itself (yours); readiness incomplete: Approved by (yours)
+Not done: merge (yours); auto verify: ☑ pass (session cfd34d50-d813-4517-8ce1-6a3b7fca5031, commit de5cb7a299a45e94293f1281da6317ab9c0ce244, log .claude/verify-runs/T002-de5cb7a299a4.log); the 14-day climb itself (yours); readiness incomplete: Approved by (yours)
+Closed: row moved to Done 2026-11-01 — auto verify pass (session cfd34d50-d813-4517-8ce1-6a3b7fca5031, commit de5cb7a299a45e94293f1281da6317ab9c0ce244); Gates 5 and 6 checked
 
 ## Evidence
 
@@ -29,7 +30,7 @@ Not done: merge (yours); auto verify: ☑ pass (session 1e8e580f-079a-4d47-afe7-
 | **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | `experiments/v0-kit/test/index.js` — 12 new tests (AC 1–5: 3 real ladders, SHA + headers, tab/missing L3/2-card/long Back/fenced code/quote/missing header/missing Goal/README copy). Supervisor re-run 2026-11-01: `ℹ tests 12 ℹ pass 12 ℹ fail 0` |
 | Verification command run | ☑ pass | `node --test experiments/v0-kit/test/ && node experiments/v0-kit/build-anki.mjs && head -5 experiments/v0-kit/anki/*.txt` → `dset: 26 cards` / `mitt: 26 cards` / `pocketflow: 27 cards`; headers `#separator:tab` `#html:false` `#tags column:3` — pass |
 | Negative cases hold | ☑ pass | tab in Back, missing L3, level with 2 cards → exit 1 naming file + card (tests 4–6) — pass |
-| verify | ☑ pass | auto-run by hook, session 1e8e580f-079a-4d47-afe7-81c4aa8c0405, commit 00d46cbffb9ccac097a2a4f667cb7cb62d2b4d40, log .claude/verify-runs/T002-00d46cbffb9c.log — pass; done not moved: Gate 5: no test run in memory/event-trace/T002.jsonl |
+| verify | ☑ pass | auto-run by hook, session cfd34d50-d813-4517-8ce1-6a3b7fca5031, commit de5cb7a299a45e94293f1281da6317ab9c0ce244, log .claude/verify-runs/T002-de5cb7a299a4.log — pass |
 | Review scope bounded to the change's blast radius (affected set, not whole repo) | ☑ pass | code-review on `plan/idea-ladder-init..T002-v0-kit` only (11 files, experiments/v0-kit/**); lane_check: `EXCEEDS (files 11 > 6; lines 739 > 250)` — content files (3 ladders + 3 generated .txt) inflate it; no relabel |
 | Full smoke suite still green (no regression) | ☑ pass | no prior code; only suite is the new one — 12/12 pass |
 | **Companion score (easy-verifier)** | ☑ N/A | not run: optional companion tool; spike/content task |
