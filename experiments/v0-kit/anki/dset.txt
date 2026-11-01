@@ -1,0 +1,29 @@
+#separator:tab
+#html:false
+#tags column:3
+What does it mean to write a value deep inside a nested object by path?	You name each step down, for example a then b then c, and the tool creates missing levels on the way and stores the value at the end.	idea-ladder dset L0
+Why is writing by path harder than reading by path?	Reading can stop and return nothing at a missing level. Writing must invent the missing levels and choose a type for each: plain object or array.	idea-ladder dset L0
+What is prototype pollution?	An attacker-controlled key such as the prototype link name makes a write land on the shared base object. Every object then inherits the attacker's value.	idea-ladder dset L0
+Which key names must a path writer refuse, and why?	The prototype link, the constructor and the prototype property names. Writing through them can reach the shared base objects.	idea-ladder dset L0
+In JavaScript, why is the typeof check on null a classic trap?	The typeof operator reports object for null. Code that tests for an object by typeof alone treats null as something it can read properties from, and then throws.	idea-ladder dset L0
+How do you get the package for a quick experiment?	Create an empty folder, run npm init, install the package named dset, and import its named export in a small script.	idea-ladder dset L1
+What are the three inputs of the main function?	The target object, the path as a dot string or an array of keys, and the value to store. It changes the object in place and returns nothing useful.	idea-ladder dset L1
+What does the function do with a missing middle level of the path?	It creates it. The next key decides the type: a number-like key creates an array and any other key creates an object.	idea-ladder dset L1
+Why should you print the object before and after in your log?	The function mutates in place and returns nothing. Printing both states is the only proof of what it did.	idea-ladder dset L1
+What is the second entry point the package offers besides the default one?	A merge mode. It joins the new value with an existing object at the end of the path instead of replacing it.	idea-ladder dset L1
+Which test runner and style does the project use?	A small runner called uvu, with test suites in separate files for basics, arrays, objects, pollution and so on. Add your case to the closest suite.	idea-ladder dset L2
+Name two open-issue themes seen on the read date.	One is about null values met while walking a path, another about merging at the root of the object. Re-read the issue list first, because it may have moved.	idea-ladder dset L2
+Before you start on an issue, what two checks avoid wasted work?	Check whether an open pull request already fixes it, and check whether the maintainer has replied. Several fix pull requests were open at the read date.	idea-ladder dset L2
+Why write the failing test before the fix?	A test that fails first proves it reproduces the bug. Without that, a passing test after the fix proves nothing.	idea-ladder dset L2
+What belongs in a diff to a 9-line function?	One behavior change with its test. Any added line is a large relative change, so explain it in the pull request text.	idea-ladder dset L2
+How does the function turn a string path into steps?	If the keys input has a split method, it is a string and is split on dots into an array. An array input is used as it is.	idea-ladder dset L3
+What does the loop do on each key?	It converts the key to text, stops at a forbidden name, and otherwise moves one level down, creating or reusing the child. On the last key it stores the value.	idea-ladder dset L3
+What happens on a forbidden key?	The loop breaks and the function returns quietly. Levels created earlier in the same call stay, so a partial write is possible.	idea-ladder dset L3
+How does the code choose between a new array and a new object?	It multiplies the next key by zero. A real number gives zero and picks an array. A non-number gives not-a-number and picks an object. A dot in the key also picks an object.	idea-ladder dset L3
+Why does an existing null value break a deeper write?	The reuse test uses typeof, which reports object for null. The code keeps the null and then tries to step into it, which throws.	idea-ladder dset L3
+How does merge mode change the final step?	On the last key it combines the old value and the new one recursively when both are objects, instead of overwriting the old one.	idea-ladder dset L3
+What behaviors must your rebuild have?	Accept a string or array path, create missing levels with the right type, store the value, and refuse the three dangerous key names.	idea-ladder dset L4
+How would you treat null differently from the original?	Replace a null (or any non-object) in the path with a fresh container before stepping in, instead of reusing it. Decide, then test it.	idea-ladder dset L4
+Which edge cases belong in your tests?	An empty path, a path of one key, a numeric key, a key containing a dot inside an array path, a forbidden key in the middle, and an existing primitive in the path.	idea-ladder dset L4
+Should a forbidden key stop quietly or raise an error?	Write your own answer and defend it. Quiet stops hide attacks and partial writes. Errors are louder but may break callers who rely on the quiet behavior.	idea-ladder dset L4
+If upstream seems inactive, how do you still finish L4?	Use the rebuild option. A merged pull request depends on someone else, while your own repo with tests is fully in your control.	idea-ladder dset L4
