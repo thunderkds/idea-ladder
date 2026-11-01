@@ -50,9 +50,9 @@ Mode: auto
 2. Added an e2e test for retries running out, because `onFailure` had no test and it is the only path out of `running` — RULE: `.claude/skills/code-review/SKILL.md` § Finding Classification
 3. Left the P2 and P3 findings unfixed — RULE: `.claude/skills/code-review/SKILL.md` § Phase 4 — Apply Safe Fixes
 Findings: P1 fixed: no test for `onFailure` (the path passed unchanged once tested). P2 `src/start/jobs.ts:54` a job left open forever blocks that repo + SHA for everyone: a process crash between the insert and the event send, or a function that never runs, leaves `queued` or `running`, and later callers get the same job with no recovery. P2 `src/start/github.ts:127` a UTF-16 README decodes with NUL bytes, which Postgres text refuses, so the job would end `github-error` with a wrong message (read from the code, not run). P3 long URLs can exceed the cookie limit when encoded, so the return to `/start` is lost; P3 `github.com/o/n` with no scheme is rejected; P3 `pnpm audit --prod` 2 moderate, `minimatch` and `glob`, both transitive through inngest's telemetry dependencies; P3 a 500 on `/api/*` returns HTML, not JSON; P3 no per-learner limit on `/api/start` (cut list; T017 cost cap).
-Checks: tests `pnpm test` and `pnpm test:e2e` — 110 unit and 25 browser tests passed; reviews code-review — 0 P0, 1 P1 fixed, 2 P2, 5 P3; migration-safety — GO, reversible, no downtime, additive, production-copy check not applicable because no production data exists; security-review — RUNNING, not finished; startup-reads check — pass, the report names `PROJECT_SPEC.md`, `tasks/TASK_GUIDE_T005.md`, `agents/backend.md`; real run: `/api/inngest` forged POST in production mode — printed `{"message":"Unauthorized"}` 401 (auto-checked, not /verify)
+Checks: tests `pnpm test` and `pnpm test:e2e` — 110 unit and 25 browser tests passed; reviews code-review — 0 P0, 1 P1 fixed, 2 P2, 5 P3; migration-safety — GO, reversible, no downtime, additive, production-copy check not applicable because no production data exists; security-review — skill ran through a temporary `origin/HEAD` ref; no findings at confidence 8 or above; a step-limit hook stopped the first reviewer after a partial read, so a second reviewer read the 7 remaining files in full; startup-reads check — pass, the report names `PROJECT_SPEC.md`, `tasks/TASK_GUIDE_T005.md`, `agents/backend.md`; real run: `/api/inngest` forged POST in production mode — printed `{"message":"Unauthorized"}` 401 (auto-checked, not /verify)
 Memory: memory/learnings.md — step limit counts all agents of a task; memory/learnings.md — open jobs can block a repo + SHA forever
-Not done: merge (yours); auto verify: not started; real run with a `GITHUB_APP_TOKEN` (yours, none here); HTML review reports not generated; 11 of 13 new screenshots not viewed by the reviewer
+Not done: merge (yours); auto verify: running (T182); real run with a `GITHUB_APP_TOKEN` (yours, none here); HTML review reports not generated; 11 of 13 new screenshots not viewed by the reviewer
 
 ---
 
@@ -119,5 +119,4 @@ Retry on the real Inngest dev server (local flaky GitHub stand-in: first `GET /r
 
 **DELTA**: A signed-in learner can open `/start?url=<GitHub repo URL>` (or POST `/api/start`) and get a cached ladder or a background Inngest job whose first step reads the repo at a pinned commit and scores confidence, with a polling status page at `/jobs/:jobId`; before, the app had no `/start`, no job and no repo tables.
 
-**WITNESS**: [who ran it and when — derived from `memory/event-trace/T005.jsonl`, never the
-implementing agent alone]
+**WITNESS**: Supervisor reran the verification commands on 2026-11-01 in `.claude/worktrees/T005`; trace `memory/event-trace/T005.jsonl`.
