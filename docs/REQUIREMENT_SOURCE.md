@@ -501,3 +501,32 @@ Fetch repo (code, no LLM) → Repo reader (agent as a tool, read-only) → Conce
  "evidence":{"branch":"https://github.com/thunderkds/name/tree/add-retry","commit":"9b1e2d4",
  "diffQuestions":{"asked":5,"correct":4,"pass":4}},"verifiedBy":"verifier@1.3.0",
  "verifiedAt":"2026-11-01T09:12:00Z","hash":"sha256:..."}
+
+### Vision flow — "Discover an idea, climb its ladder, leave with proof"
+Idea Radar (finds a repo worth learning) → Learn this link (a plain URL, no shared data; or paste any URL) →
+Idea Ladder reads repo (README, deps, issues, SHA) → Concepts detected (reuse or draft ladders) →
+Ladder L0 to L4 (pinned to a commit SHA) → Daily 5-min review (FSRS spaced recall) ⇄ Pass test (unlocks the next level; not yet → study) → passed → Proof profile (repo, PR, explanation).
+
+### Sequence: ladder generation — "A ladder is generated once per repo commit, then cached"
+Participants: PWA (learner), Ladder API (HTTP), Workflow (Inngest), GitHub (REST API), Reader (bounded agent), LLMs (model A, B), Store (Postgres).
+1 PWA→API POST /start · 2 API→Store look up ladder by repo + commit SHA · 3 Store→API hit: return cached ladder, stop here ·
+4 API→Workflow miss: event · 5 API→PWA 202 + job id · 6 Workflow→GitHub tree, README, deps · 7 Workflow→Reader pick core files (agent as a tool) ·
+8 Reader→GitHub list, read, search · 9 Reader→Workflow core files + reasons · 10 Workflow→LLMs map concepts (model A, schema) ·
+11 Workflow→LLMs generate levels, N in parallel · 12 Workflow self: code checks: citation, dedupe · 13 Workflow→LLMs blind-solve each MCQ (model B) ·
+14 Workflow→Store save ladder, status unverified · 15 Workflow→PWA push: ladder ready.
+
+### Sequence: pass test and proof — "The LLM writes questions; only code decides the pass"
+Participants: PWA (learner), Ladder API (verifiers), Workflow (Inngest), GitHub (REST API), LLMs (model A, B), Issuer (OB 3.0 signer), Store (Postgres).
+1 PWA→API submit L2 branch · 2 API→GitHub branch exists? author = learner? · 3 GitHub→API diff + commit SHA · 4 API→Workflow event ·
+5 Workflow→LLMs questions from the diff only (A) · 6 Workflow→LLMs blind-solve each question (B) · 7 Workflow self: keep only keys verified against the diff ·
+8 Workflow→PWA push: 5 questions on your code · 9 PWA→API answers · 10 API self: score with stored keys (code, no LLM) ·
+11 API→Store evidence record + SHA-256 hash · 12 API→PWA L3 unlocked (fail: back to review cards) · 13 API→Issuer after L4: issue credential ·
+14 Issuer→Store VC + status · 15 Issuer→PWA signed badge + public verify URL.
+
+### Daily loop — "Every level runs the same five-step loop"
+Learn (20 to 30 min) → Recall (without notes; highlighted) → Use it (build or write) → Review (1, 3, 7, 21 days) → Explain (in plain words) → next small piece → Learn.
+
+### Architecture — "Two apps, one URL between them, nothing shared"
+Idea Radar (existing): Scraper + sources (GitHub, OSS Insight, more) → Repo DB (trending, medium, lowkey) → Dashboard + Wake brief (shows the Learn this link).
+Idea Ladder (new PWA): PWA client (offline cache, push reminders, install prompt) → Ladder API (reads repo, detects concepts, caches by SHA) → Store (progress, proofs); Content repo (community ladders, CI) → Ladder API.
+Link: Dashboard → PWA client, "URL only". GitHub API (public): each app calls it on its own, with its own token.
