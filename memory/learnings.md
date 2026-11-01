@@ -9,6 +9,8 @@
 
 ## Patterns
 
+- **The merge gate checks the whole Bash command (2026-11-01).** A call that edits the board and merges is refused before anything runs. Move the row in one call and merge in the next. A row under Blocked does not hold the gate.
+
 - **The repo reader needs a GitHub token in real use (2026-11-01).** T005 alone costs about 7 calls per repo, but T006 adds one call per file read and up to 30 per `search`. One job can pass the unauthenticated limit of 60 per hour.
 
 - **T008 must match the columns T010 reads (2026-11-01).** `src/ladder/view.ts` reads `levels(ladder_id, level_id, goal, pass_test_kind, pass_test_description)` behind a `to_regclass` check. T008 uses those names or changes the view, and removes the check.
