@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { RETURN_LADDER_COOKIE } from '../src/app.js';
+import { RETURN_COOKIE, RETURN_LADDER_COOKIE } from '../src/app.js';
 import { getLadderView, listMyLadders } from '../src/ladder/view.js';
 import { LadderPage } from '../src/views.js';
 import { startTestApp, type TestApp } from './helpers/app.js';
@@ -129,6 +129,15 @@ describe('GET /ladders/:ladderId', () => {
     expect(res.status).toBe(302);
     expect(res.headers.get('location')).toBe('/auth/github');
     expect(res.headers.get('set-cookie')).toContain(`${RETURN_LADDER_COOKIE}=${id}`);
+  });
+
+  it('the newest return target wins: opening a ladder clears an older /start target, and the reverse', async () => {
+    const id = await newLadder();
+    const ladder = await get(`/ladders/${id}`, `${RETURN_COOKIE}=lukeed%2Fdset`);
+    expect(ladder.headers.getSetCookie().find((c) => c.startsWith(`${RETURN_COOKIE}=`))).toMatch(/Max-Age=0/i);
+
+    const start = await get('/start?url=developit%2Fmitt', `${RETURN_LADDER_COOKIE}=${id}`);
+    expect(start.headers.getSetCookie().find((c) => c.startsWith(`${RETURN_LADDER_COOKIE}=`))).toMatch(/Max-Age=0/i);
   });
 
   it('a ladder saved for one learner shows for another, with the same levels', async () => {

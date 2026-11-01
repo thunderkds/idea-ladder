@@ -112,6 +112,8 @@ export function createApp({ config, pool, fetchImpl, enqueue = sendLadderRequest
     const ladderId = c.req.param('ladderId');
     const session = await findSession(pool, config.sessionSecret, getCookie(c, SESSION_COOKIE));
     if (!session) {
+      // The newest target wins: an unfinished sign-in from /start must not send this learner there.
+      deleteCookie(c, RETURN_COOKIE, { path: '/', secure: config.secureCookies });
       if (LADDER_ID.test(ladderId)) setCookie(c, RETURN_LADDER_COOKIE, ladderId, { ...cookieBase, path: '/', maxAge: RETURN_MAX_AGE_SECONDS });
       return c.redirect('/auth/github', 302);
     }
@@ -136,6 +138,7 @@ export function createApp({ config, pool, fetchImpl, enqueue = sendLadderRequest
     }
     const session = await findSession(pool, config.sessionSecret, getCookie(c, SESSION_COOKIE));
     if (!session) {
+      deleteCookie(c, RETURN_LADDER_COOKIE, { path: '/', secure: config.secureCookies });
       setCookie(c, RETURN_COOKIE, url, { ...cookieBase, path: '/', maxAge: RETURN_MAX_AGE_SECONDS });
       return c.redirect('/auth/github', 302);
     }
