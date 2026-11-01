@@ -83,6 +83,16 @@ test('rate limit in the background step: the page shows "Failed: rate-limited" a
   await page.screenshot({ path: 'e2e/screenshots/job-failed-desktop.png' });
 });
 
+test('retries run out in the background step: the job ends "Failed: github-error", not stuck running', async ({ page, request }) => {
+  test.setTimeout(120_000);
+  await signIn(page, request);
+  await request.post(`${STUB}/__stub/fail`, { data: { repo: 'the-pocket/pocketflow' } });
+  await page.goto('/start?url=' + encodeURIComponent('https://github.com/The-Pocket/PocketFlow'));
+  await expect(page).toHaveURL(/\/jobs\/[0-9a-f-]{36}$/);
+  await expect(page.getByRole('heading', { name: 'Failed: github-error' })).toBeVisible({ timeout: 100_000 });
+  await expect(page.getByRole('link', { name: 'Try again' })).toBeVisible();
+});
+
 test('unsupported URL: the page says only GitHub repo URLs work and shows the given URL escaped', async ({ page, request }) => {
   await signIn(page, request);
   const given = 'https://gitlab.com/o/n/<b>x</b>';

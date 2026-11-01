@@ -42,22 +42,34 @@ Memory: <each entry the memory pass wrote, as `file — entry` | nothing new>
 Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | /verify (yours)>
 
 -->
-Paused: auto-mode check failed — tasks/TASK_REVIEW_T005.md has no `## Auto decisions` section starting with `Mode: auto`; no `Memory:` line in the report — run the memory pass before you stop and record it there (each entry written, or `Memory: nothing new`); no test run in memory/event-trace/T005.jsonl — write /home/hungnguyenhuu/workspace/pets/hungnguyen111/idea-ladder/.claude/hooks/.state/active_task.d/$CLAUDE_CODE_SESSION_ID with the task ID (minimal-track step 1): `mkdir -p /home/hungnguyenhuu/workspace/pets/hungnguyen111/idea-ladder/.claude/hooks/.state/active_task.d && printf '%s\n%s\n' "T005" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > /home/hungnguyenhuu/workspace/pets/hungnguyen111/idea-ladder/.claude/hooks/.state/active_task.d/$CLAUDE_CODE_SESSION_ID`, then rerun the task's tests so the trace records them under the task, then stop
+
+## Auto decisions
+
+Mode: auto
+1. Left the branch unmerged — RULE: `docs/claude-md/tracks.md` `### Never in auto mode`
+2. Added an e2e test for retries running out, because `onFailure` had no test and it is the only path out of `running` — RULE: `.claude/skills/code-review/SKILL.md` § Finding Classification
+3. Left the P2 and P3 findings unfixed — RULE: `.claude/skills/code-review/SKILL.md` § Phase 4 — Apply Safe Fixes
+Findings: P1 fixed: no test for `onFailure` (the path passed unchanged once tested). P2 `src/start/jobs.ts:54` a job left open forever blocks that repo + SHA for everyone: a process crash between the insert and the event send, or a function that never runs, leaves `queued` or `running`, and later callers get the same job with no recovery. P2 `src/start/github.ts:127` a UTF-16 README decodes with NUL bytes, which Postgres text refuses, so the job would end `github-error` with a wrong message (read from the code, not run). P3 long URLs can exceed the cookie limit when encoded, so the return to `/start` is lost; P3 `github.com/o/n` with no scheme is rejected; P3 `pnpm audit --prod` 2 moderate, `minimatch` and `glob`, both transitive through inngest's telemetry dependencies; P3 a 500 on `/api/*` returns HTML, not JSON; P3 no per-learner limit on `/api/start` (cut list; T017 cost cap).
+Checks: tests `pnpm test` and `pnpm test:e2e` — 110 unit and 25 browser tests passed; reviews code-review — 0 P0, 1 P1 fixed, 2 P2, 5 P3; migration-safety — GO, reversible, no downtime, additive, production-copy check not applicable because no production data exists; security-review — RUNNING, not finished; startup-reads check — pass, the report names `PROJECT_SPEC.md`, `tasks/TASK_GUIDE_T005.md`, `agents/backend.md`; real run: `/api/inngest` forged POST in production mode — printed `{"message":"Unauthorized"}` 401 (auto-checked, not /verify)
+Memory: memory/learnings.md — step limit counts all agents of a task; memory/learnings.md — open jobs can block a repo + SHA forever
+Not done: merge (yours); auto verify: not started; real run with a `GITHUB_APP_TOKEN` (yours, none here); HTML review reports not generated; 11 of 13 new screenshots not viewed by the reviewer
+
+---
 
 ## Evidence
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass / ☐ fail | [test file path(s) — required before Done] |
-| Verification command run | ☐ pass / ☐ fail | [paste actual output] |
-| Negative cases hold | ☐ pass / ☐ fail | |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | `test/repo-url.test.ts`, `test/start-ladder.test.ts`, `test/fetch-repo.test.ts`, `test/jobs.test.ts`, `e2e/start-flow.spec.ts`. Reviewer rerun 2026-11-01: `Test Files  9 passed (9)`, `Tests  110 passed (110)`; Playwright `25 passed (22.9s)`, including the reviewer-added test for retries running out. |
+| Verification command run | ☑ pass | Reviewer rerun in the worktree: `pnpm install --frozen-lockfile` ok; `pnpm db:migrate`, `db:migrate:down`, `db:migrate` ok, 6 app tables present; `pnpm typecheck` clean; `pnpm lint` exit 0; `pnpm test` and `pnpm test:e2e` as above. Dependency ages: inngest 2026-10-14, @inngest/test 2026-03-25, inngest-cli 2026-10-06 (rule: at least 2 weeks old). `pnpm audit --prod`: 2 moderate, both transitive under inngest (see P3). |
+| Negative cases hold | ☑ pass | Tests pass for rate limit (no snapshot), repo 404, gitlab URL, unknown job, signed-out API 401. Reviewer probe of `/api/inngest` in production mode, forged unsigned POST: 401 `Unauthorized` with a signing key; 500 `internal_server_error` and nothing run with no key. |
 | verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
-| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
-| Full smoke suite still green (no regression) | ☐ pass / ☐ fail | |
-| **Companion score (easy-verifier)** | ☐ pass / ☐ fail / ☐ N/A | [`overall` and `change_risk` as the tool returned them, the scope, the ref, and the absolute path of the verifier report after a literal `report:` label — e.g. "overall 86 (>= 80), change_risk pass, scope changes, ref `main...HEAD`, report: `/home/me/.easy-verifier-reports/kit/score_changes_20261028T0530Z.html`". The gate reads the path that follows `report:` and nothing else, so with no label, or a path that is absent, the row is unscored — write ☑ N/A instead. ☑ N/A with a reason when neither companion tool was run: the merge gate blocks on ☑ fail only, never on an absent or N/A row] |
-| **UI: Visual regression (diff or verdict pasted)** | ☐ pass / ☐ fail / ☐ N/A | [screenshot path or LLM verdict — required for UI tasks, Hard-Stop Gate 6] |
-| **UI: Design-system compliance (tokens/colors/typography verified)** | ☐ pass / ☐ fail / ☐ N/A | [method used + output] |
-| **UI: Responsiveness at target viewports** | ☐ pass / ☐ fail / ☐ N/A | [viewports tested, any overflow findings] |
+| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☑ pass | Reviewed `src/**`, migration, `public/job-status.js`, config, test stub and e2e spec. Skipped lockfile and fixture bodies. `lane_check`: `lane: C2, 43 files, 1970 lines, EXCEEDS (files 43 > 14; lines 1970 > 500)` plus an unpredicted list of almost every file (warn-only; the guide Files table did not match the layout, and screenshots and fixtures count). Findings: P0 0, P1 1 fixed, P2 2, P3 5, listed under Auto decisions. |
+| Full smoke suite still green (no regression) | ☑ pass | Same run: the 3 sign-in and 4 ui browser specs from T003 pass, and all earlier unit tests pass. |
+| **Companion score (easy-verifier)** | ☑ N/A | The companion tool was not run for this task. |
+| **UI: Visual regression (diff or verdict pasted)** | ☑ pass | Reviewer verdict after viewing `e2e/screenshots/job-failed-mobile.png` and `e2e/screenshots/job-queued-desktop.png`: status text is the main element, the long name wraps, the failed state shows the reason and reset time in plain words, no stack trace or raw JSON — pass. The other 11 screenshots were not viewed by the reviewer; the implementer viewed `start-unsupported-desktop.png`. |
+| **UI: Design-system compliance (tokens/colors/typography verified)** | ☑ pass | `e2e/start-flow.spec.ts` computed-style assertions against the token file pass for 4 states at 3 viewports in the reviewer rerun. |
+| **UI: Responsiveness at target viewports** | ☑ pass | `e2e/start-flow.spec.ts` at 360, 768 and 1280 px pass in the reviewer rerun; no horizontal scroll. |
 
 ---
 

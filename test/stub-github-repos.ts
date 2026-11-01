@@ -11,6 +11,13 @@ const FIXTURES: Record<string, string> = {
 export function addRepoRoutes(app: Hono) {
   const held = new Map<string, { promise: Promise<void>; release: () => void }>();
   const limited = new Map<string, number>();
+  const failing = new Set<string>();
+
+  app.post('/__stub/fail', async (c) => {
+    const { repo } = await c.req.json<{ repo: string }>();
+    failing.add(repo.toLowerCase());
+    return c.json({ ok: true });
+  });
 
   app.post('/__stub/hold', async (c) => {
     const { repo } = await c.req.json<{ repo: string }>();
@@ -45,6 +52,7 @@ export function addRepoRoutes(app: Hono) {
     if (!file) return new Response('{"message":"Not Found"}', { status: 404 });
     const isStepStart = url.pathname.toLowerCase() === `/repos/${repo}`;
     if (isStepStart) {
+      if (failing.has(repo)) return new Response('{"message":"Service Unavailable"}', { status: 503 });
       const reset = limited.get(repo);
       if (reset !== undefined) return rateLimited(reset);
       await held.get(repo)?.promise;
