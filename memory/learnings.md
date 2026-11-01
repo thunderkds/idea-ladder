@@ -9,6 +9,8 @@
 
 ## Patterns
 
+- **T015 push paths are shown only with mocks (2026-11-01).** No real delivery ran, and auto verify could not turn reminders on in headless Chromium. The first deploy (T018) must run one real push. Auto verify saw 2 sync runs leave ratings queued with a CDP session open; the cause was not proven.
+
 - **web-push reads endpoints with the legacy URL parser (2026-11-01).** `new URL("https:host/x")` finds the host, but `url.parse` finds none, and `https.request` then goes to localhost. Check the raw string starts with `https://` as well as the parsed host.
 
 - **T006 needs a new migration number at its merge (2026-11-01).** T006 and T011 both use `1762000002000`. Rename T006's file to a later number, or its migration runs out of order.
