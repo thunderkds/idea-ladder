@@ -55,7 +55,8 @@ Mode: auto
 7. Companion score row N/A: MCP cannot read the worktree path, CLI not importable — RULE: skills/score/SKILL.md § The ladder (rung 3)
 Checks: tests `pnpm typecheck && pnpm lint && pnpm test && pnpm test:e2e` — 151/151 unit, 45/45 e2e, typecheck and lint clean; reviews code-review — P0 0, P1 0, P2 1, P3 1; security-review — no findings; migration-safety (by hand, agent) — GO; real run `pnpm test test/ladder-learners.test.ts` — printed `Tests  8 passed (8)` (auto-checked, not /verify)
 Memory: memory/learnings.md — two e2e runs at once collide (port 4010, `il_e2e`); memory/learnings.md — `review_log` append-only blocks shared test cleanup; memory/learnings.md — easy-verifier MCP cannot see worktrees
-Not done: merge (yours); auto verify: running (T182); easy-verifier score (container fix is the operator's)
+Not done: merge (yours); auto verify: ☑ pass (session a73e8f78-77f9-4b15-9936-19293b9f216a, commit 5fe6292f9b410901df46728cb54d5783023dcbc0, log .claude/verify-runs/T032-5fe6292f9b41.log); easy-verifier score (container fix is the operator's)
+Closed: row moved to Done 2026-11-01 — auto verify pass (session a73e8f78-77f9-4b15-9936-19293b9f216a, commit 5fe6292f9b410901df46728cb54d5783023dcbc0); Gates 5 and 6 checked
 
 ## Evidence
 
@@ -64,7 +65,7 @@ Not done: merge (yours); auto verify: running (T182); easy-verifier score (conta
 | **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | `test/ladder-learners.test.ts` (AC 1–6 + cascade edge); `test/migrations.test.ts` lists `ladder_learners`. `pnpm test test/ladder-learners.test.ts` → `Tests  8 passed (8)`; full `pnpm test` → `Test Files  13 passed (13)` / `Tests  151 passed (151)`. Six tests fail when the `addLearner` call is removed (agent check). — pass |
 | Verification command run | ☑ pass | Supervisor run 2026-11-01 ~15:10Z in the worktree: `pnpm typecheck` clean, `pnpm lint` clean, `pnpm test` 151 passed, `pnpm test:e2e` `45 passed (29.6s)`. `docker compose up -d db` not needed: `idea-ladder-db-1` already holds 54329. — pass |
 | Negative cases hold | ☑ pass | AC 4: a learner with no record gets `[]` from `listMyLadders` and 404 on `/api/review/rating`. AC 6: an insert failure returns 500, creates no job, sends no event, and hands out no ladder id. — pass |
-| verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
+| verify | ☑ pass | auto-run by hook, session a73e8f78-77f9-4b15-9936-19293b9f216a, commit 5fe6292f9b410901df46728cb54d5783023dcbc0, log .claude/verify-runs/T032-5fe6292f9b41.log — pass |
 | Review scope bounded to the change's blast radius (affected set, not whole repo) | ☑ pass | Reviewed the diff `main...HEAD` (10 files) plus direct callers: `src/app.tsx` (`startLadder` at 195, 223), `src/review/store.ts` (`unlockedPairs` → `listMyLadders`), `src/start/github.ts` `resolveHead` (lower-case name). Nothing else. — pass |
 | Full smoke suite still green (no regression) | ☑ pass | `pnpm test:e2e` → `45 passed (29.6s)`; T010 and T011 unit tests in the 151 pass. Regenerated `e2e/screenshots/review-*.png` restored (random seed names, no UI change). — pass |
 | **Companion score (easy-verifier)** | ☑ N/A | MCP `score` returned `target repository path does not exist: /home/hungnguyenhuu/workspace/pets/hungnguyen111/idea-ladder/.claude/worktrees/T032` (container `easy-verifier-mcp-scorer-1` has no workspace mount; `easy-verifier` restarting); `easy_verifier` not importable; stopped at rung 3 |
