@@ -2,6 +2,12 @@
 
 > **Rules**: Supervisor-only writes. Each entry: `### YYYY-MM-DD — Title`, then **Decision**, **Why**, and **Files** (cite paths — the diff-driven pass greps this file by changed file path).
 
+## 2026-11-01 — Learners of a ladder are recorded by repo + SHA
+
+**Decision**: T032 adds `ladder_learners`, written on every start. `My ladders` and reviews read it, not `generation_jobs.started_by`.
+**Why**: NFR-004 reuses ladders, but only the first learner was tracked. The user accepted the recommended task on 2026-11-01. Migration numbers: T032 `1762000003000`, T015 `1762000004000`; T006 takes the next free number at its merge.
+**Files**: `tasks/TASK_GUIDE_T032.md`, `src/ladder/view.ts`, `src/start/service.ts`
+
 ## 2026-11-01 — v1 includes ladders from any URL, as concept-only ladders
 
 **Decision**: v1 builds T031: a public non-GitHub URL gets a concept-only ladder (L0 generated, L1–L4 skipped). `GITHUB_APP_TOKEN` stays optional in config, but the T006 reader needs it in real use (memory/learnings.md).

@@ -30,4 +30,5 @@
 - [Codebase Map](codebase-map.md) — structural snapshot: directory tree, entry points, blast-radius hotspots. Refresh via /map-codebase.
 - [Gate 1 waived for v1](decisions.md#2026-11-01--v1-build-starts-before-gate-1) — user chose to build v1 now; v0 run no longer blocks T003–T018, T030
 - [Any URL in v1 (T031)](decisions.md#2026-11-01--v1-includes-ladders-from-any-url-as-concept-only-ladders) — non-GitHub URLs get a concept-only ladder (L0); `GITHUB_APP_TOKEN` is optional in config, needed by the reader in real use
+- [Learners of a ladder (T032)](decisions.md#2026-11-01--learners-of-a-ladder-are-recorded-by-repo--sha) — `ladder_learners` replaces `started_by` for My ladders and reviews
 - [Web stack](../docs/decisions/0001-web-framework.md) — Hono + Postgres + pgvector + node-pg-migrate; T003 merged 86a3dab

@@ -19,7 +19,6 @@
 - [ ] **T013** — GitHub artifact verifiers — L2 branch, L4 repo or merged PR, L1 verifier design | backend-developer | C2 | Risk: High | P0 | Phase: v1 (after Gate 1) | HITL
 - [ ] **T014** — Diff questions after L2 — generated from the learner's diff (model A), blind-solved (model B), pass 4 of 5 | backend-developer | C2 | Risk: High | P1 | Phase: v1 (after Gate 1)
 - [ ] **T030** — Pass-test screens — MCQ attempt, artifact submit (L1/L2/L4), diff-question attempt, result view | frontend-developer | C2 | Risk: Medium | P0 | Phase: v1 (after Gate 1)
-- [ ] **T015** — Offline PWA (service worker cache), push reminders, export/import of progress | frontend-developer | C2 | Risk: Medium | P1 | Phase: v1 (after Gate 1)
 - [ ] **T016** — "This question seems wrong" flag; frequently flagged cards regenerated or removed | backend-developer | C1 | Risk: Low | P2 | Phase: v1 (after Gate 1)
 - [ ] **T017** — Measure real cost per ladder on the golden set; set and enforce a cap with the user; provider prompt caching | backend-developer | C1 | Risk: Medium | P1 | Phase: v1 (after Gate 1) | HITL
 - [ ] **T018** — Deploy v1 + Gate 2 metrics ("others finish L1 without help") | common-infrastructure | C2 | Risk: Medium | P1 | Phase: v1 (after Gate 1) | HITL
@@ -36,6 +35,8 @@
 - [ ] **T029** — "Learn what's trending" weekly pick | backend-developer | C1 | Risk: Low | P2 | Phase: v3 (after Gate 3)
 
 ### In Progress
+- [ ] **T015** — Offline PWA (service worker cache), push reminders, export/import of progress | frontend-developer | C2 | Risk: Medium | P1 | Phase: v1 (after Gate 1) | Started 2026-11-01: branch `T015-offline-pwa`
+- [ ] **T032** — Record every learner who starts a ladder (cache hit and shared job) | backend-developer | C1 | Risk: Medium | P0 | Phase: v1 (after Gate 1) | Started 2026-11-01: branch `T032-ladder-learners`
 
 ### Blocked
 - [ ] **T006** — Repo reader agent (3 read-only tools: list, read, search; step cap; token budget) picks core files; scored on golden set | backend-developer | C2 | Risk: Medium | P0 | Phase: v1 (after Gate 1) | Started 2026-11-01: branch `T006-repo-reader` | Blocked 2026-11-01: AC 7 needs `ANTHROPIC_API_KEY`, `MODEL_A_ID` and a price in `eval/prices.json`
