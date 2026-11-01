@@ -109,4 +109,4 @@ Files that **must not** be touched: `.claude/**`, `agents/**`, `skills/**`, `tem
 
 ## User Selection
 
-> **Approved direction**: Option B — Measured (narrowed). Auto mode: taken by the Supervisor after a 2-Advocate Debate, not approved by the user.
+> **Approved direction**: Option B — Measured (narrowed). Approved by user on 2026-11-01.

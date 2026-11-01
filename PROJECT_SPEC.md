@@ -36,7 +36,7 @@ v0 (now): no product code. Experiments only — the v0 ladder kit (T002) and a d
 - **Codebase map**: none — blank scaffold
 - **Tech stack**: v0 spikes: TypeScript on Node v26, pnpm, vitest, node:crypto (Ed25519, SHA-256); no storage, no hosting. v1 target (unconfirmed until Gate 1): Vercel AI SDK, Inngest, Postgres + pgvector, FSRS, PWA
 - **Main flow**: docs/MAIN_FLOW.md
-- **Approved by**:
+- **Approved by**: user 2026-11-01
 - **Waived**:
 
 ---

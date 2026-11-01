@@ -1,6 +1,6 @@
 # PRD — Idea Ladder
 **Last updated**: 2026-11-01
-**Status**: Draft (auto mode — not approved by the user) · PRD gate: PASS for v0 scope (grill 2026-11-01); 2 items flagged for v1
+**Status**: Approved by user 2026-11-01 · PRD gate: PASS for v0 scope (grill 2026-11-01); 2 items flagged for v1
 **Owner**: Hung NguyenHuu
 
 > **Scope of this document**: *What* to build and *why*. Technical decisions live in `PROJECT_SPEC.md`.
