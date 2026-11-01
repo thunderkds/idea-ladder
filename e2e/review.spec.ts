@@ -41,6 +41,7 @@ async function learner(page: Page, request: APIRequestContext): Promise<Learner>
   const sha = randomBytes(20).toString('hex');
   const ladderId = (await db.query(`INSERT INTO ladders (repo_full_name, commit_sha) VALUES ($1, $2) RETURNING id`, [repo, sha])).rows[0].id;
   await db.query(`INSERT INTO generation_jobs (repo_full_name, commit_sha, status, started_by) VALUES ($1, $2, 'fetched', $3)`, [repo, sha, userId]);
+  await db.query(`INSERT INTO ladder_learners (user_id, repo_full_name, commit_sha) VALUES ($1, $2, $3)`, [userId, repo, sha]);
   return { githubId, userId, ladderId };
 }
 

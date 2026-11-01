@@ -20,6 +20,7 @@ async function newLadder(repo = MITT, sha: string = SHAS.mitt): Promise<string> 
 }
 async function newJob(repo: string, sha: string, startedBy: string | null) {
   await t.pool.query(`INSERT INTO generation_jobs (repo_full_name, commit_sha, status, started_by) VALUES ($1, $2, 'fetched', $3)`, [repo, sha, startedBy]);
+  if (startedBy) await t.pool.query(`INSERT INTO ladder_learners (user_id, repo_full_name, commit_sha) VALUES ($1, $2, $3)`, [startedBy, repo, sha]);
 }
 const get = (path: string, c?: string) => t.app.request(path, { headers: c ? { cookie: c } : {}, redirect: 'manual' });
 async function userIdOf(githubId: number): Promise<string> {
@@ -39,6 +40,7 @@ afterAll(async () => {
 });
 beforeEach(async () => {
   await t.pool.query('DROP TABLE IF EXISTS levels');
+  await t.pool.query('DELETE FROM ladder_learners');
   await t.pool.query('DELETE FROM generation_jobs');
   await t.pool.query('DELETE FROM ladders');
 });

@@ -99,12 +99,12 @@ export interface LadderListItem {
   repoFullName: string;
 }
 
-/** Saved ladders whose generation job this learner started. Newest first, one row per ladder. */
+/** Saved ladders this learner started (ladder_learners). Newest first, one row per ladder. */
 export async function listMyLadders(pool: pg.Pool, userId: string): Promise<LadderListItem[]> {
   const { rows } = await pool.query<{ id: string; repo_full_name: string }>(
-    `SELECT l.id, l.repo_full_name FROM ladders l
-     WHERE EXISTS (SELECT 1 FROM generation_jobs j
-                   WHERE j.started_by = $1 AND j.repo_full_name = l.repo_full_name AND j.commit_sha = l.commit_sha)
+    `SELECT l.id, l.repo_full_name FROM ladder_learners m
+     JOIN ladders l ON l.repo_full_name = m.repo_full_name AND l.commit_sha = m.commit_sha
+     WHERE m.user_id = $1
      ORDER BY l.created_at DESC, l.id`,
     [userId],
   );

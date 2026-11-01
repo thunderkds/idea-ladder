@@ -91,7 +91,10 @@ describe('T011 review queue and rating (integration)', () => {
     const repo = `owner/repo${githubId}`;
     const sha = randomBytes(20).toString('hex');
     const ladderId = (await t.pool.query<{ id: string }>('INSERT INTO ladders (repo_full_name, commit_sha) VALUES ($1, $2) RETURNING id', [repo, sha])).rows[0]!.id;
-    if (started) await t.pool.query(`INSERT INTO generation_jobs (repo_full_name, commit_sha, status, started_by) VALUES ($1, $2, 'fetched', $3)`, [repo, sha, userId]);
+    if (started) {
+      await t.pool.query(`INSERT INTO generation_jobs (repo_full_name, commit_sha, status, started_by) VALUES ($1, $2, 'fetched', $3)`, [repo, sha, userId]);
+      await t.pool.query(`INSERT INTO ladder_learners (user_id, repo_full_name, commit_sha) VALUES ($1, $2, $3)`, [userId, repo, sha]);
+    }
     const card = async (level: string, front = `question ${seq++}`) =>
       (await t.pool.query<{ id: string }>(`INSERT INTO cards (ladder_id, level_id, front, back) VALUES ($1, $2, $3, 'answer') RETURNING id`, [ladderId, level, front])).rows[0]!.id;
     return { cookie, userId, ladderId, card };

@@ -8,6 +8,7 @@ const APP_TABLES = [
   'card_states',
   'cards',
   'generation_jobs',
+  'ladder_learners',
   'ladders',
   'repo_confidence',
   'repo_snapshots',

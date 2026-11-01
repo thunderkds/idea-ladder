@@ -180,6 +180,7 @@ test('My ladders lists the learner\'s two ladders with Open ladder links; the li
   const user = (await db.query(`SELECT id FROM users WHERE github_id = 45`)).rows[0].id;
   await db.query(`INSERT INTO generation_jobs (repo_full_name, commit_sha, status, started_by) VALUES ('developit/mitt', $1, 'fetched', $2)`, [MITT_SHA, user]);
   await db.query(`INSERT INTO generation_jobs (repo_full_name, commit_sha, status, started_by) VALUES ('lukeed/dset', '05b1ec0f8cebe3b5d5667285bc7da90f38a7215e', 'fetched', $1)`, [user]);
+  await db.query(`INSERT INTO ladder_learners (user_id, repo_full_name, commit_sha) VALUES ($1, 'developit/mitt', $2), ($1, 'lukeed/dset', '05b1ec0f8cebe3b5d5667285bc7da90f38a7215e') ON CONFLICT DO NOTHING`, [user, MITT_SHA]);
   await page.goto('/ladders');
   await expect(page.getByText('No ladders yet')).toHaveCount(0);
   await expect(page.getByRole('link', { name: /Open ladder/ })).toHaveCount(2);

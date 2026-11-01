@@ -34,6 +34,14 @@ export async function findLadderId(pool: pg.Pool, repoFullName: string, sha: str
   return rows[0]?.id ?? null;
 }
 
+/** Records that this learner started the ladder for repo + SHA. Starting again writes nothing. */
+export async function addLearner(pool: pg.Pool, userId: string, repoFullName: string, sha: string): Promise<void> {
+  await pool.query(
+    'INSERT INTO ladder_learners (user_id, repo_full_name, commit_sha) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
+    [userId, repoFullName, sha],
+  );
+}
+
 /**
  * Insert-on-conflict against the partial unique index on open jobs: parallel callers for one repo + SHA
  * get one row. `created` is true only for the caller whose insert won, so only that caller sends the event.

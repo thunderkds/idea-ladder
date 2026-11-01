@@ -1,6 +1,6 @@
 import type pg from 'pg';
 import { type GithubOptions, GitHubError, RateLimitError, RepoEmptyError, RepoNotFoundError, resolveHead } from './github.js';
-import { createOrFindJob, findLadderId, markJobFailed } from './jobs.js';
+import { addLearner, createOrFindJob, findLadderId, markJobFailed } from './jobs.js';
 import type { RepoRef } from './repo-url.js';
 
 export const LADDER_REQUESTED = 'ladder/generate.requested';
@@ -49,6 +49,8 @@ export async function startLadder(deps: StartDeps, repo: RepoRef, userId: string
     throw err;
   }
 
+  // Before any lookup: every path (hit, joined job, new job) has the record, and a failed write fails the request.
+  await addLearner(deps.pool, userId, head.fullName, head.sha);
   const ladderId = await findLadderId(deps.pool, head.fullName, head.sha);
   if (ladderId) return { kind: 'hit', ladderId };
 
