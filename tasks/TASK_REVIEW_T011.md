@@ -42,22 +42,34 @@ Memory: <each entry the memory pass wrote, as `file — entry` | nothing new>
 Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | /verify (yours)>
 
 -->
-Paused: auto-mode check failed — tasks/TASK_REVIEW_T011.md has no `## Auto decisions` section starting with `Mode: auto`; no `Memory:` line in the report — run the memory pass before you stop and record it there (each entry written, or `Memory: nothing new`); no test run in memory/event-trace/T011.jsonl — write /home/hungnguyenhuu/workspace/pets/hungnguyen111/idea-ladder/.claude/hooks/.state/active_task.d/$CLAUDE_CODE_SESSION_ID with the task ID (minimal-track step 1): `mkdir -p /home/hungnguyenhuu/workspace/pets/hungnguyen111/idea-ladder/.claude/hooks/.state/active_task.d && printf '%s\n%s\n' "T011" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > /home/hungnguyenhuu/workspace/pets/hungnguyen111/idea-ladder/.claude/hooks/.state/active_task.d/$CLAUDE_CODE_SESSION_ID`, then rerun the task's tests so the trace records them under the task, then stop
+
+## Auto decisions
+
+Mode: auto
+1. Left the branch unmerged — RULE: `docs/claude-md/tracks.md` `### Never in auto mode`
+2. Fixed the 5:00 cap, a broken AC 4 with one safe change and a test — RULE: `.claude/skills/code-review/SKILL.md` § Phase 4 — Apply Safe Fixes
+3. Left the cache-hit gap open, because the fix adds a table and changes T010's AC 7 — RULE: `.claude/skills/code-review/SKILL.md` § Phase 4 — Apply Safe Fixes
+Findings: P1 fixed `public/review.js` the 5:00 cap was only set on the timer tick, so a rating just after 5:00, or in a delayed background tab, showed a new card. P1 open `src/review/store.ts:36` a learner who reaches a ladder through a cache hit has no `generation_jobs` row, so the ladder has no reviews and is absent from My ladders; this is every learner after the first once T008 saves ladders. P2 `migrations/1762000002000_review-cards-fsrs.sql` has the same number as T006's migration, so T006 must take a later number at its merge. P2 `public/review.js` a 404 or 409 on a rating shows Retry, which can never work. P3 reloading `/review` restarts the 5:00 timer. P3 a NUL in an idempotency key gives a 500. P3 the migration comment says four tables; there are three.
+Checks: tests `pnpm test` and `pnpm test:e2e` — 143 unit and 45 browser tests passed; reviews code-review — 0 P0, 1 P1 fixed, 1 P1 open, 2 P2, 3 P3; migration-safety — GO, reversible, no downtime, additive, `review_log` RESTRICT keys are deliberate, production-copy check not applicable because no production data exists; security-review — skill ran through a temporary `origin/HEAD` ref; no findings at confidence 8 or above, all named files read in full; startup-reads check — pass, the report names `PROJECT_SPEC.md`, `tasks/TASK_GUIDE_T011.md`, `agents/frontend.md`; real run: browser tests on the running app with a real Postgres (auto-checked, not /verify)
+Memory: memory/learnings.md — T006 needs a new migration number; memory/learnings.md — cache-hit learners have no started record
+Not done: merge (yours); auto verify: running (T182); cards are test data until T008; only L0 is open until T012 stores passes
+
+---
 
 ## Evidence
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass / ☐ fail | [test file path(s) — required before Done] |
-| Verification command run | ☐ pass / ☐ fail | [paste actual output] |
-| Negative cases hold | ☐ pass / ☐ fail | |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | `test/review.test.ts`, `e2e/review.spec.ts`. Reviewer rerun 2026-11-01: `Test Files  12 passed (12)`, `Tests  143 passed (143)`; Playwright `45 passed (30.3s)`, including the reviewer-added late-tick test, which failed before the fix. |
+| Verification command run | ☑ pass | Reviewer rerun in the worktree: `pnpm install --frozen-lockfile` printed `Done in 349ms`; `pnpm typecheck` exit 0; `pnpm lint` exit 0; `pnpm test`; `pnpm test:e2e`. ts-fsrs pinned `5.4.2`. |
+| Negative cases hold | ☑ pass | Tests pass: 401 with no session, 404 for another ladder or a locked level, 409 for a reused key, same key writes one log row, UPDATE and DELETE on `review_log` are rejected, `Rating.Manual` is rejected. |
 | verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
-| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
-| Full smoke suite still green (no regression) | ☐ pass / ☐ fail | |
-| **Companion score (easy-verifier)** | ☐ pass / ☐ fail / ☐ N/A | [`overall` and `change_risk` as the tool returned them, the scope, the ref, and the absolute path of the verifier report after a literal `report:` label — e.g. "overall 86 (>= 80), change_risk pass, scope changes, ref `main...HEAD`, report: `/home/me/.easy-verifier-reports/kit/score_changes_20261028T0530Z.html`". The gate reads the path that follows `report:` and nothing else, so with no label, or a path that is absent, the row is unscored — write ☑ N/A instead. ☑ N/A with a reason when neither companion tool was run: the merge gate blocks on ☑ fail only, never on an absent or N/A row] |
-| **UI: Visual regression (diff or verdict pasted)** | ☐ pass / ☐ fail / ☐ N/A | [screenshot path or LLM verdict — required for UI tasks, Hard-Stop Gate 6] |
-| **UI: Design-system compliance (tokens/colors/typography verified)** | ☐ pass / ☐ fail / ☐ N/A | [method used + output] |
-| **UI: Responsiveness at target viewports** | ☐ pass / ☐ fail / ☐ N/A | [viewports tested, any overflow findings] |
+| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☑ pass | Reviewed the migration, `src/review/**`, `public/review.js`, `src/app.tsx` and `src/ladder/view.ts` diffs. `src/views.tsx` and tests read only by the security reviewer or through test runs. `lane_check`: `lane: C2, 25 files, 1265 lines, EXCEEDS (files 25 > 14; lines 1265 > 500)` (warn-only; screenshots and tests count). Findings: P0 0, P1 1 fixed, P1 1 open for your call, P2 2, P3 3, listed under Auto decisions. |
+| Full smoke suite still green (no regression) | ☑ pass | Same run: all earlier unit and browser tests pass. |
+| **Companion score (easy-verifier)** | ☑ N/A | The companion tool was not run for this task. |
+| **UI: Visual regression (diff or verdict pasted)** | ☑ pass | Implementer viewed `e2e/screenshots/review-back-mobile.png` and `review-front-desktop.png` against the rubric — pass. The reviewer did not view them, and no vision model ran. |
+| **UI: Design-system compliance (tokens/colors/typography verified)** | ☑ pass | `e2e/review.spec.ts` token, tap-target and gap checks pass in the reviewer rerun; no new hex literal in `src/` or `public/` (implementer grep). |
+| **UI: Responsiveness at target viewports** | ☑ pass | `e2e/review.spec.ts` at 360, 768 and 1280 px pass in the reviewer rerun; no horizontal scroll. |
 
 ---
 
@@ -98,5 +110,4 @@ full suites: pnpm test 143 passed (12 files); pnpm exec playwright test 44 passe
 
 **DELTA**: [one sentence — what a user can now do that they could not before]
 
-**WITNESS**: [who ran it and when — derived from `memory/event-trace/Txxx.jsonl`, never the
-implementing agent alone]
+**WITNESS**: Supervisor reran the verification commands on 2026-11-01 in `.claude/worktrees/T011`; trace `memory/event-trace/T011.jsonl`.
