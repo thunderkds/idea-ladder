@@ -35,13 +35,13 @@
 - [ ] **T029** — "Learn what's trending" weekly pick | backend-developer | C1 | Risk: Low | P2 | Phase: v3 (after Gate 3)
 
 ### In Progress
-- [ ] **T015** — Offline PWA (service worker cache), push reminders, export/import of progress | frontend-developer | C2 | Risk: Medium | P1 | Phase: v1 (after Gate 1) | Started 2026-11-01: branch `T015-offline-pwa`
 - [ ] **T032** — Record every learner who starts a ladder (cache hit and shared job) | backend-developer | C1 | Risk: Medium | P0 | Phase: v1 (after Gate 1) | Started 2026-11-01: branch `T032-ladder-learners`
 
 ### Blocked
 - [ ] **T006** — Repo reader agent (3 read-only tools: list, read, search; step cap; token budget) picks core files; scored on golden set | backend-developer | C2 | Risk: Medium | P0 | Phase: v1 (after Gate 1) | Started 2026-11-01: branch `T006-repo-reader` | Blocked 2026-11-01: AC 7 needs `ANTHROPIC_API_KEY`, `MODEL_A_ID` and a price in `eval/prices.json`
 
 ### Ready for Review
+- [ ] **T015** — Offline PWA (service worker cache), push reminders, export/import of progress | frontend-developer | C2 | Risk: Medium | P1 | Phase: v1 (after Gate 1) | Started 2026-11-01: branch `T015-offline-pwa`
 
 ### Done
 - [x] **T011** — Daily 5-minute review with FSRS (ts-fsrs 5.4.2), review log stored | frontend-developer | C2 | Risk: Medium | P0 | Phase: v1 (after Gate 1) | Started 2026-11-01: branch `T011-daily-review` | Done 2026-11-01: auto verify pass (session 841657e4-ecac-4792-a408-9f8a5abb7b8c, commit 570fbb137513dd8d94ad709d09134f6bfd76cf50)

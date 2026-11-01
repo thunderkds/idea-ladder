@@ -9,6 +9,8 @@
 
 ## Patterns
 
+- **web-push reads endpoints with the legacy URL parser (2026-11-01).** `new URL("https:host/x")` finds the host, but `url.parse` finds none, and `https.request` then goes to localhost. Check the raw string starts with `https://` as well as the parsed host.
+
 - **T006 needs a new migration number at its merge (2026-11-01).** T006 and T011 both use `1762000002000`. Rename T006's file to a later number, or its migration runs out of order.
 - **Cache-hit learners have no started record (2026-11-01).** `startLadder` writes no row on a hit, and `listMyLadders` and `getReviewQueue` read `generation_jobs.started_by`. Every learner after the first gets no My ladders row and no reviews. Fix before T008 saves real ladders.
 
