@@ -42,6 +42,7 @@ Memory: <each entry the memory pass wrote, as `file — entry` | nothing new>
 Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | /verify (yours)>
 
 -->
+Paused: auto-mode check failed — extended track, but the trace has no `code-review` Skill call (Stage 4 runs in auto mode)
 
 ## Auto decisions
 
@@ -52,9 +53,10 @@ Mode: auto
 Findings: P1 fixed: auto verify found that an import with a future `lastReview` was accepted and the next rating of that card gave a 500; imports with a date past server time + 5 minutes are now refused, and a rating never runs earlier than the last review; tests added. P1 fixed `src/push/subscriptions.ts:12` `https:fcm.googleapis.com/x` passed the host check, but web-push reads it with no host and would connect to localhost; run with Node to confirm, then closed. P2 `src/review/sync.ts:21` two devices: the guide edge case says ratings apply in `reviewedAt` order; they apply in arrival order, and an older rating gets server time. P2 `public/offline-store.js:195` sign-out deletes queued ratings even when the send failed, so they are lost on a server error. P3 a reminder subscription stays after sign-out (fixed text only). P3 never-rated cards count as due for the reminder. P3 the service worker has no fetch timeout on a bad connection. P3 a chunked import is read in full before the size check.
 Checks: tests `pnpm test` and `pnpm test:e2e` — 180 unit and 53 browser tests passed; reviews code-review — 0 P0, 2 P1 fixed, 2 P2, 4 P3; migration-safety — GO, reversible, no downtime, additive, implementer dry run on 20,000 `review_log` rows took 120 ms and kept all rows; security-review — skill ran through a temporary `origin/HEAD` ref; no findings at confidence 8 or above, all named files read in full; one candidate at score 5 was confirmed and fixed; startup-reads check — pass, the report names `PROJECT_SPEC.md`, `tasks/TASK_GUIDE_T015.md`, `agents/frontend.md`; real run: `pnpm test:e2e` installs and runs the app in Chromium, offline included (auto-checked, not /verify)
 Memory: memory/learnings.md — web-push reads endpoints with the legacy URL parser; memory/learnings.md — T015 unproven push paths
-Not done: merge (yours); auto verify: running (T182); real push delivery (needs real VAPID keys and a push service; the verify run also could not reach `Turn on reminders` in headless Chromium, so that path is shown only with mocks); manual iPhone check; browser tests run with `tsx`, not the production build
+Not done: merge (yours); auto verify: ☑ pass (session 6367c9f7-cf90-4965-8533-31050c6aa7f6, commit b3d61aba701cbc8712e1e2a69bad5973b83527e5, log .claude/verify-runs/T015-b3d61aba701c.log); real push delivery (needs real VAPID keys and a push service; the verify run also could not reach `Turn on reminders` in headless Chromium, so that path is shown only with mocks); manual iPhone check; browser tests run with `tsx`, not the production build
 
 ---
+Closed: row moved to Done 2026-11-01 — auto verify pass (session 6367c9f7-cf90-4965-8533-31050c6aa7f6, commit b3d61aba701cbc8712e1e2a69bad5973b83527e5); Gates 5 and 6 checked
 
 ## Evidence
 
@@ -63,7 +65,7 @@ Not done: merge (yours); auto verify: running (T182); real push delivery (needs 
 | **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | `test/t015-offline-sync.test.ts`, `test/t015-progress.test.ts`, `test/t015-push.test.ts`, `test/t015-web-push.test.ts`, `e2e/pwa.spec.ts`, `e2e/pwa-install.spec.ts`. Reviewer rerun 2026-11-01: `Test Files  16 passed (16)`, `Tests  180 passed (180)`; Playwright `53 passed (34.0s)`. |
 | Verification command run | ☑ pass | Reviewer rerun in the worktree, exit codes checked: `pnpm install --frozen-lockfile` 0, `pnpm typecheck` 0, `pnpm lint` 0, `pnpm build` 0, `pnpm test`, `pnpm test:e2e`. Dependency ages: web-push 2024-01-16, zod 2026-10-12, @types/web-push 2024-10-22 (rule: at least 2 weeks old). `pnpm audit --prod`: 2 moderate, the two already recorded under T005. |
 | Negative cases hold | ☑ pass | Tests pass: import with an evidence hash and L3 unlocked changes no other table, another learner's file 403, version 2 422, over 5 MB 413, future and old `reviewedAt` rejected, duplicate key one row, 404 and 410 delete a subscription, disallowed push hosts refused. |
-| verify | ☑ fail | auto-run by hook, session b5d85330-32fc-4ff3-817c-b71614010138, commit b451106186de99bac857312c57b2f6af80704360, log .claude/verify-runs/T015-b451106186de.log — fail |
+| verify | ☑ pass | auto-run by hook, session 6367c9f7-cf90-4965-8533-31050c6aa7f6, commit b3d61aba701cbc8712e1e2a69bad5973b83527e5, log .claude/verify-runs/T015-b3d61aba701c.log — pass |
 | Review scope bounded to the change's blast radius (affected set, not whole repo) | ☑ pass | Reviewed the migration, `src/review/sync.ts`, `src/progress/transfer.ts`, `src/push/**`, `public/sw.js`, the `src/review/store.ts` and `src/app.tsx` diffs. `public/offline-store.js`, `public/pwa.js`, `public/settings.js` read in full by the security reviewer only. `lane_check`: `lane: C2, 41 files, 2624 lines, EXCEEDS (files 41 > 14; lines 2624 > 500)` plus an unpredicted list (warn-only; this task is near C3, label kept). Findings: P0 0, P1 2 fixed, P2 2, P3 4, listed under Auto decisions. |
 | Full smoke suite still green (no regression) | ☑ pass | Same run: all earlier unit and browser tests pass; the T011 tests pass unchanged. |
 | **Companion score (easy-verifier)** | ☑ N/A | The companion tool was not run for this task. |
