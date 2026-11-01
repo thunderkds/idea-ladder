@@ -47,7 +47,8 @@ export async function logStepCost(input: StepCostInput, opts: CostOptions = {}):
   const parsed = inputSchema.safeParse(input);
   if (!parsed.success) throw new InvalidCostInputError(parsed.error.issues.map((i) => `${i.path.join(".") || "input"}: ${i.message}`).join("; "));
   const v = parsed.data;
-  const price = (opts.prices ?? (await loadPrices()))[v.model];
+  const prices = opts.prices ?? (await loadPrices());
+  const price = Object.hasOwn(prices, v.model) ? prices[v.model] : undefined;
   if (!price) throw new UnknownModelPriceError(v.model);
   const usd = Math.round(((v.inputTokens * price.input + v.cachedInputTokens * price.cachedInput + v.outputTokens * price.output) / 1e6) * 1e9) / 1e9;
   const rec: CostRecord = { ts: (opts.now ?? (() => new Date()))().toISOString(), ...v, usd };

@@ -47,7 +47,7 @@ const f = (n: number | undefined) => (n === undefined ? "" : n.toFixed(3));
 
 export function renderMarkdown(r: Report): string {
   const core = r.step === "core-files";
-  const head = core ? "| Repo | Tier | Recall | Precision | Missed | Extra |\n|---|---|---|---|---|---|" : "| Repo | Tier | Overlap | Missed | Extra |\n|---|---|---|---|---|---|";
+  const head = core ? "| Repo | Tier | Recall | Precision | Missed | Extra |\n|---|---|---|---|---|---|" : "| Repo | Tier | Overlap | Missed | Extra |\n|---|---|---|---|---|";
   const list = (xs: string[]) => (xs.length ? xs.map((x) => `\`${x}\``).join(", ") : "-");
   const body = r.rows.map((x) => (core
     ? `| ${x.fullName} | ${x.tier} | ${f(x.recall)} | ${f(x.precision)} | ${list(x.missed)} | ${list(x.extra)} |`
