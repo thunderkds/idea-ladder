@@ -9,6 +9,9 @@
 
 ## Patterns
 
+- **The step limit counts every agent of a task (2026-11-01).** `pre_agent_step_limit.py` counts by Task ID, so a reviewer spawned after a long build can be stopped after 3 calls. The T005 security reviewer was stopped this way. Treat that result as incomplete and rerun it; the counter resets itself.
+- **An open job holds its repo + SHA until it fails (2026-11-01).** `generation_jobs_open_key` covers every status except `failed`. T005 leaves no way out for a job stuck `queued` or `running`, and T008 must handle `fetched` jobs that never produce a ladder.
+
 - **Lint and the database on the main checkout (2026-11-01).** `pnpm lint` from `main` also walks `.claude/worktrees/`; T005 adds `.claude/` to the ESLint ignores. Worktree compose projects all bind port 54329: stop the other container first, and recreate one that failed its first start, because it comes up with no published port.
 - **`security-review` needs `origin/HEAD` (2026-11-01).** This repo's remote is `github`, so the built-in skill stops at launch with `fatal: ambiguous argument 'origin/HEAD...'`. To run it: in the task worktree, `git update-ref refs/remotes/origin/HEAD main`, run the skill, then delete that ref.
 - **The merge gate also blocks trial merges (2026-11-01).** Any `git merge` in a Bash call is blocked while a task is In Progress, even in a scratch worktree. Check overlap from `git diff --name-only` lists until the tasks are through review.
