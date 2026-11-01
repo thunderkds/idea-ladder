@@ -42,22 +42,34 @@ Memory: <each entry the memory pass wrote, as `file — entry` | nothing new>
 Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | /verify (yours)>
 
 -->
-Paused: auto-mode check failed — tasks/TASK_REVIEW_T010.md has no `## Auto decisions` section starting with `Mode: auto`; no `Memory:` line in the report — run the memory pass before you stop and record it there (each entry written, or `Memory: nothing new`); no test run in memory/event-trace/T010.jsonl — write /home/hungnguyenhuu/workspace/pets/hungnguyen111/idea-ladder/.claude/hooks/.state/active_task.d/$CLAUDE_CODE_SESSION_ID with the task ID (minimal-track step 1): `mkdir -p /home/hungnguyenhuu/workspace/pets/hungnguyen111/idea-ladder/.claude/hooks/.state/active_task.d && printf '%s\n%s\n' "T010" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > /home/hungnguyenhuu/workspace/pets/hungnguyen111/idea-ladder/.claude/hooks/.state/active_task.d/$CLAUDE_CODE_SESSION_ID`, then rerun the task's tests so the trace records them under the task, then stop
+
+## Auto decisions
+
+Mode: auto
+1. Left the branch unmerged — RULE: `docs/claude-md/tracks.md` `### Never in auto mode`
+2. Recorded the partial role-guide read as a process finding with no code change, because a late full read cannot change committed work — RULE: `.claude/skills/code-review/SKILL.md` § Phase 0.5 — Entry-Point Reachability Check
+3. Left the P2 and P3 findings unfixed — RULE: `.claude/skills/code-review/SKILL.md` § Phase 4 — Apply Safe Fixes
+Findings: P1 process: the implementer read only the first 30 lines of `agents/frontend.md`, and skipped the guide's Complexity part. P2 `src/ladder/view.ts:107` `My ladders` lists only ladders whose job the learner started, so a learner who arrives through a cache hit cannot find the ladder again (AC 7 as written; needs a backend follow-up). P2 `src/ladder/view.ts:118` the README link is always `README.md`, so it is a 404 for a repo with `README.rst` or similar, because T005 stores no README path. P3 `src/ladder/view.ts:53` the `to_regclass` check runs on each request and must go when T008 adds `levels`.
+Checks: tests `pnpm test` and `pnpm test:e2e` — 127 unit and 35 browser tests passed; reviews code-review — 0 P0, 1 P1 process, 2 P2, 1 P3; security-review not required at Risk Low; migration-safety not applicable, no schema change; startup-reads check — partial, see P1; real run: browser tests on the running app with a real Postgres (auto-checked, not /verify)
+Memory: memory/learnings.md — T008 must match the `levels` columns T010 reads
+Not done: merge (yours); auto verify: running (T182); HTML review report not generated; level content and passes are test data until T008 and T012
+
+---
 
 ## Evidence
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass / ☐ fail | [test file path(s) — required before Done] |
-| Verification command run | ☐ pass / ☐ fail | [paste actual output] |
-| Negative cases hold | ☐ pass / ☐ fail | |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | `test/level-lock-state.test.ts`, `test/ladder-view.test.ts`, `e2e/ladder-view.spec.ts`. Reviewer rerun 2026-11-01: `Test Files  11 passed (11)`, `Tests  127 passed (127)`; Playwright `35 passed (34.7s)`. |
+| Verification command run | ☑ pass | Reviewer rerun in the worktree: `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm lint` exit 0, `pnpm test`, `pnpm test:e2e`. `@axe-core/playwright` 4.14.0 published 2026-10-15 (rule: at least 2 weeks old). |
+| Negative cases hold | ☑ pass | Tests pass: unknown and malformed ladder id give the 404 page; signed-out learner goes to sign-in and back to the same ladder; a return cookie that is not a UUID is ignored. |
 | verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
-| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
-| Full smoke suite still green (no regression) | ☐ pass / ☐ fail | |
-| **Companion score (easy-verifier)** | ☐ pass / ☐ fail / ☐ N/A | [`overall` and `change_risk` as the tool returned them, the scope, the ref, and the absolute path of the verifier report after a literal `report:` label — e.g. "overall 86 (>= 80), change_risk pass, scope changes, ref `main...HEAD`, report: `/home/me/.easy-verifier-reports/kit/score_changes_20261028T0530Z.html`". The gate reads the path that follows `report:` and nothing else, so with no label, or a path that is absent, the row is unscored — write ☑ N/A instead. ☑ N/A with a reason when neither companion tool was run: the merge gate blocks on ☑ fail only, never on an absent or N/A row] |
-| **UI: Visual regression (diff or verdict pasted)** | ☐ pass / ☐ fail / ☐ N/A | [screenshot path or LLM verdict — required for UI tasks, Hard-Stop Gate 6] |
-| **UI: Design-system compliance (tokens/colors/typography verified)** | ☐ pass / ☐ fail / ☐ N/A | [method used + output] |
-| **UI: Responsiveness at target viewports** | ☐ pass / ☐ fail / ☐ N/A | [viewports tested, any overflow findings] |
+| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☑ pass | Reviewed `src/ladder/**`, the `src/app.tsx` and `src/views.tsx` diffs, `package.json`. Skipped lockfile; `public/app.css` read through screenshots only. `lane_check`: `lane: C2, 13 files, 712 lines, EXCEEDS (lines 712 > 500)` with an unpredicted list (warn-only; tests and screenshots count). Findings: P0 0, P1 1 process, P2 2, P3 1, listed under Auto decisions. |
+| Full smoke suite still green (no regression) | ☑ pass | Same run: all T003 and T005 unit and browser tests pass. |
+| **Companion score (easy-verifier)** | ☑ N/A | The companion tool was not run for this task. |
+| **UI: Visual regression (diff or verdict pasted)** | ☑ pass | Reviewer verdict after viewing `e2e/screenshots/ladder-view-mobile.png`: five levels in order, L0 open, L1–L4 locked with icon and text, badge, 7-character SHA, two link buttons, long word wraps — pass. Desktop, tablet and list screenshots were viewed by the implementer only. |
+| **UI: Design-system compliance (tokens/colors/typography verified)** | ☑ pass | `e2e/ladder-view.spec.ts` token checks pass in the reviewer rerun; axe scan: 0 serious or critical violations (implementer report; same spec passed in the rerun). |
+| **UI: Responsiveness at target viewports** | ☑ pass | `e2e/ladder-view.spec.ts` at 360, 768 and 1280 px pass in the reviewer rerun; no horizontal scroll. |
 
 ---
 
@@ -92,5 +104,4 @@ Screenshots: e2e/screenshots/ladder-view-{mobile,tablet,desktop}.png, e2e/screen
 
 **DELTA**: A signed-in learner can open `/ladders/:ladderId` and see L0 to L4 with goals and pass tests, only the first unpassed level open, status Unverified, the 7-char pinned SHA, and links to the README at that SHA and to DeepWiki; `My ladders` lists the ladders they started.
 
-**WITNESS**: [who ran it and when — derived from `memory/event-trace/Txxx.jsonl`, never the
-implementing agent alone]
+**WITNESS**: Supervisor reran the verification commands on 2026-11-01 in `.claude/worktrees/T010`; trace `memory/event-trace/T010.jsonl`.
