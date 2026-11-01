@@ -2,6 +2,12 @@
 
 > **Rules**: Supervisor-only writes. Each entry: `### YYYY-MM-DD — Title`, then **Decision**, **Why**, and **Files** (cite paths — the diff-driven pass greps this file by changed file path).
 
+## 2026-11-01 — v1 build starts before Gate 1
+
+**Decision**: The v1 build continues before Gate 1 passes. The 14-day v0 run no longer blocks T003–T018 and T030. Gate 2 and Gate 3 still hold.
+**Why**: The user said "approve, and run all tasks in parrallel if possible", then replied "continue" when asked to merge wave 1 or hold it until Gate 1. The Supervisor read that reply as the ruling; the user can reverse it.
+**Effect**: Merged T003 and T004 to local `main` (86a3dab), not pushed.
+
 ## Architecture
 
 ### 2026-11-01 — v0 runs as experiments only (Option B, narrowed)

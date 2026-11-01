@@ -54,7 +54,6 @@
 
 | Task | Reason | Waiting on |
 |------|--------|-----------|
-| v1 tasks T003–T018, T030 | Gate 1: review on ≥10 of 14 days and ladders usable | Owner's 14-day v0 run (T002 kit) |
 | v2 tasks T019–T024 | Gate 2: others finish L1 without your help | v1 deployed (T018) + real learners |
 | v3 tasks T025–T029 | Gate 3: proof links get shared; first outside ladder PR | v2 live |
 | T013, T017, T018, T023 | Each stops for one user decision (L1 proof; cost cap; hosting; Radar button) | User |

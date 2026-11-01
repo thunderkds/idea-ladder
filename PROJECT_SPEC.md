@@ -45,7 +45,7 @@ v0 (now): no product code. Experiments only — the v0 ladder kit (T002) and a d
 
 - The LLM never decides a pass, never schedules a review, never sits in the proof trust path (§ LLM strategy, § Proof architecture).
 - No shared database, login or API with Idea Radar; the only contract is `/start?url=` (§ Architecture).
-- No v1 product code before Gate 1 (v0: review on ≥10 of 14 days, ladders usable) passes (§ Roadmap).
+- Gate 1 (v0: review on ≥10 of 14 days, ladders usable) no longer blocks v1: the user chose on 2026-11-01 to build v1 before it passes (`memory/decisions.md`). The v0 run stays open as evidence.
 - Spikes live under `experiments/` and are throwaway: no production abstractions, no persistence beyond files.
 - Never commit secrets or private keys; spike signing keys are generated per run in memory.
 - Cards are original text; never copy repo code or docs into cards (§ Grill #9).
