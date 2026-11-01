@@ -17,9 +17,10 @@ Mode: auto
 2. Recommended ladder to climb: `developit/mitt` — SAFER OPTION: smallest core, so L4 rebuild fits inside 14 days ⚠ decided for you — please review
 3. Anki plain-text import (`.txt`) instead of `.apkg` — RULE: guide cut list (no dependency); Anki imports it with FSRS on
 4. Agent fixed the verification path (`test/index.js` + `package.json` type module) because `node --test <dir>/` fails on Node v26.7.0 — FACT: agent report, re-run by Supervisor passes
-Checks: tests `node --test experiments/v0-kit/test/` — 12/12 pass; reviews code-review — 0 P0, 0 P1, 0 P2 for T002; real run `node experiments/v0-kit/build-anki.mjs` — printed `mitt: 26 cards (L0=5 L1=5 L2=5 L3=6 L4=5)` and 2 more lines (auto-checked, not /verify)
+5. Added `"test": "node --test test/"` to `experiments/v0-kit/package.json` (agent, commit dbbddbb) so the trace hook recognises the run (it counts `npm test`, not `node --test`) — RULE: `docs/claude-md/tracks.md` `### Auto-mode check (Stop hook)` (check 7: the task's trace must hold a test run)
+Checks: tests `npm test` (in experiments/v0-kit) — 12/12 pass; reviews code-review — 0 P0, 0 P1, 0 P2 for T002; real run `node experiments/v0-kit/build-anki.mjs` — printed `mitt: 26 cards (L0=5 L1=5 L2=5 L3=6 L4=5)` and 2 more lines (auto-checked, not /verify)
 Memory: memory/decisions.md — "v0 runs as experiments only"; memory/MEMORY.md — 2 index lines
-Not done: merge (yours); auto verify: running (T182); the 14-day climb itself (yours); readiness incomplete: Approved by (yours)
+Not done: merge (yours); auto verify: ☑ pass (session 1e8e580f-079a-4d47-afe7-81c4aa8c0405, commit 00d46cbffb9ccac097a2a4f667cb7cb62d2b4d40, log .claude/verify-runs/T002-00d46cbffb9c.log); the 14-day climb itself (yours); readiness incomplete: Approved by (yours)
 
 ## Evidence
 
@@ -28,7 +29,7 @@ Not done: merge (yours); auto verify: running (T182); the 14-day climb itself (y
 | **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | `experiments/v0-kit/test/index.js` — 12 new tests (AC 1–5: 3 real ladders, SHA + headers, tab/missing L3/2-card/long Back/fenced code/quote/missing header/missing Goal/README copy). Supervisor re-run 2026-11-01: `ℹ tests 12 ℹ pass 12 ℹ fail 0` |
 | Verification command run | ☑ pass | `node --test experiments/v0-kit/test/ && node experiments/v0-kit/build-anki.mjs && head -5 experiments/v0-kit/anki/*.txt` → `dset: 26 cards` / `mitt: 26 cards` / `pocketflow: 27 cards`; headers `#separator:tab` `#html:false` `#tags column:3` — pass |
 | Negative cases hold | ☑ pass | tab in Back, missing L3, level with 2 cards → exit 1 naming file + card (tests 4–6) — pass |
-| verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
+| verify | ☑ pass | auto-run by hook, session 1e8e580f-079a-4d47-afe7-81c4aa8c0405, commit 00d46cbffb9ccac097a2a4f667cb7cb62d2b4d40, log .claude/verify-runs/T002-00d46cbffb9c.log — pass; done not moved: Gate 5: no test run in memory/event-trace/T002.jsonl |
 | Review scope bounded to the change's blast radius (affected set, not whole repo) | ☑ pass | code-review on `plan/idea-ladder-init..T002-v0-kit` only (11 files, experiments/v0-kit/**); lane_check: `EXCEEDS (files 11 > 6; lines 739 > 250)` — content files (3 ladders + 3 generated .txt) inflate it; no relabel |
 | Full smoke suite still green (no regression) | ☑ pass | no prior code; only suite is the new one — 12/12 pass |
 | **Companion score (easy-verifier)** | ☑ N/A | not run: optional companion tool; spike/content task |
