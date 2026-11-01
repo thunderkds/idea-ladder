@@ -80,9 +80,17 @@ $ ls src   ->  app.tsx auth config.ts db.ts server.tsx start views.tsx workflow
 ```
 Prior `My ladders` page body (src/views.tsx, `LaddersPage`): `<p class="muted">No ladders yet</p>` for every learner.
 
-**AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
+**AFTER**: 2026-11-01, T010 worktree, same commands after the change:
 
-**DELTA**: [one sentence — what a user can now do that they could not before]
+```
+$ pnpm test      -> Test Files 11 passed (11) / Tests 127 passed (127)   (new: test/level-lock-state.test.ts, test/ladder-view.test.ts = 17 tests)
+$ pnpm test:e2e  -> 35 passed   (new: e2e/ladder-view.spec.ts, 10 tests incl. axe scan with 0 serious/critical, 360/768/1280 no horizontal scroll)
+GET /ladders/<seeded id> -> 200: 5 levels L0..L4, badge "Unverified", "6b41670", README link .../blob/<full sha>/README.md, DeepWiki link
+GET /ladders/does-not-exist -> 404 "Ladder not found"
+```
+Screenshots: e2e/screenshots/ladder-view-{mobile,tablet,desktop}.png, e2e/screenshots/ladders-list-desktop.png.
+
+**DELTA**: A signed-in learner can open `/ladders/:ladderId` and see L0 to L4 with goals and pass tests, only the first unpassed level open, status Unverified, the 7-char pinned SHA, and links to the README at that SHA and to DeepWiki; `My ladders` lists the ladders they started.
 
 **WITNESS**: [who ran it and when — derived from `memory/event-trace/Txxx.jsonl`, never the
 implementing agent alone]
