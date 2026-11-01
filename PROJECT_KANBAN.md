@@ -40,9 +40,9 @@
 - [ ] **T006** — Repo reader agent (3 read-only tools: list, read, search; step cap; token budget) picks core files; scored on golden set | backend-developer | C2 | Risk: Medium | P0 | Phase: v1 (after Gate 1) | Started 2026-11-01: branch `T006-repo-reader` | Blocked 2026-11-01: AC 7 needs `ANTHROPIC_API_KEY`, `MODEL_A_ID` and a price in `eval/prices.json`
 
 ### Ready for Review
-- [ ] **T032** — Record every learner who starts a ladder (cache hit and shared job) | backend-developer | C1 | Risk: Medium | P0 | Phase: v1 (after Gate 1) | Started 2026-11-01: branch `T032-ladder-learners`
 
 ### Done
+- [x] **T032** — Record every learner who starts a ladder (cache hit and shared job) | backend-developer | C1 | Risk: Medium | P0 | Phase: v1 (after Gate 1) | Started 2026-11-01: branch `T032-ladder-learners` | Done 2026-11-01: auto verify pass (session a73e8f78-77f9-4b15-9936-19293b9f216a, commit 5fe6292f9b410901df46728cb54d5783023dcbc0)
 - [x] **T015** — Offline PWA (service worker cache), push reminders, export/import of progress | frontend-developer | C2 | Risk: Medium | P1 | Phase: v1 (after Gate 1) | Started 2026-11-01: branch `T015-offline-pwa` | Done 2026-11-01: auto verify pass (session 6367c9f7-cf90-4965-8533-31050c6aa7f6, commit b3d61aba701cbc8712e1e2a69bad5973b83527e5)
 - [x] **T011** — Daily 5-minute review with FSRS (ts-fsrs 5.4.2), review log stored | frontend-developer | C2 | Risk: Medium | P0 | Phase: v1 (after Gate 1) | Started 2026-11-01: branch `T011-daily-review` | Done 2026-11-01: auto verify pass (session 841657e4-ecac-4792-a408-9f8a5abb7b8c, commit 570fbb137513dd8d94ad709d09134f6bfd76cf50)
 - [x] **T010** — Ladder view — L0–L4, locked levels, status unverified, link out to README/DeepWiki | frontend-developer | C2 | Risk: Low | P0 | Phase: v1 (after Gate 1) | Started 2026-11-01: branch `T010-ladder-view` | Done 2026-11-01: auto verify pass (session c1384577-e7e9-41b8-aaa1-74a6f94229c8, commit fe8d46b1610058b54b6c9b68c33271f660d02109)
