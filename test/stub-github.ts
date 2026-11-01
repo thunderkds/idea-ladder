@@ -73,8 +73,9 @@ export function createStub(opts: StubOptions) {
   return { app, issueCode, setUser: (u: StubUser) => (currentUser = u) };
 }
 
-export async function startStub(opts: StubOptions, port = 0) {
+export async function startStub(opts: StubOptions, port = 0, extend?: (app: Hono) => void) {
   const stub = createStub(opts);
+  extend?.(stub.app);
   const info = await new Promise<{ port: number }>((resolve) => {
     const server = serve({ fetch: stub.app.fetch, port, hostname: '127.0.0.1' }, (i) => resolve(i));
     (stub as unknown as { server: unknown }).server = server;

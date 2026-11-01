@@ -4,6 +4,8 @@ import { createTempDb, runMigrate, type TempDb } from './helpers/db.js';
 
 let db: TempDb;
 
+const APP_TABLES = ['generation_jobs', 'ladders', 'repo_confidence', 'repo_snapshots', 'sessions', 'users'];
+
 async function query<T extends pg.QueryResultRow>(sql: string): Promise<T[]> {
   const client = new pg.Client({ connectionString: db.url });
   await client.connect();
@@ -25,12 +27,12 @@ afterAll(async () => {
 });
 
 describe('migrations', () => {
-  it('up creates vector, users and sessions; down empties the schema; up works again', async () => {
+  it('up creates vector and the app tables; down empties the schema; up works again', async () => {
     await runMigrate(db.url, 'up');
     expect((await query<{ extname: string }>('SELECT extname FROM pg_extension')).map((r) => r.extname)).toContain(
       'vector',
     );
-    expect((await query<{ table_name: string }>(appTables)).map((r) => r.table_name)).toEqual(['sessions', 'users']);
+    expect((await query<{ table_name: string }>(appTables)).map((r) => r.table_name)).toEqual(APP_TABLES);
     const cols = await query<{ column_name: string }>(
       `SELECT column_name FROM information_schema.columns WHERE table_name = 'users'`,
     );
@@ -49,6 +51,6 @@ describe('migrations', () => {
     );
 
     await runMigrate(db.url, 'up');
-    expect((await query<{ table_name: string }>(appTables)).map((r) => r.table_name)).toEqual(['sessions', 'users']);
+    expect((await query<{ table_name: string }>(appTables)).map((r) => r.table_name)).toEqual(APP_TABLES);
   });
 });
