@@ -5,6 +5,8 @@ export interface Config {
   sessionSecret: string;
   githubOauthBaseUrl: string;
   githubApiBaseUrl: string;
+  /** Token for the app's own GitHub reads (public repos only). Optional: without it GitHub's low unauthenticated limit applies. */
+  githubAppToken: string | undefined;
   appBaseUrl: string;
   port: number;
   secureCookies: boolean;
@@ -50,6 +52,7 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     sessionSecret: env.SESSION_SECRET as string,
     githubOauthBaseUrl: (env.GITHUB_OAUTH_BASE_URL ?? 'https://github.com').replace(/\/$/, ''),
     githubApiBaseUrl: (env.GITHUB_API_BASE_URL ?? 'https://api.github.com').replace(/\/$/, ''),
+    githubAppToken: env.GITHUB_APP_TOKEN || undefined,
     appBaseUrl,
     port,
     secureCookies: !isLocalUrl(appBaseUrl),

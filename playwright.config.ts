@@ -25,7 +25,16 @@ export default defineConfig({
         GITHUB_API_BASE_URL: 'http://127.0.0.1:4010',
         APP_BASE_URL: 'http://localhost:4011',
         PORT: '4011',
+        INNGEST_DEV: '1',
+        INNGEST_BASE_URL: 'http://127.0.0.1:8288',
       },
+    },
+    {
+      // Local Inngest dev server (pinned in package.json as `inngest:dev`); it syncs the app's functions.
+      command: 'pnpm dlx inngest-cli@1.46.0 dev -u http://localhost:4011/api/inngest --no-discovery --retry-interval 1',
+      url: 'http://127.0.0.1:8288/',
+      reuseExistingServer: false,
+      timeout: 120_000,
     },
   ],
 });
