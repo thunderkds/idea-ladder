@@ -42,22 +42,35 @@ Memory: <each entry the memory pass wrote, as `file — entry` | nothing new>
 Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | /verify (yours)>
 
 -->
-Paused: auto-mode check failed — tasks/TASK_REVIEW_T006.md has no `## Auto decisions` section starting with `Mode: auto`; no `Memory:` line in the report — run the memory pass before you stop and record it there (each entry written, or `Memory: nothing new`); no test run in memory/event-trace/T006.jsonl — write /home/hungnguyenhuu/workspace/pets/hungnguyen111/idea-ladder/.claude/hooks/.state/active_task.d/$CLAUDE_CODE_SESSION_ID with the task ID (minimal-track step 1): `mkdir -p /home/hungnguyenhuu/workspace/pets/hungnguyen111/idea-ladder/.claude/hooks/.state/active_task.d && printf '%s\n%s\n' "T006" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > /home/hungnguyenhuu/workspace/pets/hungnguyen111/idea-ladder/.claude/hooks/.state/active_task.d/$CLAUDE_CODE_SESSION_ID`, then rerun the task's tests so the trace records them under the task, then stop
+
+## Auto decisions
+
+Mode: auto
+1. Kept T006 In Progress and did not start auto verify, because AC 7 has no result and a cut never narrows an Acceptance Criterion — RULE: `AGENTS.md` § Karpathy Engineering Principles
+2. Did not invent a Claude price or a golden-set score — RULE: `docs/claude-md/tracks.md` `### Never in auto mode`
+3. Left the P2 and P3 findings unfixed — RULE: `.claude/skills/code-review/SKILL.md` § Phase 4 — Apply Safe Fixes
+Paused: AC 7 needs `ANTHROPIC_API_KEY`, `MODEL_A_ID` and a real price for that model in `eval/prices.json`.
+Findings: P1 open `src/reader/cost.ts:19` `eval/prices.json` holds only `test-model`, so every real model call fails the cost log and the failure is only printed; AC 6 is unmet in a real run until the price exists. P2 `src/reader/repo-tools.ts:155` one `search` can fetch 30 files, up to 15 steps, so one job can use more than GitHub's 60 unauthenticated calls per hour; a token is needed in real use. P2 `src/views.tsx:107` `fetched` renders as final, so a page that reloads in the short gap before `picking` stops updating. P2 `src/workflow/ladder-generate.ts:73` a transient model error repeats the whole loop, so up to 4 attempts at the budget are paid. P3 `repo_file_cache` is never trimmed.
+Checks: tests `pnpm test` and eval `pnpm test` — 151 and 71 passed; reviews code-review — 0 P0, 1 P1 open, 3 P2, 1 P3; migration-safety — GO, reversible, no downtime, data lost only in the new tables on down, CHECK widening rescans a small table, production-copy check not applicable because no production data exists; security-review — RUNNING, not finished; startup-reads check — pass, the report names `PROJECT_SPEC.md`, `tasks/TASK_GUIDE_T006.md`, `agents/backend.md`; real run: `node dist/src/server.js` with a reader configured — printed `Idea Ladder listening on http://localhost:4078` (auto-checked, not /verify)
+Memory: memory/learnings.md — the reader needs `GITHUB_APP_TOKEN` in real use; memory/decisions.md — token note corrected
+Not done: merge (yours); auto verify: not started, waits for AC 7; AC 7 golden-set run (yours: needs the key); a real model run has never happened; browser tests on this branch
+
+---
 
 ## Evidence
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass (AC 1-6, 8; AC 7 paid run pending) | `test/repo-reader.test.ts` (AC 1,2,3,4,6,8), `test/pick-core-files.test.ts` (AC 2 storage, 5, 6, GitHub cache, retry), `eval/test/repo-reader.test.ts` (AC 7 subject, verdict lines). Run output: root 11 files / 151 tests pass; eval 7 files / 71 tests pass. |
-| Verification command run | ☐ pass / ☐ fail | [paste actual output] |
-| Negative cases hold | ☐ pass / ☐ fail | |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ fail | `test/repo-reader.test.ts`, `test/pick-core-files.test.ts`, `eval/test/repo-reader.test.ts`. Reviewer rerun 2026-11-01: root `Tests  151 passed (151)`, eval `Tests  71 passed (71)`. AC 1–6 and 8 are covered with a mock model. AC 7 has no result: the paid golden-set run needs `ANTHROPIC_API_KEY`, so no score exists. |
+| Verification command run | ☑ fail | Reviewer rerun: install, `pnpm typecheck`, `pnpm lint` exit 0, `pnpm test`, eval `pnpm test`, `pnpm build`; the built server starts with a reader configured. Not run: `pnpm eval -- --step core-files --subject repo-reader`. |
+| Negative cases hold | ☑ pass | Tests pass: `../`, absolute and not-in-tree paths give tool errors; injection README adds no tool and keeps the schema; step cap and token budget stop the loop; invalid output ends `reader-invalid-output`. |
 | verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
-| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
-| Full smoke suite still green (no regression) | ☐ pass / ☐ fail | |
-| **Companion score (easy-verifier)** | ☐ pass / ☐ fail / ☐ N/A | [`overall` and `change_risk` as the tool returned them, the scope, the ref, and the absolute path of the verifier report after a literal `report:` label — e.g. "overall 86 (>= 80), change_risk pass, scope changes, ref `main...HEAD`, report: `/home/me/.easy-verifier-reports/kit/score_changes_20261028T0530Z.html`". The gate reads the path that follows `report:` and nothing else, so with no label, or a path that is absent, the row is unscored — write ☑ N/A instead. ☑ N/A with a reason when neither companion tool was run: the merge gate blocks on ☑ fail only, never on an absent or N/A row] |
-| **UI: Visual regression (diff or verdict pasted)** | ☐ pass / ☐ fail / ☐ N/A | [screenshot path or LLM verdict — required for UI tasks, Hard-Stop Gate 6] |
-| **UI: Design-system compliance (tokens/colors/typography verified)** | ☐ pass / ☐ fail / ☐ N/A | [method used + output] |
-| **UI: Responsiveness at target viewports** | ☐ pass / ☐ fail / ☐ N/A | [viewports tested, any overflow findings] |
+| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☑ pass | Reviewed `src/reader/**`, `src/workflow/ladder-generate.ts`, changed T005 files, migration, `eval/src/cli/eval.ts`. `eval/src/subjects/repo-reader.ts` not read by the Supervisor. `lane_check`: `lane: C2, 24 files, 1498 lines, EXCEEDS (files 24 > 14; lines 1498 > 500)` plus an unpredicted list (warn-only; a large C2, label kept). Findings: P0 0, P1 1 open, P2 3, P3 1, listed under Auto decisions. |
+| Full smoke suite still green (no regression) | ☑ pass | Same run: all T003 and T005 unit tests pass. Browser tests not rerun on this branch, because the T010 verify run used the same e2e database. |
+| **Companion score (easy-verifier)** | ☑ N/A | The companion tool was not run for this task. |
+| **UI: Visual regression (diff or verdict pasted)** | ☐ N/A | No UI acceptance criteria in this guide; the only page change is one status heading, covered by unit tests. |
+| **UI: Design-system compliance (tokens/colors/typography verified)** | ☐ N/A | No UI acceptance criteria in this guide; the only page change is one status heading, covered by unit tests. |
+| **UI: Responsiveness at target viewports** | ☐ N/A | No UI acceptance criteria in this guide; the only page change is one status heading, covered by unit tests. |
 
 ---
 
