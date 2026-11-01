@@ -9,6 +9,8 @@
 
 ## Patterns
 
+- **T008 must match the columns T010 reads (2026-11-01).** `src/ladder/view.ts` reads `levels(ladder_id, level_id, goal, pass_test_kind, pass_test_description)` behind a `to_regclass` check. T008 uses those names or changes the view, and removes the check.
+
 - **The step limit counts every agent of a task (2026-11-01).** `pre_agent_step_limit.py` counts by Task ID, so a reviewer spawned after a long build can be stopped after 3 calls. The T005 security reviewer was stopped this way. Treat that result as incomplete and rerun it; the counter resets itself.
 - **An open job holds its repo + SHA until it fails (2026-11-01).** `generation_jobs_open_key` covers every status except `failed`. T005 leaves no way out for a job stuck `queued` or `running`, and T008 must handle `fetched` jobs that never produce a ladder.
 
