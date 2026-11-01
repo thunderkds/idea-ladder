@@ -11,12 +11,12 @@
 > Task line format: **Txxx** — [title] | [agent] | C[0–3] | Risk: Low/Med/High | P[0–2]
 
 ### Todo
-- [ ] **T002** — v0 experiment kit — 3 ladders, Anki import file, 14-day log | backend-developer | C1 | Risk: Low | P0
-- [ ] **T001** — Spike — measure the deterministic core (answer-key check, signed proof, GitHub read) | backend-developer | C2 | Risk: Medium | P0
 
 ### In Progress
 
 ### Ready for Review
+- [ ] **T001** — Spike — measure the deterministic core (answer-key check, signed proof, GitHub read) | backend-developer | C2 | Risk: Medium | P0 | Started 2026-11-01: branch `T001-core-spike`
+- [ ] **T002** — v0 experiment kit — 3 ladders, Anki import file, 14-day log | backend-developer | C1 | Risk: Low | P0 | Started 2026-11-01: branch `T002-v0-kit`
 
 ### Done
 
@@ -37,7 +37,7 @@
 | 0.5 Brainstorming | ✅ Done (auto; approval pending) |
 | 1 Environment Setup | ✅ Done |
 | 1.5 Sub-Agent Architecture | ✅ Done (base team) |
-| 2 Planning (/plan) | 🔄 In Progress |
-| 3 Execution | ⬜ Not Started |
-| 4 Review | ⬜ Not Started |
-| 5 Integration & Verify | ⬜ Not Started |
+| 2 Planning (/plan) | ✅ Done |
+| 3 Execution | ✅ Done |
+| 4 Review | ✅ Done |
+| 5 Integration & Verify | 🔄 auto verify running |

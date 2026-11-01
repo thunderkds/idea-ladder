@@ -21,3 +21,5 @@
 <!-- Format: - [Title](cold-file.md#section) — one-line summary.
      Target ≤150 chars/entry. Advisory: reported by the size test, never enforced.
      The enforced gate is the 42,000-character whole-file budget above. -->
+- [v0 = experiments only](decisions.md#2026-11-01--v0-runs-as-experiments-only-option-b-narrowed) — no product code before Gate 1; T001 spike + T002 kit
+- [Board mode local](decisions.md#2026-11-01--idea-ladder-uses-board-mode-local) — Linear config backed up; old cache archived; T-IDs
