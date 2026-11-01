@@ -58,13 +58,15 @@ async function readLevelRows(pool: pg.Pool, ladderId: string): Promise<Map<strin
 }
 
 /** Levels the learner has passed. T012 writes passes; until then nobody has passed a level. */
-async function readPassedLevelIds(): Promise<string[]> {
+export async function readPassedLevelIds(): Promise<string[]> {
   return [];
 }
 
+export type ReadPassed = (pool: pg.Pool, userId: string, ladderId: string) => Promise<string[]>;
+
 export interface ViewDeps {
   /** Replaces the pass lookup. Tests use it; T012 will make the default real. */
-  readPassed?: (pool: pg.Pool, userId: string, ladderId: string) => Promise<string[]>;
+  readPassed?: ReadPassed;
 }
 
 export async function getLadderView(pool: pg.Pool, ladderId: string, userId: string, deps: ViewDeps = {}): Promise<LadderView | null> {

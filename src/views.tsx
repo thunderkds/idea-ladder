@@ -49,6 +49,13 @@ export function LaddersPage(props: { login: string; ladders?: LadderListItem[] }
         </form>
       </header>
       <h1>My ladders</h1>
+      {ladders.length > 0 ? (
+        <p>
+          <a class="button button-quiet" href="/review">
+            Start review
+          </a>
+        </p>
+      ) : null}
       {ladders.length === 0 ? (
         <p class="muted">No ladders yet</p>
       ) : (
@@ -111,6 +118,9 @@ export function LadderPage(props: { login: string; ladder: LadderView }) {
         <a class="button button-quiet" href={deepWikiUrl(ladder.repoFullName)} target="_blank" rel="noopener noreferrer">
           Open in DeepWiki
         </a>
+        <a class="button" href="/review">
+          Start review
+        </a>
       </div>
       <ol class="levels">
         {ladder.levels.map((level, i) => (
@@ -138,6 +148,27 @@ export function LadderPage(props: { login: string; ladder: LadderView }) {
           </li>
         ))}
       </ol>
+    </Layout>
+  );
+}
+
+export function ReviewPage(props: { login: string }) {
+  return (
+    <Layout title={`Review - ${APP_NAME}`}>
+      <header class="bar">
+        <a href="/ladders">My ladders</a>
+        <span class="muted">
+          Signed in as <strong>{props.login}</strong>
+        </span>
+      </header>
+      <h1>Daily review</h1>
+      <div id="review" class="review" data-session-seconds="300">
+        <p class="muted">Loading your cards</p>
+        <noscript>
+          <p>Review needs JavaScript.</p>
+        </noscript>
+      </div>
+      <script src="/assets/review.js" defer></script>
     </Layout>
   );
 }

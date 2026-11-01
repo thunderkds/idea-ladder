@@ -1,5 +1,5 @@
 import pg from 'pg';
-import { createApp } from '../../src/app.js';
+import { createApp, type AppDeps } from '../../src/app.js';
 import { SESSION_COOKIE } from '../../src/auth/cookies.js';
 import { createSession, upsertUser } from '../../src/auth/session.js';
 import { loadConfig } from '../../src/config.js';
@@ -20,7 +20,7 @@ export interface TestApp {
   close: () => Promise<void>;
 }
 
-export async function startTestApp(opts: { fetchImpl?: typeof fetch; enqueue?: Enqueue; apiBaseUrl?: string; oauthBaseUrl?: string } = {}): Promise<TestApp> {
+export async function startTestApp(opts: { fetchImpl?: typeof fetch; enqueue?: Enqueue; apiBaseUrl?: string; oauthBaseUrl?: string } & Pick<AppDeps, 'readPassed' | 'now'> = {}): Promise<TestApp> {
   const db = await createTempDb();
   await runMigrate(db.url, 'up');
   const pool = new pg.Pool({ connectionString: db.url });
@@ -36,7 +36,7 @@ export async function startTestApp(opts: { fetchImpl?: typeof fetch; enqueue?: E
   });
   const events: LadderRequested[] = [];
   const enqueue: Enqueue = opts.enqueue ?? (async (data) => void events.push(data));
-  const app = createApp({ config, pool, fetchImpl: opts.fetchImpl, enqueue });
+  const app = createApp({ config, pool, fetchImpl: opts.fetchImpl, enqueue, readPassed: opts.readPassed, now: opts.now });
   return {
     db,
     pool,
