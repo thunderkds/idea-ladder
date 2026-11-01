@@ -8,6 +8,7 @@
 **Decision**: No product code before roadmap Gate 1. v0 = the ladder kit (T002) + a throwaway LLM-free spike (T001) measuring the answer-key code check, signed evidence proof and GitHub read against pre-registered thresholds. FSRS spike cut (v0 uses Anki's FSRS).
 **Why**: User asked to "evaluate, experiment the solution before apply"; source roadmap says v0 is no-code. 2-Advocate Debate, auto mode, not yet approved by the user.
 **Files**: BRAINSTORMING_LOG.md, experiments/core-spike/, experiments/v0-kit/, tasks/TASK_GUIDE_T001.md, tasks/TASK_GUIDE_T002.md
+**Outcome (2026-11-01, merged to main)**: T001 — answer-key code check FAIL (catch 96.9%, false-reject 11.3% > 10%; borderline, seed by implementer) → v1 needs a blind solver or entailment check; signed proof KEEP (17/17 tamper rejected); GitHub read KEEP (7 calls/repo). User confirmed v0 repos PocketFlow / mitt / dset. See experiments/core-spike/RESULTS.md.
 
 ## Infrastructure
 
