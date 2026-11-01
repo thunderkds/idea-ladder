@@ -15,9 +15,9 @@
 ### In Progress
 
 ### Ready for Review
-- [ ] **T001** — Spike — measure the deterministic core (answer-key check, signed proof, GitHub read) | backend-developer | C2 | Risk: Medium | P0 | Started 2026-11-01: branch `T001-core-spike`
 
 ### Done
+- [x] **T001** — Spike — measure the deterministic core (answer-key check, signed proof, GitHub read) | backend-developer | C2 | Risk: Medium | P0 | Started 2026-11-01: branch `T001-core-spike` | Completed: 2026-11-01 — verify pass (commit 4bc2c4c, same code at c0c587a); moved by Supervisor on user's merge request
 - [x] **T002** — v0 experiment kit — 3 ladders, Anki import file, 14-day log | backend-developer | C1 | Risk: Low | P0 | Started 2026-11-01: branch `T002-v0-kit` | Done 2026-11-01: auto verify pass (session cfd34d50-d813-4517-8ce1-6a3b7fca5031, commit de5cb7a299a45e94293f1281da6317ab9c0ce244)
 
 ---
@@ -40,4 +40,4 @@
 | 2 Planning (/plan) | ✅ Done |
 | 3 Execution | ✅ Done |
 | 4 Review | ✅ Done |
-| 5 Integration & Verify | 🔄 verify pass (T001, T002); merge waits for the user |
+| 5 Integration & Verify | ✅ Done — merged to main 2026-11-01 |
