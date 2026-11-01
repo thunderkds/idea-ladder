@@ -13,6 +13,11 @@ describe('T015 reviewedAt validation (unit)', () => {
   it('no client time: server time, not a rejection', () => {
     expect(resolveReviewedAt(undefined, last, T0)).toEqual({ reviewedAt: T0, clientTimeRejected: false });
   });
+  it('a last review a little ahead of server time (device clock) is the floor, so time never runs backwards', () => {
+    const ahead = new Date(T0.getTime() + 120_000);
+    expect(resolveReviewedAt(undefined, ahead, T0)).toEqual({ reviewedAt: ahead, clientTimeRejected: false });
+    expect(resolveReviewedAt(new Date(T0.getTime() - 1000), ahead, T0)).toEqual({ reviewedAt: ahead, clientTimeRejected: true });
+  });
   it('accepts a time after the last review and not later than server time + 5 minutes', () => {
     const c = new Date('2026-11-01T06:00:00Z');
     expect(resolveReviewedAt(c, last, T0)).toEqual({ reviewedAt: c, clientTimeRejected: false });

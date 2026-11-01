@@ -2,6 +2,7 @@ import type pg from 'pg';
 import { z } from 'zod';
 import { readPassedLevelIds } from '../ladder/view.js';
 import { unlockedPairs, type ReviewDeps } from '../review/store.js';
+import { MAX_CLIENT_AHEAD_MS } from '../review/sync.js';
 
 export const EXPORT_FORMAT = 'idea-ladder-progress';
 export const EXPORT_VERSION = 1;
@@ -152,6 +153,11 @@ export async function importProgress(pool: pg.Pool, userId: string, rawText: str
   if (!parsed.success) throw new ImportError('malformed-file');
   const file = parsed.data;
   if (file.learner !== userId) throw new ImportError('wrong-learner');
+
+  // Same ceiling as a synced rating. A last review in the future makes the next rating fail in ts-fsrs.
+  const latest = (deps.now ?? (() => new Date()))().getTime() + MAX_CLIENT_AHEAD_MS;
+  const inFuture = (date: string | null) => date !== null && new Date(date).getTime() > latest;
+  if (file.cardStates.some((c) => inFuture(c.lastReview)) || file.reviewLog.some((l) => inFuture(l.reviewedAt))) throw new ImportError('malformed-file');
 
   const { ladderIds, levelIds } = await unlockedPairs(pool, userId, deps.readPassed ?? readPassedLevelIds);
   const wanted = [...new Set([...file.cardStates.map((c) => c.cardId), ...file.reviewLog.map((l) => l.cardId)].map((id) => id.toLowerCase()))];

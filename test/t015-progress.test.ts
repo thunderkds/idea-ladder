@@ -92,6 +92,7 @@ describe('T015 export and import of progress (integration)', () => {
     older.reps = 99;
     newer.reviewLog.push({ ...file.reviewLog[0]!, idempotencyKey: `from-device-${s.userId}`, reviewedAt: days(T0, 3).toISOString() });
 
+    clock = days(T0, 4); // the imported dates are in the past of this clock
     const first = await importFile(s, newer);
     expect(first.status).toBe(200);
     expect(await first.json()).toMatchObject({ cardStatesUpdated: 1, logRowsAdded: 1 });
@@ -113,6 +114,20 @@ describe('T015 export and import of progress (integration)', () => {
     expect((await t.pool.query('SELECT count(*) AS n FROM card_states WHERE user_id = $1 AND card_id = $2', [s.userId, locked])).rows[0].n).toBe('0');
     expect((await t.pool.query('SELECT count(*) AS n FROM review_log WHERE user_id = $1 AND idempotency_key = $2', [s.userId, `locked-${s.userId}`])).rows[0].n).toBe('0');
     expect(a).toBeTruthy();
+  });
+
+  it('AC6 negative: a date in the future is rejected, and the card can still be rated', async () => {
+    const { s, a } = await learnerWithReviews();
+    const before = await snapshot(s);
+    const stateFile = await exportOf(s);
+    stateFile.cardStates[0]!.lastReview = '2099-01-01T00:00:00.000Z';
+    expect((await importFile(s, stateFile)).status).toBe(422);
+    const logFile = await exportOf(s);
+    logFile.reviewLog[0]!.reviewedAt = '2099-01-01T00:00:00.000Z';
+    expect((await importFile(s, logFile)).status).toBe(422);
+    expect(await snapshot(s)).toEqual(before);
+    clock = days(T0, 3);
+    expect((await rate(s, a, 3, `after-future-${s.userId}`)).status).toBe(200);
   });
 
   it('AC6 negative: a file edited to add an evidence hash and unlock L3 changes no evidence and no lock', async () => {

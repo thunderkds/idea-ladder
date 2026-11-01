@@ -15,9 +15,11 @@ export interface ResolvedReviewTime {
  * after the card's last review, not older than 30 days and not later than server time + 5 minutes. Otherwise the server uses its own time.
  */
 export function resolveReviewedAt(client: Date | undefined, lastReview: Date | null, serverNow: Date): ResolvedReviewTime {
-  if (!client) return { reviewedAt: serverNow, clientTimeRejected: false };
+  // A last review can be up to MAX_CLIENT_AHEAD_MS ahead of the server. Time must not run backwards: ts-fsrs refuses that.
+  const floor = lastReview && lastReview.getTime() > serverNow.getTime() ? lastReview : serverNow;
+  if (!client) return { reviewedAt: floor, clientTimeRejected: false };
   const afterLast = lastReview === null || client.getTime() > lastReview.getTime();
   const notTooOld = client.getTime() >= serverNow.getTime() - MAX_CLIENT_AGE_MS;
   const notAhead = client.getTime() <= serverNow.getTime() + MAX_CLIENT_AHEAD_MS;
-  return afterLast && notTooOld && notAhead ? { reviewedAt: client, clientTimeRejected: false } : { reviewedAt: serverNow, clientTimeRejected: true };
+  return afterLast && notTooOld && notAhead ? { reviewedAt: client, clientTimeRejected: false } : { reviewedAt: floor, clientTimeRejected: true };
 }
