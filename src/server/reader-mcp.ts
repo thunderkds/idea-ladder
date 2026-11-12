@@ -2,7 +2,7 @@
 // Hand-written newline-delimited JSON-RPC 2.0 (no MCP SDK dependency). The tools are the SAME `createReaderTools`
 // as the API back end, so path checks, read bounds and injection hygiene are identical. The step cap lives here:
 // this Claude Code build has no --max-turns, so after READER_MAX_STEPS tool calls every call is refused.
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { z } from "zod";
 import { githubRepoClient } from "./github-repo.ts";
@@ -29,7 +29,12 @@ type Response = { jsonrpc: "2.0"; id: string | number | null } & (
 );
 
 /** One handler per server process: answers one JSON-RPC message, or null for a notification. */
-export function createReaderMcp(ctx: ReaderContext, readFile: ReadFile, maxSteps: number) {
+export function createReaderMcp(
+  ctx: ReaderContext,
+  readFile: ReadFile,
+  maxSteps: number,
+  onCall: (calls: number) => void = () => {},
+) {
   const tools = createReaderTools(ctx.tree, readFile, { treeTruncated: ctx.treeTruncated });
   const names = Object.keys(tools) as (keyof typeof tools)[];
   let calls = 0;
@@ -37,6 +42,7 @@ export function createReaderMcp(ctx: ReaderContext, readFile: ReadFile, maxSteps
 
   async function callTool(params: Record<string, unknown>) {
     calls++;
+    onCall(calls);
     if (calls > maxSteps) return text(STEP_LIMIT_MESSAGE, true);
     const name = params.name as keyof typeof tools;
     if (!names.includes(name)) return text(`error: unknown tool ${JSON.stringify(String(params.name))}`, true);
@@ -105,7 +111,9 @@ if (import.meta.main) {
   const readFile: ReadFile = files
     ? async (path) => (Object.hasOwn(files, path) ? (files[path] ?? null) : "")
     : (path) => (github as ReturnType<typeof githubRepoClient>).readFile(ctx.fullName, ctx.sha, path);
-  const server = createReaderMcp(ctx, readFile, maxSteps);
+  // READER_CALLS_FILE: the tool-call count, for the parent reader (steps used, cap hit).
+  const callsFile = env.READER_CALLS_FILE;
+  const server = createReaderMcp(ctx, readFile, maxSteps, (n) => callsFile && writeFileSync(callsFile, String(n)));
   const send = (r: Response, then?: () => void) => process.stdout.write(`${JSON.stringify(r)}\n`, then);
 
   // Lines are answered in order: a tool call is counted against the cap in the order the client sent it.
