@@ -24,6 +24,8 @@ import {
 
 export const CLAUDE_CODE_MODEL = "claude-code";
 export const CLAUDE_CODE_TIMEOUT_MS = 300_000;
+/** After the timeout kill, how long to wait for the pipes to close before giving up on them. */
+const KILL_GRACE_MS = 2_000;
 const MCP_SCRIPT = join(import.meta.dir, "reader-mcp.ts");
 const ALLOWED_TOOLS = ["mcp__reader__list", "mcp__reader__read", "mcp__reader__search"];
 /** Asked of the CLI with --json-schema; the answer is still validated by CoreFilesSchema and the tree. */
@@ -259,19 +261,31 @@ async function runClaude(
     ...ALLOWED_TOOLS,
   ];
   const env = childEnv(process.env);
-  const proc = Bun.spawn(argv, { cwd, env, stdin: "ignore", stdout: "pipe", stderr: "pipe" });
+  const timeoutMs = input.timeoutMs ?? CLAUDE_CODE_TIMEOUT_MS;
+  // Its own process group, so the timeout kills claude and its MCP server child together.
+  const proc = Bun.spawn(argv, { cwd, env, stdin: "ignore", stdout: "pipe", stderr: "pipe", detached: true });
   let timedOut = false;
-  const timer = setTimeout(() => {
-    timedOut = true;
-    proc.kill("SIGKILL");
-  }, input.timeoutMs ?? CLAUDE_CODE_TIMEOUT_MS);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let grace: ReturnType<typeof setTimeout> | undefined;
+  // Resolves KILL_GRACE_MS after the timeout kill: a pipe still held open (a stray grandchild) is not awaited.
+  const killed = new Promise<null>((resolve) => {
+    timer = setTimeout(() => {
+      timedOut = true;
+      try {
+        process.kill(-proc.pid, "SIGKILL");
+      } catch {
+        proc.kill("SIGKILL");
+      }
+      grace = setTimeout(() => resolve(null), KILL_GRACE_MS);
+    }, timeoutMs);
+  });
   try {
-    const [stdout, stderr, code] = await Promise.all([
-      new Response(proc.stdout).text(),
-      new Response(proc.stderr).text(),
-      proc.exited,
+    const out = await Promise.race([
+      Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]),
+      killed,
     ]);
-    if (timedOut) throw new Error(`claude timed out after ${input.timeoutMs ?? CLAUDE_CODE_TIMEOUT_MS} ms`);
+    if (timedOut || !out) throw new Error(`claude timed out after ${timeoutMs} ms`);
+    const [stdout, stderr, code] = out;
     let parsed: CliResult | undefined;
     try {
       parsed = JSON.parse(stdout) as CliResult;
@@ -284,5 +298,6 @@ async function runClaude(
     return parsed;
   } finally {
     clearTimeout(timer);
+    clearTimeout(grace);
   }
 }

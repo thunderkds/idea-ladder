@@ -57,7 +57,7 @@ afterAll(() => {
   }
 });
 
-const replies = (r: { stdout: string; exit?: number; sleepMs?: number; toolCalls?: number }[]) =>
+const replies = (r: { stdout: string; exit?: number; sleepMs?: number; toolCalls?: number; holdPipes?: boolean }[]) =>
   writeFile(join(rec, "replies.json"), JSON.stringify(r));
 const calls = async () =>
   (await readFile(join(rec, "calls.jsonl"), "utf8"))
@@ -226,6 +226,15 @@ describe("pickCoreFilesClaudeCode (fake claude)", () => {
     const [c] = await calls();
     expect(existsSync(c.cwd)).toBe(false);
   });
+
+  test("timeout with a child that ignores SIGTERM and a grandchild holding the pipes -> reader-failed in time", async () => {
+    await replies([{ stdout: result(), sleepMs: 20_000, holdPipes: true }]);
+    const started = Date.now();
+    const err = await pick({ timeoutMs: 300 }).run.catch((e) => e);
+    expect(err).toBeInstanceOf(ReaderFailedError);
+    expect(err.message).toMatch(/timed out after 300 ms/);
+    expect(Date.now() - started).toBeLessThan(4_000);
+  }, 15_000);
 
   test("non-zero exit and unparsable output -> reader-failed", async () => {
     await replies([{ stdout: "boom", exit: 2 }]);
