@@ -144,6 +144,9 @@ export function LadderPage({ ladderId }: { ladderId: string }) {
           >
             Read the README
           </a>
+          <a className="button button-quiet" href="/review">
+            Start review
+          </a>
           <a
             className="button button-quiet"
             href={`https://deepwiki.com/${repoPath}`}
