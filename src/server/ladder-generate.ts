@@ -2,7 +2,6 @@
 import { APICallError, type LanguageModel } from "ai";
 import type { SQL } from "bun";
 import { Inngest, NonRetriableError } from "inngest";
-import { ZodError } from "zod";
 import { pickCoreFilesClaudeCode, ReaderNotInstalledError } from "./claude-code-reader.ts";
 import { confidenceScore } from "./confidence.ts";
 import { GitHubError, type GithubRepoClient, RateLimitError, RepoNotFoundError } from "./github-repo.ts";
@@ -176,8 +175,8 @@ async function pickCoreFilesStep({ sql, github, reader }: Deps, { jobId }: Gener
         await failJob(sql, jobId, err.code);
         return { status: "failed", reason: err.code } as const;
       }
-      // A retry cannot help these (400 prompt too long, 401 bad key, a schema bug): fail now, no paid re-run.
-      if ((APICallError.isInstance(err) && !err.isRetryable) || err instanceof ZodError) {
+      // A retry cannot help these (400 prompt too long, 401 bad key): fail now, no paid re-run.
+      if (APICallError.isInstance(err) && !err.isRetryable) {
         console.warn(JSON.stringify({ event: "reader-error", jobId, repo, sha, error: String(err) }));
         await failJob(sql, jobId, "reader-error");
         return { status: "failed", reason: "reader-error" } as const;
