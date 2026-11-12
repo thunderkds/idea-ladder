@@ -186,7 +186,7 @@ async function syncQueue(): Promise<"done" | "kept" | "expired"> {
         elapsedMs,
         reviewedAt,
       })),
-    } as SyncRequest; // until the backend's `learnerId?: string` lands in src/shared/offline.ts
+    };
     const res = await fetch("/api/review/sync", {
       method: "POST",
       headers: { "content-type": "application/json" },

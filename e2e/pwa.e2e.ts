@@ -657,7 +657,7 @@ test("T015 fix: every sync names the queue's learner; a 409 wrong-learner keeps 
   await page.goto("/review"); // app open: one sync
   await expect(question(page)).toBeVisible();
   await expect.poll(() => api.syncBodies.length).toBe(1);
-  expect((api.syncBodies[0] as SyncRequest & { learnerId?: string }).learnerId).toBe(LEARNER);
+  expect(api.syncBodies[0]?.learnerId).toBe(LEARNER);
   await page.waitForTimeout(1_500);
   expect(api.syncBodies).toHaveLength(1); // no retry loop
   expect((await readStore<Queued>(page, "queue")).map((q) => q.idempotencyKey)).toEqual([key]);
