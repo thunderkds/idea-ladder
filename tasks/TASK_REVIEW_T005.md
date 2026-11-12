@@ -47,16 +47,16 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass / ☐ fail | [test file path(s) — required before Done] |
-| Verification command run | ☐ pass / ☐ fail | [paste actual output] |
-| Negative cases hold | ☐ pass / ☐ fail | |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | `tests/repo-url.test.ts` (AC 1, SC 1), `tests/start-ladder.test.ts` (AC 2–4, 6, SC 2–4), `tests/fetch-repo.test.ts` (AC 5, 6, 8, SC 5–6, via `@inngest/test`), `tests/jobs.test.ts` (AC 7 API), `tests/migrate.test.ts` (0002 up/down), `e2e/start-flow.e2e.ts` (AC 3, AC 7, SC 7, UI). `bun test start-ladder repo-url fetch-repo jobs` at 2026-11-12T09:10:10Z: ` 55 pass / 0 fail / Ran 55 tests across 4 files. [937.00ms]`. Full suite in ci:local: ` 104 pass / 0 fail / Ran 104 tests across 8 files. [1.53s]`. e2e: `6 passed (28.4s)` |
+| Verification command run | ☑ pass (with 1 environment note) | Run 2026-11-12T09:10:17Z in the worktree. `docker compose up -d db` → `Container wt-t005-db-1 Started` (port 54329 is already published by `wt-t003-db-1`; tests used that Postgres). `bun install --frozen-lockfile` → `Checked 362 installs across 319 packages (no changes)`. `bun run db:migrate` → `Invalid configuration: missing required environment variable(s): DATABASE_URL` / `exit=1` (the worktree has no `.env`; the agent did not apply migrations to the dev DB — Common-Infrastructure owns that). Migrations proven instead on the throwaway `il_ci` DB by `bun run ci:local`: `applied: 0001_init, 0002_start_jobs` / `reverted: 0002_start_jobs` / `applied: 0002_start_jobs`. `bun run typecheck && bun run lint` → `Checked 44 files in 24ms. No fixes applied.` / `check-tokens: 0 color literals outside src/client/tokens.css` / `exit=0`. `bun test start-ladder repo-url fetch-repo jobs` → ` 55 pass` ` 0 fail` `Ran 55 tests across 4 files. [859.00ms]`. `bun run test:e2e -- start-flow` → `6 passed (28.4s)`. `bun run ci:local` (2026-11-12T09:11:04Z) → `ci:local: all steps passed`. |
+| Negative cases hold | ☑ pass | bun test: unsupported URLs (8 forms incl. `javascript:alert(1)`) make no network call; repo 404 → `404 repo-not-found`, no job; rate limit at resolve → `503 rate-limited` + `resetAt`, no job; 403 + `x-ratelimit-remaining: 0` in `fetch-repo` → `failed / rate-limited`, 0 snapshot rows; 5xx once → only `fetch-repo` retried, 0 `sendEvent`; enqueue failure → `503 queue-unavailable`. e2e: `rate limit in fetch-repo -> Failed: rate-limited with the reset time in plain words` ✓; `unsupported URL ... escaped` ✓ (HTTP 400, `<b>` rendered as text, 0 `b` elements); `unknown job id -> Job not found` ✓. The expected log lines `start: GitHub call failed: GitHub API 302 ...` and `enqueue failed: Inngest unreachable` come from these negative tests. |
 | verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
 | Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
 | Full smoke suite still green (no regression) | ☐ pass / ☐ fail | |
 | **Companion score (easy-verifier)** | ☐ pass / ☐ fail / ☐ N/A | [`overall` and `change_risk` as the tool returned them, the scope, the ref, and the absolute path of the verifier report after a literal `report:` label — e.g. "overall 86 (>= 80), change_risk pass, scope changes, ref `main...HEAD`, report: `/home/me/.easy-verifier-reports/kit/score_changes_20261028T0530Z.html`". The gate reads the path that follows `report:` and nothing else, so with no label, or a path that is absent, the row is unscored — write ☑ N/A instead. ☑ N/A with a reason when neither companion tool was run: the merge gate blocks on ☑ fail only, never on an absent or N/A row] |
-| **UI: Visual regression (diff or verdict pasted)** | ☐ pass / ☐ fail / ☐ N/A | [screenshot path or LLM verdict — required for UI tasks, Hard-Stop Gate 6] |
-| **UI: Design-system compliance (tokens/colors/typography verified)** | ☐ pass / ☐ fail / ☐ N/A | [method used + output] |
-| **UI: Responsiveness at target viewports** | ☐ pass / ☐ fail / ☐ N/A | [viewports tested, any overflow findings] |
+| **UI: Visual regression (diff or verdict pasted)** | ☑ pass | Screenshots in `test-results/screenshots/` (git-ignored): `job-queued-*`, `job-running-*`, `job-done-*`, `job-failed-*`, `start-unsupported-*` at mobile/tablet/desktop. LLM-vision verdict (agent, on `job-failed-mobile`, `start-unsupported-mobile`, `job-running-desktop`, `job-queued-tablet`): the status text is the h1 and the main element; the failed state reads "Failed: rate-limited" / "The GitHub rate limit is used up. It resets at 1/1/2030, 7:00:00 PM; then try again." — no stack trace or raw JSON (the e2e also asserts the body has no `{` and no `Error:`); the unsupported page says "Only GitHub repos work for now" and shows `https://gitlab.com/o/n?<b>x</b>` as plain text — pass. No committed baseline for these screens (as in T003, screenshots are not diffed). |
+| **UI: Design-system compliance (tokens/colors/typography verified)** | ☑ pass | Playwright computed-style check (`expectTokens` in `e2e/start-flow.e2e.ts`) on every status state: body background = `--color-bg`; h1 color = `--color-text`, font-family = `--font-family`, font-size = `--font-size-h1`, font-weight = `--font-weight-strong`; `.status-detail` color = `--color-text-muted`, font-size = `--font-size-body`; `main` padding-top = `--space-8`, padding-left = `--space-4`, max-width = `--content-max` — all 6 e2e tests passed. `bun scripts/check-tokens.ts` → `check-tokens: 0 color literals outside src/client/tokens.css` (new CSS uses only `var(--color-accent)` and `var(--color-text-muted)`). |
+| **UI: Responsiveness at target viewports** | ☑ pass | 360×740, 768×1024, 1280×800 for each status screen and the unsupported-URL page: `scrollWidth <= viewport width` asserted at each. A 320-char URL at 360px wraps (`.long-text { overflow-wrap: anywhere }`), scrollWidth ≤ 360 — pass. Desktop: column held at `--content-max` (40rem) and centered. No overflow found. |
 
 ---
 
@@ -83,9 +83,23 @@ The following filters did not match any test files in --cwd="/home/thunderkds/wo
 10 files were searched [2.00ms]
 ```
 
-**AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
+**AFTER**: same command at `879c022`. One change to the script: `loadConfig` now requires `GITHUB_APP_TOKEN`, so the
+copy adds `GITHUB_APP_TOKEN: "x"` (the unchanged script now stops with `missing required environment variable(s):
+GITHUB_APP_TOKEN`). Requests are signed out, as in BEFORE.
 
-**DELTA**: [one sentence — what a user can now do that they could not before]
+```
+2026-11-12T09:10:10Z
+GET /start?url=https://github.com/lukeed/dset -> 302
+POST /api/start -> 401
+GET /api/jobs/00000000-0000-0000-0000-000000000000 -> 401
+GET /jobs/00000000-0000-0000-0000-000000000000 -> 302
+bun test v1.4.3 (c6da4a4d3)
+ 55 pass
+ 0 fail
+Ran 55 tests across 4 files. [937.00ms]
+```
+
+**DELTA**: A learner can now open `/start?url=<GitHub repo>`, sign in if needed, and land on `/jobs/:jobId`, which shows `Queued` → `Reading the repo` → `Done` (or `Failed: rate-limited` with the reset time) while a background job pins the SHA and stores the repo snapshot and confidence; before, all four entry points answered 404.
 
 **WITNESS**: [who ran it and when — derived from `memory/event-trace/Txxx.jsonl`, never the
 implementing agent alone]
