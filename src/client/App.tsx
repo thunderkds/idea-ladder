@@ -41,6 +41,123 @@ function Ladders() {
   );
 }
 
+/** Plain-words time for a reset or retry moment; never raw JSON. */
+const when = (iso: string | undefined) => (iso ? new Date(iso).toLocaleString() : "later");
+
+/** /start problems: the server serves the client with `data-error` (a fixed code) on #root. */
+function StartProblem({ error, resetAt, retryAt }: { error: string; resetAt?: string; retryAt?: string }) {
+  const given = new URLSearchParams(window.location.search).get("url") ?? "";
+  const messages: Record<string, [title: string, detail: string]> = {
+    "unsupported-url": ["Only GitHub repos work for now", "Paste a link to a public GitHub repo. You gave:"],
+    "url-required": ["No URL given", "Open /start?url= with a GitHub repo link."],
+    "url-too-long": ["That URL is too long", "A URL can have at most 2,048 characters."],
+    "repo-not-found": ["Repo not found", "GitHub has no public repo at this link. You gave:"],
+    "repo-empty": ["This repo is empty", "It has no commits yet, so there is nothing to read."],
+    "rate-limited": ["GitHub is busy", `The GitHub rate limit is used up. Try again after ${when(resetAt)}.`],
+    "too-many-starts": ["Too many new ladders", `You started the hourly maximum. Try again after ${when(retryAt)}.`],
+    "queue-unavailable": ["Could not start", "The ladder queue is not available. Try again in a few minutes."],
+    "github-unavailable": ["Could not reach GitHub", "Try again in a few minutes."],
+  };
+  const [title, detail] = messages[error] ?? ["Could not start", "Try again in a few minutes."];
+  const showUrl = error === "unsupported-url" || error === "repo-not-found";
+  return (
+    <main className="page">
+      <h1>{title}</h1>
+      <p className="status-detail">{detail}</p>
+      {showUrl && given ? <p className="long-text">{given}</p> : null}
+      <p>
+        <a href="/ladders">Back to My ladders</a>
+      </p>
+    </main>
+  );
+}
+
+type Job = { status: "queued" | "running" | "fetched" | "failed"; repo: string; reason?: string; resetAt?: string };
+const POLL_MS = 2_000;
+const STATUS_TEXT: Record<Job["status"], string> = {
+  queued: "Queued",
+  running: "Reading the repo",
+  fetched: "Done",
+  failed: "Failed",
+};
+const FAILED_DETAIL: Record<string, (job: Job) => string> = {
+  "rate-limited": (job) => `The GitHub rate limit is used up. It resets at ${when(job.resetAt)}; then try again.`,
+  "repo-not-found": () => "GitHub no longer has this repo.",
+  "queue-unavailable": () => "The ladder queue was not available. Try again in a few minutes.",
+};
+
+/** /jobs/:jobId: polls the job every 2 s and stops on a final status (fetched, failed). */
+function JobStatus({ jobId }: { jobId: string }) {
+  const [job, setJob] = useState<Job>();
+  const [missing, setMissing] = useState(false);
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let stopped = false;
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}`);
+        if (res.status === 401) return window.location.assign("/");
+        if (res.status === 404) return setMissing(true);
+        if (res.ok) {
+          const next = (await res.json()) as Job;
+          if (stopped) return;
+          setJob(next);
+          if (next.status === "fetched" || next.status === "failed") return;
+        }
+      } catch {
+        // network blip: try again on the next tick
+      }
+      if (!stopped) timer = setTimeout(poll, POLL_MS);
+    };
+    void poll();
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
+  }, [jobId]);
+
+  if (missing) {
+    return (
+      <main className="page">
+        <h1>Job not found</h1>
+        <p className="status-detail">This job does not exist, or you did not start it.</p>
+        <p>
+          <a href="/ladders">Back to My ladders</a>
+        </p>
+      </main>
+    );
+  }
+  const title = !job
+    ? "Loading"
+    : job.status === "failed"
+      ? `Failed: ${job.reason ?? "unknown"}`
+      : STATUS_TEXT[job.status];
+  const detail = !job
+    ? ""
+    : job.status === "failed"
+      ? (FAILED_DETAIL[job.reason ?? ""]?.(job) ?? "Something went wrong while reading the repo. Try again later.")
+      : job.status === "fetched"
+        ? "The repo is read and its snapshot is saved."
+        : "This page updates by itself.";
+  return (
+    <main className="page" aria-live="polite">
+      <h1>{title}</h1>
+      {job ? <p className="long-text">{job.repo}</p> : null}
+      <p className="status-detail">{detail}</p>
+      <p>
+        <a href="/ladders">Back to My ladders</a>
+      </p>
+    </main>
+  );
+}
+
 export function App() {
-  return window.location.pathname === "/ladders" ? <Ladders /> : <Home />;
+  const path = window.location.pathname;
+  if (path === "/ladders") return <Ladders />;
+  if (path.startsWith("/jobs/")) return <JobStatus jobId={path.slice("/jobs/".length)} />;
+  const root = document.getElementById("root");
+  if (path === "/start" && root?.dataset.error) {
+    return <StartProblem error={root.dataset.error} resetAt={root.dataset.resetAt} retryAt={root.dataset.retryAt} />;
+  }
+  return <Home />;
 }

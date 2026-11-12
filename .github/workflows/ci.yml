@@ -38,3 +38,5 @@ jobs:
       - run: bunx playwright install --with-deps chromium
       - name: e2e sign-in
         run: bun run test:e2e -- sign-in
+      - name: e2e start-flow
+        run: bun run test:e2e -- start-flow

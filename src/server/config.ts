@@ -2,17 +2,29 @@ export type Config = {
   databaseUrl: string;
   githubClientId: string;
   githubClientSecret: string;
+  /** Fine-grained token, public read only: the app's own GitHub API calls (repo reads). Never logged. */
+  githubAppToken: string;
   sessionSecret: string;
   githubOauthBaseUrl: string;
   githubApiBaseUrl: string;
   port: number;
   /** Cookies get `Secure` everywhere except local development and tests. */
   secureCookies: boolean;
+  /** New generation jobs one learner may create per hour (joins and cache hits do not count). */
+  startMaxNewJobsPerHour: number;
+  /** Public origin Inngest calls back; never derived from the request Host header. Required in production. */
+  inngestServeOrigin?: string;
 };
 
 export class ConfigError extends Error {}
 
-const REQUIRED = ["DATABASE_URL", "GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET", "SESSION_SECRET"] as const;
+const REQUIRED = [
+  "DATABASE_URL",
+  "GITHUB_CLIENT_ID",
+  "GITHUB_CLIENT_SECRET",
+  "GITHUB_APP_TOKEN",
+  "SESSION_SECRET",
+] as const;
 
 /** Validates the environment once at start, so a bad setup fails with variable names, not deep in OAuth code. */
 export function loadConfig(env: Record<string, string | undefined>): Config {
@@ -36,15 +48,29 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
   const port = Number(env.PORT || 3000);
   if (!Number.isInteger(port) || port < 0 || port > 65535) problems.push("PORT must be an integer 0-65535");
 
+  const limitRaw = env.START_MAX_NEW_JOBS_PER_HOUR || "20";
+  const startMaxNewJobsPerHour = /^[1-9][0-9]*$/.test(limitRaw) ? Number(limitRaw) : 0;
+  if (!startMaxNewJobsPerHour) problems.push("START_MAX_NEW_JOBS_PER_HOUR must be a positive integer");
+
+  if (env.NODE_ENV === "production") {
+    if (env.INNGEST_DEV) problems.push("INNGEST_DEV must not be set in production");
+    const missingInngest = ["INNGEST_SIGNING_KEY", "INNGEST_EVENT_KEY", "INNGEST_SERVE_ORIGIN"].filter((n) => !env[n]);
+    if (missingInngest.length) problems.push(`production requires: ${missingInngest.join(", ")}`);
+  }
+  const inngestServeOrigin = env.INNGEST_SERVE_ORIGIN ? url("INNGEST_SERVE_ORIGIN", "") : undefined;
+
   if (problems.length) throw new ConfigError(`Invalid configuration: ${problems.join("; ")}`);
   return {
     databaseUrl: env.DATABASE_URL as string,
     githubClientId: env.GITHUB_CLIENT_ID as string,
     githubClientSecret: env.GITHUB_CLIENT_SECRET as string,
+    githubAppToken: env.GITHUB_APP_TOKEN as string,
     sessionSecret: env.SESSION_SECRET as string,
     githubOauthBaseUrl,
     githubApiBaseUrl,
     port,
     secureCookies: env.NODE_ENV !== "development" && env.NODE_ENV !== "test",
+    startMaxNewJobsPerHour,
+    ...(inngestServeOrigin ? { inngestServeOrigin } : {}),
   };
 }

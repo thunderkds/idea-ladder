@@ -20,6 +20,7 @@ describe("CI workflow (.github/workflows/ci.yml, AC 7)", async () => {
       "bun test",
       "bun run db:migrate && bun run db:migrate:down && bun run db:migrate",
       "bun run test:e2e -- sign-in",
+      "bun run test:e2e -- start-flow",
     ];
     const positions = expected.map((cmd) => runs.indexOf(cmd));
     expect(positions.every((p) => p >= 0)).toBe(true);
@@ -43,12 +44,22 @@ describe("CI workflow (.github/workflows/ci.yml, AC 7)", async () => {
 });
 
 describe("env files and secrets (AC 8)", () => {
-  test(".env.example lists exactly the four variable names, all empty", async () => {
+  test(".env.example lists exactly the variable names (T003's four, T005's five), all empty", async () => {
     const assignments = (await Bun.file(`${root}/.env.example`).text())
       .split("\n")
       .map((line) => line.trim())
       .filter((line) => line && !line.startsWith("#"));
-    expect(assignments).toEqual(["DATABASE_URL=", "GITHUB_CLIENT_ID=", "GITHUB_CLIENT_SECRET=", "SESSION_SECRET="]);
+    expect(assignments).toEqual([
+      "DATABASE_URL=",
+      "GITHUB_CLIENT_ID=",
+      "GITHUB_CLIENT_SECRET=",
+      "GITHUB_APP_TOKEN=",
+      "INNGEST_EVENT_KEY=",
+      "INNGEST_SIGNING_KEY=",
+      "INNGEST_SERVE_ORIGIN=",
+      "SESSION_SECRET=",
+      "START_MAX_NEW_JOBS_PER_HOUR=",
+    ]);
   });
 
   test("git ignores .env and .env.local but not .env.example", () => {
