@@ -1,0 +1,475 @@
+[
+  {
+    "fullName": "The-Pocket/PocketFlow",
+    "sha": "f74d023f93607b8c3268133339a5e532a949898c",
+    "tier": "trending",
+    "language": "Python",
+    "expectedCoreFiles": [
+      "pocketflow/__init__.py",
+      "pocketflow/__init__.pyi",
+      "docs/core_abstraction/node.md",
+      "docs/core_abstraction/flow.md",
+      "docs/core_abstraction/communication.md",
+      "docs/core_abstraction/batch.md",
+      "tests/test_flow_basic.py"
+    ],
+    "expectedConcepts": [
+      "graph abstraction",
+      "node lifecycle prep exec post",
+      "flow orchestration",
+      "shared store",
+      "batch processing",
+      "async execution"
+    ],
+    "expectedConfidence": "high",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-12"
+  },
+  {
+    "fullName": "developit/mitt",
+    "sha": "6b41670516ed8e8b738612f60491995470aa63b3",
+    "tier": "trending",
+    "language": "TypeScript",
+    "expectedCoreFiles": [
+      "src/index.ts",
+      "test/index_test.ts",
+      "test/test-types-compilation.ts"
+    ],
+    "expectedConcepts": [
+      "event emitter",
+      "publish subscribe",
+      "wildcard handlers",
+      "handler registration on off",
+      "typescript generics"
+    ],
+    "expectedConfidence": "high",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-12"
+  },
+  {
+    "fullName": "tj/commander.js",
+    "sha": "a5a7dc084d4d2b7932e85ca049c5204e50a2c721",
+    "tier": "trending",
+    "language": "JavaScript",
+    "expectedCoreFiles": [
+      "lib/command.js",
+      "lib/option.js",
+      "lib/argument.js",
+      "lib/help.js",
+      "lib/error.js",
+      "lib/suggestSimilar.js",
+      "index.js"
+    ],
+    "expectedConcepts": [
+      "command line parsing",
+      "subcommands",
+      "option and argument declaration",
+      "help generation",
+      "did you mean suggestions",
+      "action handlers"
+    ],
+    "expectedConfidence": "high",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-12"
+  },
+  {
+    "fullName": "honojs/hono",
+    "sha": "f6fbaf0299c48eea9e656e03e2ffe7ac755e8823",
+    "tier": "trending",
+    "language": "TypeScript",
+    "expectedCoreFiles": [
+      "src/hono.ts",
+      "src/hono-base.ts",
+      "src/compose.ts",
+      "src/context.ts",
+      "src/request.ts",
+      "src/router.ts",
+      "src/router/reg-exp-router/router.ts",
+      "src/router/trie-router/router.ts",
+      "src/router/smart-router/router.ts"
+    ],
+    "expectedConcepts": [
+      "routing",
+      "middleware composition",
+      "request context",
+      "router selection",
+      "web standard apis",
+      "multi runtime adapters"
+    ],
+    "expectedConfidence": "high",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-12"
+  },
+  {
+    "fullName": "BurntSushi/ripgrep",
+    "sha": "178cc027e283fd965cb72d0a7395b219eada170c",
+    "tier": "trending",
+    "language": "Rust",
+    "expectedCoreFiles": [
+      "crates/core/main.rs",
+      "crates/core/search.rs",
+      "crates/core/flags/parse.rs",
+      "crates/searcher/src/searcher/mod.rs",
+      "crates/ignore/src/walk.rs",
+      "crates/ignore/src/gitignore.rs",
+      "crates/regex/src/matcher.rs",
+      "crates/globset/src/lib.rs"
+    ],
+    "expectedConcepts": [
+      "line oriented search",
+      "gitignore filtering",
+      "regex matching",
+      "parallel directory traversal",
+      "cargo workspace crates",
+      "glob matching"
+    ],
+    "expectedConfidence": "high",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-12"
+  },
+  {
+    "fullName": "pallets/click",
+    "sha": "8abb77a8432e03ed14a95f972b44f905279415a7",
+    "tier": "trending",
+    "language": "Python",
+    "expectedCoreFiles": [
+      "src/click/core.py",
+      "src/click/decorators.py",
+      "src/click/parser.py",
+      "src/click/types.py",
+      "src/click/exceptions.py",
+      "src/click/termui.py",
+      "src/click/shell_completion.py",
+      "src/click/formatting.py"
+    ],
+    "expectedConcepts": [
+      "decorator based commands",
+      "command groups and nesting",
+      "parameter types",
+      "context object",
+      "help page generation",
+      "shell completion"
+    ],
+    "expectedConfidence": "high",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-12"
+  },
+  {
+    "fullName": "charmbracelet/bubbletea",
+    "sha": "e4d617e7e0c0dd595cc553a856236221c678470f",
+    "tier": "trending",
+    "language": "Go",
+    "expectedCoreFiles": [
+      "tea.go",
+      "commands.go",
+      "key.go",
+      "options.go",
+      "renderer.go",
+      "cursed_renderer.go"
+    ],
+    "expectedConcepts": [
+      "elm architecture",
+      "model update view",
+      "commands and messages",
+      "event loop",
+      "terminal rendering",
+      "keyboard input"
+    ],
+    "expectedConfidence": "high",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-12"
+  },
+  {
+    "fullName": "lukeed/dset",
+    "sha": "05b1ec0f8cebe3b5d5667285bc7da90f38a7215e",
+    "tier": "medium",
+    "language": "JavaScript",
+    "expectedCoreFiles": [
+      "src/index.js",
+      "src/merge.js",
+      "test/index.js",
+      "test/suites/pollution.js"
+    ],
+    "expectedConcepts": [
+      "deep object assignment",
+      "dot path keys",
+      "prototype pollution guard",
+      "merge mode",
+      "array or object inference"
+    ],
+    "expectedConfidence": "high",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-12"
+  },
+  {
+    "fullName": "sindresorhus/escape-string-regexp",
+    "sha": "a7f7dabaf336bda98d2166848af15d9168b10bcf",
+    "tier": "medium",
+    "language": "JavaScript",
+    "expectedCoreFiles": [
+      "index.js",
+      "test.js",
+      "index.d.ts"
+    ],
+    "expectedConcepts": [
+      "regex escaping",
+      "special characters",
+      "unicode pattern escape",
+      "input type check"
+    ],
+    "expectedConfidence": "low",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-12"
+  },
+  {
+    "fullName": "mattn/go-isatty",
+    "sha": "c44dc0b9c702c76577fdb7898032969e0611efc2",
+    "tier": "medium",
+    "language": "Go",
+    "expectedCoreFiles": [
+      "isatty_tiocgwinsz.go",
+      "isatty_bsd.go",
+      "isatty_windows.go",
+      "isatty_others.go",
+      "isatty_solaris.go"
+    ],
+    "expectedConcepts": [
+      "terminal detection",
+      "file descriptors",
+      "build tags per platform",
+      "cygwin and msys terminals",
+      "ioctl system calls"
+    ],
+    "expectedConfidence": "low",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-12"
+  },
+  {
+    "fullName": "lukeed/klona",
+    "sha": "e563341d88f433e74a9b4c3c0372d4ba55d2f79e",
+    "tier": "medium",
+    "language": "JavaScript",
+    "expectedCoreFiles": [
+      "src/index.js",
+      "src/lite.js",
+      "src/full.js",
+      "src/json.js",
+      "index.d.ts"
+    ],
+    "expectedConcepts": [
+      "deep clone",
+      "recursive copy",
+      "clone modes json lite default full",
+      "property descriptors",
+      "typed arrays and special types"
+    ],
+    "expectedConfidence": "high",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-12"
+  },
+  {
+    "fullName": "pallets/itsdangerous",
+    "sha": "672971d66a2ef9f85151e53283113f33d642dabd",
+    "tier": "medium",
+    "language": "Python",
+    "expectedCoreFiles": [
+      "src/itsdangerous/signer.py",
+      "src/itsdangerous/serializer.py",
+      "src/itsdangerous/timed.py",
+      "src/itsdangerous/url_safe.py",
+      "src/itsdangerous/encoding.py",
+      "src/itsdangerous/exc.py"
+    ],
+    "expectedConcepts": [
+      "data signing",
+      "hmac",
+      "serializer",
+      "timestamped signatures",
+      "url safe encoding",
+      "key derivation"
+    ],
+    "expectedConfidence": "high",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-12"
+  },
+  {
+    "fullName": "dtolnay/semver",
+    "sha": "280ebcb6edac3aa4cdc545dbff8a26c5ac4861fe",
+    "tier": "medium",
+    "language": "Rust",
+    "expectedCoreFiles": [
+      "src/lib.rs",
+      "src/parse.rs",
+      "src/eval.rs",
+      "src/identifier.rs",
+      "src/display.rs",
+      "src/impls.rs",
+      "src/error.rs"
+    ],
+    "expectedConcepts": [
+      "semantic versioning",
+      "version requirement matching",
+      "caret and tilde operators",
+      "prerelease and build metadata",
+      "parsing",
+      "compact identifier storage"
+    ],
+    "expectedConfidence": "high",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-12"
+  },
+  {
+    "fullName": "rs/xid",
+    "sha": "34d39051ca0d70f40a8cd8c5491ef835e624b71d",
+    "tier": "medium",
+    "language": "Go",
+    "expectedCoreFiles": [
+      "id.go",
+      "hostid_linux.go",
+      "hostid_fallback.go",
+      "error.go"
+    ],
+    "expectedConcepts": [
+      "unique id generation",
+      "mongodb object id layout",
+      "base32hex encoding",
+      "machine id",
+      "sortable ids",
+      "sql and json marshalling"
+    ],
+    "expectedConfidence": "high",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-12"
+  },
+  {
+    "fullName": "sindresorhus/slash",
+    "sha": "2e8a56bd8b2863be09d4fc85283c0e465131a6d3",
+    "tier": "lowkey",
+    "language": "JavaScript",
+    "expectedCoreFiles": [
+      "index.js",
+      "test.js",
+      "index.d.ts"
+    ],
+    "expectedConcepts": [
+      "path normalization",
+      "windows backslashes",
+      "extended length paths"
+    ],
+    "expectedConfidence": "low",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-12"
+  },
+  {
+    "fullName": "sindresorhus/is-plain-obj",
+    "sha": "666df7c10035f7e26f27ec214fe5ae3173435f34",
+    "tier": "lowkey",
+    "language": "JavaScript",
+    "expectedCoreFiles": [
+      "index.js",
+      "test.js",
+      "index.d.ts"
+    ],
+    "expectedConcepts": [
+      "plain object detection",
+      "prototype chain",
+      "symbol checks",
+      "cross realm objects"
+    ],
+    "expectedConfidence": "low",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-12"
+  },
+  {
+    "fullName": "kballard/go-shellquote",
+    "sha": "95032a82bc518f77982ea72343cc1ade730072f0",
+    "tier": "lowkey",
+    "language": "Go",
+    "expectedCoreFiles": [
+      "quote.go",
+      "unquote.go",
+      "quote_test.go",
+      "unquote_test.go"
+    ],
+    "expectedConcepts": [
+      "shell word splitting",
+      "quoting and escaping",
+      "sh semantics",
+      "unterminated quote errors"
+    ],
+    "expectedConfidence": "low",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-12"
+  },
+  {
+    "fullName": "dtolnay/itoa",
+    "sha": "9339ca99a43c550b5ee36e2afe524d1c90413461",
+    "tier": "lowkey",
+    "language": "Rust",
+    "expectedCoreFiles": [
+      "src/lib.rs",
+      "src/u128_ext.rs",
+      "tests/test.rs",
+      "benches/bench.rs"
+    ],
+    "expectedConcepts": [
+      "integer to string",
+      "stack buffer",
+      "sealed trait",
+      "macro generated impls",
+      "avoiding fmt overhead"
+    ],
+    "expectedConfidence": "high",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-12"
+  },
+  {
+    "fullName": "kjd/idna",
+    "sha": "d357725082245ff90f5cf8800a3fc297b1f2319a",
+    "tier": "lowkey",
+    "language": "Python",
+    "expectedCoreFiles": [
+      "idna/core.py",
+      "idna/codec.py",
+      "idna/idnadata.py",
+      "idna/intranges.py",
+      "idna/compat.py"
+    ],
+    "expectedConcepts": [
+      "internationalized domain names",
+      "punycode a labels and u labels",
+      "uts46 mapping",
+      "label validation",
+      "codec registration"
+    ],
+    "expectedConfidence": "medium",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-12"
+  },
+  {
+    "fullName": "raviqqe/hamt",
+    "sha": "4301c6ce10320ae5d21c97f98d2d3bf707f95c75",
+    "tier": "lowkey",
+    "language": "Go",
+    "expectedCoreFiles": [
+      "hamt.go",
+      "node.go",
+      "bucket.go",
+      "map.go",
+      "set.go",
+      "entry.go",
+      "key_value.go"
+    ],
+    "expectedConcepts": [
+      "hash array mapped trie",
+      "immutable collections",
+      "persistent data structures",
+      "generics",
+      "hash collisions",
+      "maps and sets"
+    ],
+    "expectedConfidence": "high",
+    "checkedBy": "qa-expert",
+    "checkedAt": "2026-11-12"
+  }
+]

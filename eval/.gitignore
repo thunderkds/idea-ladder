@@ -1,0 +1,6 @@
+node_modules/
+reports/*
+!reports/.gitkeep
+# real cost logs stay local; only the committed test fixture run is tracked
+cost-log/*
+!cost-log/test-fixture-run.jsonl

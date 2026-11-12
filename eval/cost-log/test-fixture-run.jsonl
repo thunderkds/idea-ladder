@@ -1,0 +1,5 @@
+{"ts":"2026-11-12T08:00:01.000Z","runId":"test-fixture-run","ladderKey":"o/a","step":"mapper","model":"test-model","inputTokens":120000,"outputTokens":8000,"cachedInputTokens":0,"usd":0.48}
+{"ts":"2026-11-12T08:00:02.000Z","runId":"test-fixture-run","ladderKey":"o/a","step":"generate-l1","model":"test-model","inputTokens":90000,"outputTokens":20000,"cachedInputTokens":60000,"usd":0.588}
+{"ts":"2026-11-12T08:00:03.000Z","runId":"test-fixture-run","ladderKey":"o/a","step":"blind-solver","model":"test-model","inputTokens":40000,"outputTokens":3000,"cachedInputTokens":0,"usd":0.165}
+{"ts":"2026-11-12T08:00:04.000Z","runId":"test-fixture-run","ladderKey":"o/b","step":"mapper","model":"test-model","inputTokens":80000,"outputTokens":6000,"cachedInputTokens":0,"usd":0.33}
+{"ts":"2026-11-12T08:00:05.000Z","runId":"test-fixture-run","ladderKey":"o/b","step":"generate-l1","model":"test-model","inputTokens":70000,"outputTokens":15000,"cachedInputTokens":50000,"usd":0.45}
