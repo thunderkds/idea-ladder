@@ -542,13 +542,163 @@ test("T015: a 401 clears another learner's cached cards; offline then shows none
   api.pack = 401;
   await page.goto("/settings");
   await expect.poll(async () => (await readStore(page, "packs")).length).toBe(0);
-  expect(await readStore(page, "meta")).toEqual([]);
+  // meta.learner stays, so a queue made offline is synced after the same learner signs in again (never shown).
+  expect(await readStore(page, "meta")).toEqual(["someone-else"]);
+  await expect(page).toHaveURL(/\/$/);
   // The 401 also emptied the service worker cache, so offline /review has no app shell until the next online visit:
   // the browser's own offline page, and never the other learner's cards.
   expect(await page.evaluate(async () => (await caches.match("/index.html")) === undefined)).toBe(true);
   await setOffline(context, api, true);
   await page.goto("/review").catch(() => undefined);
   await expect(page.getByText("Another learner's private card")).toHaveCount(0);
+});
+
+/** Adds one rating to the IndexedDB queue as if it had been made offline; returns its idempotency key. */
+const addQueued = (page: Page, learnerId: string, cardId = "201") =>
+  page.evaluate(
+    ({ learnerId, cardId }) =>
+      new Promise<string>((resolve) => {
+        const key = crypto.randomUUID();
+        const req = indexedDB.open("idea-ladder");
+        req.onsuccess = () => {
+          const tx = req.result.transaction("queue", "readwrite");
+          tx.objectStore("queue").add({
+            cardId,
+            rating: "good",
+            idempotencyKey: key,
+            elapsedMs: 1000,
+            reviewedAt: new Date().toISOString(),
+            learnerId,
+          });
+          tx.oncomplete = () => {
+            req.result.close();
+            resolve(key);
+          };
+        };
+      }),
+    { learnerId, cardId },
+  );
+const cacheCount = (page: Page) => page.evaluate(async () => (await caches.keys()).length);
+
+test("T015 fix: a 401 on sync keeps the offline queue, drops the pack and caches, goes to sign-in; the same learner's next sign-in syncs it", async ({
+  page,
+  context,
+}) => {
+  const api = await mockApi(context, { syncStatus: (n) => (n === 0 ? 401 : 200) });
+  await signIn(page);
+  await page.goto("/review");
+  await expect(question(page)).toHaveText(PACK.cards[0]?.front ?? "");
+  await swReady(page);
+  await expect.poll(async () => (await readStore<OfflinePack>(page, "packs")).length).toBe(1);
+  await setOffline(context, api, true);
+  await page.reload();
+  await expect(page.locator(".offline-banner")).toBeVisible();
+  await page.getByRole("button", { name: "Show answer" }).click();
+  await page.getByRole("button", { name: "Good" }).click();
+  await expect(page.getByText("Card 2 of 3")).toBeVisible();
+  const [queued] = await readStore<Queued>(page, "queue");
+  expect(queued?.learnerId).toBe(LEARNER);
+
+  // Back online, the session has expired: the sync answers 401.
+  await setOffline(context, api, false);
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole("button", { name: "Sign in with GitHub" })).toBeVisible();
+  expect(api.syncBodies).toHaveLength(1);
+  await expect.poll(async () => (await readStore(page, "packs")).length).toBe(0);
+  expect((await readStore<Queued>(page, "queue")).map((q) => q.idempotencyKey)).toEqual([queued?.idempotencyKey]);
+  expect(await readStore(page, "meta")).toEqual([LEARNER]);
+  expect(await page.evaluate(async () => (await caches.match("/index.html")) === undefined)).toBe(true);
+
+  // The same learner signs in again: the kept queue is sent and drained, then the pack is fetched again.
+  await signIn(page);
+  await expect.poll(() => api.syncBodies.length).toBe(2);
+  expect(api.syncBodies[1]?.ratings.map((r) => r.idempotencyKey)).toEqual([queued?.idempotencyKey]);
+  await expect.poll(async () => (await readStore(page, "queue")).length).toBe(0);
+  await expect.poll(async () => (await readStore(page, "packs")).length).toBe(1);
+});
+
+test("T015 fix: explicit sign-out online syncs the queue first, then clears everything; a failed sync still clears", async ({
+  page,
+  context,
+}) => {
+  const api = await mockApi(context);
+  await signIn(page);
+  await swReady(page);
+  await expect.poll(async () => (await readStore(page, "packs")).length).toBe(1);
+  const key = await addQueued(page, LEARNER);
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  expect(api.syncBodies.map((b) => b.ratings.map((r) => r.idempotencyKey))).toEqual([[key]]);
+  for (const store of ["packs", "queue", "meta"] as const) expect(await readStore(page, store)).toEqual([]);
+  expect(await cacheCount(page)).toBe(0);
+
+  // The sync fails: sign-out still clears everything and is not blocked.
+  api.syncStatus = () => 500;
+  await signIn(page);
+  await expect.poll(async () => (await readStore(page, "packs")).length).toBe(1);
+  await addQueued(page, LEARNER);
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  expect(api.syncBodies).toHaveLength(2);
+  for (const store of ["packs", "queue", "meta"] as const) expect(await readStore(page, store)).toEqual([]);
+});
+
+test("T015 fix: every sync names the queue's learner; a 409 wrong-learner keeps the queue, shows nothing, does not loop", async ({
+  page,
+  context,
+}) => {
+  const api = await mockApi(context, { syncStatus: () => 409 });
+  await signIn(page);
+  await swReady(page);
+  await expect.poll(async () => (await readStore(page, "packs")).length).toBe(1);
+  const key = await addQueued(page, LEARNER);
+  await page.goto("/review"); // app open: one sync
+  await expect(question(page)).toBeVisible();
+  await expect.poll(() => api.syncBodies.length).toBe(1);
+  expect((api.syncBodies[0] as SyncRequest & { learnerId?: string }).learnerId).toBe(LEARNER);
+  await page.waitForTimeout(1_500);
+  expect(api.syncBodies).toHaveLength(1); // no retry loop
+  expect((await readStore<Queued>(page, "queue")).map((q) => q.idempotencyKey)).toEqual([key]);
+  expect(await readStore(page, "meta")).toEqual([LEARNER]);
+  expect(await readStore(page, "packs")).toHaveLength(1);
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(page).toHaveURL(/\/review$/);
+  // The next `online` event tries once more.
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
+  await expect.poll(() => api.syncBodies.length).toBe(2);
+  await page.waitForTimeout(500);
+  expect(api.syncBodies).toHaveLength(2);
+});
+
+test("T015 fix: a session started online survives the network dropping; the rating queues with the same key and syncs", async ({
+  page,
+  context,
+}) => {
+  const api = await mockApi(context);
+  const rateKeys: string[] = [];
+  page.on("request", (req) => {
+    if (new URL(req.url()).pathname === "/api/review/rate") rateKeys.push(req.postDataJSON().idempotencyKey);
+  });
+  await signIn(page);
+  await page.goto("/review");
+  await expect(question(page)).toHaveText(PACK.cards[0]?.front ?? "");
+  await expect.poll(async () => (await readStore(page, "packs")).length).toBe(1);
+  await setOffline(context, api, true);
+  await page.getByRole("button", { name: "Show answer" }).click();
+  await page.getByRole("button", { name: "Good" }).click();
+  await expect(page.locator(".offline-banner")).toBeVisible();
+  await expect(page.getByText("Card 2 of 3")).toBeVisible();
+  await expect(question(page)).toHaveText(PACK.cards[1]?.front ?? "");
+  await expect(page.getByText("Could not save your rating")).toHaveCount(0);
+  const queued = await readStore<Queued>(page, "queue");
+  expect(queued.map((q) => [q.cardId, q.rating, q.learnerId])).toEqual([["201", "good", LEARNER]]);
+  expect(rateKeys).toEqual([queued[0]?.idempotencyKey]);
+
+  await setOffline(context, api, false);
+  await expect(page.locator(".offline-banner")).toHaveCount(0);
+  await expect.poll(() => api.syncBodies.length).toBe(1);
+  expect(api.syncBodies[0]?.ratings.map((r) => r.idempotencyKey)).toEqual(rateKeys);
+  await expect.poll(async () => (await readStore(page, "queue")).length).toBe(0);
 });
 
 test("T015 AC 7: ladder generation offline shows the notice and sends no request", async ({ page, context }) => {
@@ -820,5 +970,28 @@ test.describe("T015 settings", () => {
     await expect(messages).toHaveText(["This file is larger than 5 MB. Choose the file you exported."]);
     await page.waitForTimeout(300);
     expect(mock.imports).toBe(4); // refused before reading or uploading
+  });
+
+  test("T015 fix: a 403 import shows the server's detail; the generic text only when there is no detail", async ({
+    page,
+    context,
+  }) => {
+    const detail = "This file belongs to another account (@someone). Sign in as @someone to import it.";
+    const answers = [
+      { status: 403, json: { error: "wrong-account", detail } },
+      { status: 403, json: { error: "wrong-account" } },
+      { status: 413, json: { error: "file-too-large" } },
+    ];
+    await mockSettings(context, STATUS, (n) => answers[n] ?? { status: 500, json: {} });
+    await signIn(page);
+    await page.goto("/settings");
+    const input = page.getByRole("button", { name: "Import progress" });
+    const message = page.locator("#import-title ~ .settings-error");
+    await input.setInputFiles({ name: "a.json", mimeType: "application/json", buffer: Buffer.from("{}") });
+    await expect(message).toHaveText(detail);
+    for (let n = 1; n < answers.length; n++) {
+      await input.setInputFiles({ name: "b.json", mimeType: "application/json", buffer: Buffer.from("{}") });
+      await expect(message).toHaveText("Could not import this file. Try again.");
+    }
   });
 });
