@@ -139,7 +139,14 @@ export function parseProgressFile(text: string, githubId: number): ProgressFile 
     const where = issue?.path.join(".") || "file";
     return bad("invalid-file", `Invalid value at ${where}: ${issue?.message ?? "invalid"}.`.slice(0, 200));
   }
-  if (parsed.data.learner.githubId !== githubId) return { status: 403, body: { error: "wrong-account" } };
+  if (parsed.data.learner.githubId !== githubId)
+    return {
+      status: 403,
+      body: {
+        error: "wrong-account",
+        detail: "This file belongs to another account. Sign in with the account that exported it.",
+      },
+    };
   return parsed.data as ProgressFile;
 }
 

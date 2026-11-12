@@ -320,7 +320,7 @@ export function createApp(opts: {
     return c.json(await exportProgress(sql, user.userId, at, passedLevels));
   });
 
-  const tooLarge = (c: Context) => c.json({ error: "file-too-large" }, 413);
+  const tooLarge = (c: Context) => c.json({ error: "file-too-large", detail: "The file is larger than 5 MB." }, 413);
   app.post("/api/progress/import", bodyLimit({ maxSize: MAX_IMPORT_BYTES, onError: tooLarge }), async (c) => {
     const user = await currentUser(c);
     if (!user) return c.json({ error: "unauthorized" }, 401);

@@ -295,7 +295,10 @@ describe("T015 import negatives (AC 6, Success Criteria 7)", () => {
     const before = await tableCounts();
     const res = await postImport(theirs, me.cookie);
     expect(res.status).toBe(403);
-    expect(await res.json()).toEqual({ error: "wrong-account" });
+    expect(await res.json()).toEqual({
+      error: "wrong-account",
+      detail: "This file belongs to another account. Sign in with the account that exported it.",
+    });
     expect(await tableCounts()).toEqual(before);
   });
 
@@ -373,11 +376,12 @@ describe("T015 import negatives (AC 6, Success Criteria 7)", () => {
     const huge = "x".repeat(MAX_BYTES + 1);
     const res = await postImport(huge, me.cookie);
     expect(res.status).toBe(413);
-    expect(await res.json()).toEqual({ error: "file-too-large" });
+    expect(await res.json()).toEqual({ error: "file-too-large", detail: "The file is larger than 5 MB." });
     const exact = await postImport(`${" ".repeat(MAX_BYTES - 2)}{}`, me.cookie);
     expect(exact.status).toBe(400); // exactly 5 MB is read and parsed (and is not a valid file)
     const declared = await postImport("{}", me.cookie, { "content-length": String(MAX_BYTES + 1) });
     expect(declared.status).toBe(413);
+    expect(await declared.json()).toEqual({ error: "file-too-large", detail: "The file is larger than 5 MB." });
   });
 
   test("401 signed out; no-store", async () => {

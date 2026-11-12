@@ -436,9 +436,7 @@ describe("T015 sync learnerId (QA F3: a queue never applies under another accoun
     const other = await learner();
     const card = await seedCard(await seedLadder(me.id));
     const ratings = [rating(card, "good", iso(0), "queued")];
-    expect(await syncRatings(sql(), me.id, { learnerId: other.id, ratings }, at(MIN), noPasses)).toBe(
-      "wrong-learner",
-    );
+    expect(await syncRatings(sql(), me.id, { learnerId: other.id, ratings }, at(MIN), noPasses)).toBe("wrong-learner");
     for (const learnerId of [Number(me.id), null, {}, [me.id]]) {
       expect(await syncRatings(sql(), me.id, { learnerId, ratings }, at(MIN), noPasses)).toBe("invalid-request");
     }
