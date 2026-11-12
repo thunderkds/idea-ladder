@@ -16,7 +16,7 @@ Before writing any code:
 3. Read this file completely
 4. Read `agents/frontend.md`
 5. Note the **Complexity Level** above and apply the matching process from the Complexity matrix in `agents/frontend.md`
-6. C2: read `memory/codebase-map.md` (the app layout set by T003). Read `docs/REQUIREMENT_SOURCE.md` § Brainstorm: feature ideas (row "Offline PWA + push reminders"), § Grill #11, § Alternatives to investigate (row "Client"), § Diagram text "Architecture"; `docs/MAIN_FLOW.md` § 1; `tasks/TASK_GUIDE_T011.md` (review queue, `scheduleNext`, `submitReviewRating`).
+6. C2: read `memory/codebase-map.md` (the app layout set by T003). Read `docs/REQUIREMENT_SOURCE.md` § Brainstorm: feature ideas (row "Offline PWA + push reminders"), § Grill #11, § Alternatives to investigate (row "Client"), § Diagram text "Architecture"; `docs/MAIN_FLOW.md` § 1; `tasks/TASK_GUIDE_T011.md` (review queue, `scheduleNext`, `rateCard`).
 
 ---
 
@@ -45,10 +45,10 @@ Source (`docs/REQUIREMENT_SOURCE.md`):
 
 ### Requirement Fidelity Gate (sign off BEFORE implementation)
 
-- [ ] Restated intent confirmed to match the user's request (by Supervisor / user — not the implementing agent)
-- [ ] Domain terms align with `PROJECT_SPEC.md` glossary (`grill-with-docs` run if terminology was fuzzy)
-- [ ] Every Acceptance Criterion below traces to a line in the Requirement
-- [ ] All Requirement Refs exist in `PRD.md` and are fully covered by the Acceptance Criteria above
+- [x] Restated intent confirmed to match the user's request (by Supervisor / user — not the implementing agent)
+- [x] Domain terms align with `PROJECT_SPEC.md` glossary (`grill-with-docs` run if terminology was fuzzy)
+- [x] Every Acceptance Criterion below traces to a line in the Requirement
+- [x] All Requirement Refs exist in `PRD.md` and are fully covered by the Acceptance Criteria above
 
 > An agent must NOT start implementing until this gate is checked. If anything here is unclear,
 > STOP and ask the Supervisor (Karpathy: Think Before Coding).
@@ -57,7 +57,7 @@ Source (`docs/REQUIREMENT_SOURCE.md`):
 
 ## Dependencies & Reachability
 
-**Depends on**: T011 — the review screen, `scheduleNext` (pure ts-fsrs wrapper), `submitReviewRating` with idempotency keys, and the review log the sync and export read.
+**Depends on**: T011 — the review screen, `scheduleNext` (pure ts-fsrs wrapper), `rateCard` (`POST /api/review/rate`) with idempotency keys, and the review log the sync and export read.
 **Entry point**: `Export progress` and `Import progress` (button labels on the settings screen), `Turn on reminders` (button label), service worker registered by `registerServiceWorker`
 
 ---
@@ -174,7 +174,7 @@ Precache the app shell; cache the due-card payload (next 7 days of due cards) in
 | service worker + `registerServiceWorker` | new |
 | offline rating queue + sync module (client) | new |
 | review screen (T011) | read from cache when offline; offline banner |
-| `submitReviewRating` (T011) | accept validated client `reviewedAt` |
+| `rateCard` / `POST /api/review/rate` (T011) | accept validated client `reviewedAt` |
 | settings screen: reminders, export, import | new |
 | reminder cron Inngest function + push sender | new |
 | export / import handlers | new |
