@@ -67,8 +67,32 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 > **before any implementation commit exists**; if it does not (docs, templates, skill-instruction
 > text), BEFORE is the **verbatim prior content** of what changed — a quoted excerpt, not a command.
 
-**BEFORE**: [pasted timestamped command output showing the thing absent/failing, captured before the
-first implementation commit] OR [verbatim excerpt of the prior content, for non-executable changes]
+**BEFORE**: captured by common-infrastructure in worktree `/home/thunderkds/workspace/pets/wt-t003`,
+branch `T003-scaffold`, HEAD `c4b20ab`, before any implementation commit (the guide's Verification Command):
+
+```
+2026-11-12T08:05:53Z
+c4b20ab
+$ docker compose up -d db
+no configuration file provided: not found
+exit=1
+$ bun install --frozen-lockfile
+error: Bun could not find a package.json file to install from
+note: Run "bun init" to initialize a project
+exit=1
+$ bun run db:migrate
+error: Script not found "db:migrate"
+exit=1
+$ bun run typecheck
+error: Script not found "typecheck"
+exit=1
+$ bun run test:e2e -- sign-in
+error: Script not found "test:e2e"
+exit=1
+$ bun run ci:local
+error: Script not found "ci:local"
+exit=1
+```
 
 **AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
 

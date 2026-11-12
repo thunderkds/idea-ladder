@@ -1,0 +1,3 @@
+[test]
+# Unit/integration tests only. Playwright specs live in e2e/ (*.e2e.ts); experiments/ uses vitest.
+root = "tests"

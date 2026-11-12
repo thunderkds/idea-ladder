@@ -1,0 +1,38 @@
+# Approved by tasks/TASK_GUIDE_T003.md (Approach step 6). Keep steps in sync with scripts/ci-local.ts.
+name: ci
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  ci:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      db:
+        image: pgvector/pgvector:0.8.6-pg17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: idea_ladder
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 2s --health-timeout 3s --health-retries 30
+    env:
+      # Throwaway CI service database, not a secret.
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/idea_ladder
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.3
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun run lint
+      - run: bun test
+      - name: migrations up / down / up
+        run: bun run db:migrate && bun run db:migrate:down && bun run db:migrate
+      - run: bunx playwright install --with-deps chromium
+      - name: e2e sign-in
+        run: bun run test:e2e -- sign-in
