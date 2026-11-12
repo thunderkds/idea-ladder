@@ -121,6 +121,17 @@ describe("listLadders (AC 7)", () => {
   });
 });
 
+describe("listLadders duplicates", () => {
+  test("a failed and a fetched job for the same repo + SHA and learner list the ladder once", async () => {
+    await h.learner();
+    const [{ id: userId }] = await sql()`SELECT max(id)::text AS id FROM users`;
+    const ladder = await seedLadder();
+    await sql()`INSERT INTO generation_jobs (repo_full_name, commit_sha, status, reason, started_by) VALUES ('developit/mitt', ${SHA}, 'failed', 'rate-limited', ${userId})`;
+    await sql()`INSERT INTO generation_jobs (repo_full_name, commit_sha, status, started_by) VALUES ('developit/mitt', ${SHA}, 'fetched', ${userId})`;
+    expect(await listLadders(sql(), userId)).toEqual([{ ladderId: ladder, repo: "developit/mitt" }]);
+  });
+});
+
 describe("HTTP (AC 6, signed-in gate, no-store)", () => {
   test("GET /api/ladders/:id: 401 signed out, 404 unknown, 200 with the view; always no-store", async () => {
     const id = await seedLadder();
