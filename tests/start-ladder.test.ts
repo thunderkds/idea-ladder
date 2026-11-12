@@ -140,6 +140,17 @@ describe("POST /api/start: errors (AC 6, edge cases)", () => {
     expect(await h.count("generation_jobs")).toBe(0);
   });
 
+  test("[] from /commits (no commits) -> 422 { error: repo-empty }, no job", async () => {
+    h.state.override = (path) =>
+      path.startsWith("/repos/developit/mitt/commits")
+        ? Response.json([], { headers: { "x-ratelimit-remaining": "4999" } })
+        : undefined;
+    const res = await h.post("developit/mitt", cookie);
+    expect(res.status).toBe(422);
+    expect(await json(res)).toEqual({ error: "repo-empty" });
+    expect(await h.count("generation_jobs")).toBe(0);
+  });
+
   test("unsupported URL -> 400 { error: unsupported-url }, no GitHub call", async () => {
     const res = await h.post("https://gitlab.com/o/n", cookie);
     expect(res.status).toBe(400);
@@ -273,6 +284,8 @@ describe("GET /start?url= signed out: sign in, then back to the same /start (AC 
       "/ladders",
       "/start/../auth/sign-out?url=x",
       "/startx?url=x",
+      "/start?url=x\r\nSet-Cookie: a=b",
+      "/start?url=x%0d%0aSet-Cookie:%20a=b",
     ]) {
       expect(await signInVia(next)).toBe("/ladders");
     }

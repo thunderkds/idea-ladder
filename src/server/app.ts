@@ -43,8 +43,18 @@ const FAILED_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 
 /** Return target kept across GitHub sign-in: only a same-origin `/start?...` path is ever stored or followed. */
 const RETURN_COOKIE = "il_return_to";
+// biome-ignore lint/suspicious/noControlCharactersInRegex: matching control characters is the point
+const CONTROL_CHARS = /[\x00-\x1f\x7f]/;
+const safeDecode = (value: string) => {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return "\x00"; // malformed escapes: treat as hostile
+  }
+};
 function startPath(value: string | undefined): string | undefined {
   if (!value || value.length > MAX_URL_LENGTH * 4 || !value.startsWith("/start?")) return undefined;
+  if (CONTROL_CHARS.test(value) || CONTROL_CHARS.test(safeDecode(value))) return undefined;
   const url = new URL(value, "http://idea-ladder.invalid");
   return url.origin === "http://idea-ladder.invalid" && url.pathname === "/start" ? value : undefined;
 }

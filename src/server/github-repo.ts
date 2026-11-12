@@ -58,7 +58,11 @@ export class GitHubError extends Error {
 }
 
 const SHA = /^[0-9a-f]{40}$/;
-const FULL_NAME = /^[A-Za-z0-9-]{1,39}\/[A-Za-z0-9._-]{1,100}$/;
+const FULL_NAME_SHAPE = /^[A-Za-z0-9-]{1,39}\/[A-Za-z0-9._-]{1,100}$/;
+/** owner/name; "." and ".." match the shape but would walk the API path. */
+const FULL_NAME = {
+  test: (value: string) => FULL_NAME_SHAPE.test(value) && !value.split("/").some((p) => p === "." || p === ".."),
+};
 const DEP_FILES = new Set([
   "package.json",
   "requirements.txt",
@@ -98,7 +102,9 @@ export function githubRepoClient(opts: { baseUrl: string; token: string; fetch?:
         throw new GitHubError(0, path); // network error or timeout: transient
       });
       if ((res.status === 403 || res.status === 429) && res.headers.get("x-ratelimit-remaining") === "0") {
-        throw new RateLimitError(new Date(Number(res.headers.get("x-ratelimit-reset") ?? "0") * 1000));
+        const resetS = Number(res.headers.get("x-ratelimit-reset"));
+        const resetMs = Number.isFinite(resetS) && resetS > 0 ? resetS * 1000 : Date.now() + 60_000;
+        throw new RateLimitError(new Date(resetMs));
       }
       const location = res.headers.get("location");
       if (![301, 302, 307, 308].includes(res.status) || !location) return res;

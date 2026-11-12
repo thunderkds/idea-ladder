@@ -35,7 +35,12 @@ async function failJob(sql: SQL, jobId: string, reason: string, resetAt?: Date) 
 type Deps = { sql: SQL; github: GithubRepoClient };
 
 /** Reads the repo at the pinned SHA, scores confidence, stores both; all-or-nothing. Throws only to be retried. */
-async function fetchRepo({ sql, github }: Deps, { repo, sha, jobId }: GenerateRequested) {
+async function fetchRepo({ sql, github }: Deps, { jobId }: GenerateRequested) {
+  // Trust only the job row for repo + SHA: the event payload is not authenticated data.
+  const [job] = await sql`SELECT repo_full_name, commit_sha FROM generation_jobs WHERE id = ${jobId}`;
+  if (!job) throw new NonRetriableError(`unknown job ${jobId}`);
+  const repo = job.repo_full_name as string;
+  const sha = job.commit_sha as string;
   await sql`UPDATE generation_jobs SET status = 'running', updated_at = now() WHERE id = ${jobId} AND status = 'queued'`;
   let snapshot: Awaited<ReturnType<GithubRepoClient["fetchSnapshot"]>>;
   try {
