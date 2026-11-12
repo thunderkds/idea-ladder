@@ -181,6 +181,18 @@ describe("pickCoreFilesClaudeCode (fake claude)", () => {
     ]);
   });
 
+  test("no answer, repair, still no answer -> reader-failed (not reader-invalid-output)", async () => {
+    await replies([
+      { stdout: result({ result: "I could not decide." }) },
+      { stdout: result({ result: "Still thinking." }) },
+    ]);
+    const err = await pick().run.catch((e) => e);
+    expect(err).toBeInstanceOf(ReaderFailedError);
+    expect(err.code).toBe("reader-failed");
+    expect(err.message).toMatch(/no JSON object in the answer/);
+    expect(await calls()).toHaveLength(2);
+  });
+
   test("a successful repair returns the repaired answer", async () => {
     await replies([
       { stdout: result({ result: "I could not decide." }) },

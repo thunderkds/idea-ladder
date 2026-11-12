@@ -166,6 +166,9 @@ export async function pickCoreFilesClaudeCode(input: PickCoreFilesClaudeCodeInpu
         `Your answer was not usable: ${problems}. Reply again with the JSON answer only, using exact paths from the tree.`,
         first.sessionId,
       ));
+      // AC 9: still no usable JSON answer after the repair run -> reader-failed (paths invalid -> invalid-output).
+      if (answer.problem)
+        throw new ReaderFailedError(`no answer after one repair run: ${answer.problem}`, await hitLimit());
       const second = validate(answer.files, blobs);
       kept = second.kept;
       dropped = [...dropped, ...second.dropped];
