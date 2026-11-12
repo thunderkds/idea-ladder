@@ -18,8 +18,8 @@ try {
   process.exit(1);
 }
 
-// Every model call is priced by logStepCost; fail at start, not after a paid call, when model A has no price.
-if (!Object.hasOwn(loadPrices(), config.modelAId)) {
+// API back end: every model call is priced by logStepCost; fail at start, not after a paid call, when model A has no price.
+if (config.modelABackend === "api" && !Object.hasOwn(loadPrices(), config.modelAId as string)) {
   console.error(`Invalid configuration: MODEL_A_ID "${config.modelAId}" has no price in eval/prices.json`);
   process.exit(1);
 }
@@ -27,7 +27,9 @@ if (!Object.hasOwn(loadPrices(), config.modelAId)) {
 const sql = new SQL(config.databaseUrl);
 const reader: ReaderDeps = {
   // The API back end, explicit: never an ANTHROPIC_BASE_URL from the environment.
-  model: createAnthropic({ apiKey: config.anthropicApiKey, baseURL: "https://api.anthropic.com/v1" })(config.modelAId),
+  model: createAnthropic({ apiKey: config.anthropicApiKey, baseURL: "https://api.anthropic.com/v1" })(
+    config.modelAId as string,
+  ),
   limits: { maxSteps: config.readerMaxSteps, tokenBudget: config.readerTokenBudget },
   logCost: ({ jobId, repo, sha, step, model, inputTokens, outputTokens, cachedInputTokens }) =>
     logStepCost({
