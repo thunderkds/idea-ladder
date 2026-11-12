@@ -102,6 +102,7 @@ describe("pickCoreFilesClaudeCode (fake claude)", () => {
       "mcp__reader__read",
       "mcp__reader__search",
     ]);
+    expect(JSON.parse(a[5] as string).$schema).toBeUndefined();
     expect(c.env).toEqual({ ANTHROPIC_API_KEY: null, FAKE_MARK: "inherited" });
     expect(c.cwd).toMatch(/il-reader-/);
     expect(Object.keys(c.mcp.mcpServers)).toEqual(["reader"]);

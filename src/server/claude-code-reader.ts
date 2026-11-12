@@ -26,9 +26,11 @@ export const CLAUDE_CODE_TIMEOUT_MS = 300_000;
 const MCP_SCRIPT = join(import.meta.dir, "reader-mcp.ts");
 const ALLOWED_TOOLS = ["mcp__reader__list", "mcp__reader__read", "mcp__reader__search"];
 /** Asked of the CLI with --json-schema; the answer is still validated by CoreFilesSchema and the tree. */
-const ANSWER_SCHEMA = JSON.stringify(
-  z.toJSONSchema(z.object({ coreFiles: z.array(CoreFilesSchema.shape.coreFiles.element) })),
+const { $schema: _draft, ...answerSchema } = z.toJSONSchema(
+  z.object({ coreFiles: z.array(CoreFilesSchema.shape.coreFiles.element) }),
 );
+// Without the "$schema" key: this CLI build rejects the draft 2020-12 URI z.toJSONSchema adds.
+const ANSWER_SCHEMA = JSON.stringify(answerSchema);
 
 /** The `claude -p` run failed (timeout, non-zero exit, is_error, unparsable output): the Inngest step may retry. */
 export class ReaderFailedError extends Error {
