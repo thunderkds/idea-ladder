@@ -24,6 +24,7 @@
 - [v0 = experiments only](decisions.md#2026-11-01--v0-runs-as-experiments-only-option-b-narrowed) — no product code before Gate 1; T001 spike + T002 kit
 - [Board mode local](decisions.md#2026-11-01--idea-ladder-uses-board-mode-local) — Linear config backed up; old cache archived; T-IDs
 - [T001 outcome](decisions.md#2026-11-01--v0-runs-as-experiments-only-option-b-narrowed) — key check alone fails (11.3% false-reject) → v1 needs 2nd check; proof + GitHub read keep
-- [Gate 5 trace gotcha](learnings.md#patterns) — hook counts `npm/pnpm test`, not `node --test`; keep test commands short
-- [Source conflicts](learnings.md#requirement-clarifications) — 3 self-contradictions in the requirement doc; see docs/MAIN_FLOW.md § 5
+- [Gate 5 trace gotcha](learnings.md#patterns) — hook counts `npm/pnpm test`, not `node --test` or `bun test` (open: add bun before v1 Stage 5)
+- [Source conflicts settled](decisions.md#2026-11-12--four-source-conflicts-settled-user) — user agreed to all 4 readings in docs/MAIN_FLOW.md § 5
 - [Phase plan T003–T030](decisions.md#2026-11-01--phase-plan-t003t030) — v1 19 tasks, v2 6, v3 5; each phase waits for its gate
+- [v1 stack](decisions.md#2026-11-12--v1-stack-bun-react-postgres--pgvector-claude-subscription-for-lesson-generation) — Bun + React/Vite + Postgres/pgvector; model A via Claude subscription until other learners, then API; model B always API
