@@ -7,6 +7,8 @@ const valid = {
   GITHUB_CLIENT_SECRET: "csecret",
   GITHUB_APP_TOKEN: "app-token",
   SESSION_SECRET: "s".repeat(32),
+  ANTHROPIC_API_KEY: "sk-ant-test",
+  MODEL_A_ID: "test-model",
 };
 
 const prod = {

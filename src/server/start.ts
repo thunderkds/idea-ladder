@@ -80,7 +80,7 @@ export async function startLadder(
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export type JobView = {
-  status: "queued" | "running" | "fetched" | "failed";
+  status: "queued" | "running" | "fetched" | "picking" | "picked" | "failed";
   repo: string;
   sha: string;
   reason?: string;

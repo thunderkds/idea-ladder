@@ -1,8 +1,19 @@
-// Background ladder generation (Inngest). T005 ships one step, fetch-repo; later tasks append steps after it.
+// Background ladder generation (Inngest). Steps: fetch-repo (T005), pick-core-files (T006); later tasks append more.
+import type { LanguageModel } from "ai";
 import type { SQL } from "bun";
 import { Inngest, NonRetriableError } from "inngest";
 import { confidenceScore } from "./confidence.ts";
 import { GitHubError, type GithubRepoClient, RateLimitError, RepoNotFoundError } from "./github-repo.ts";
+import {
+  type CallUsage,
+  type CoreFile,
+  PICK_CORE_FILES_STEP,
+  pickCoreFiles,
+  ReaderInvalidOutputError,
+  type ReaderLimits,
+  type ReadFile,
+  type TreeEntry,
+} from "./repo-reader.ts";
 
 export const LADDER_GENERATE_EVENT = "ladder/generate.requested";
 export type GenerateRequested = { repo: string; sha: string; jobId: string };
@@ -29,10 +40,12 @@ function eventData(data: unknown): GenerateRequested {
 async function failJob(sql: SQL, jobId: string, reason: string, resetAt?: Date) {
   await sql`
     UPDATE generation_jobs SET status = 'failed', reason = ${reason}, reset_at = ${resetAt ?? null}, updated_at = now()
-    WHERE id = ${jobId} AND status IN ('queued', 'running')`;
+    WHERE id = ${jobId} AND status IN ('queued', 'running', 'fetched', 'picking')`;
 }
 
-type Deps = { sql: SQL; github: GithubRepoClient };
+export type CostEntry = CallUsage & { jobId: string; repo: string; sha: string; step: string };
+export type ReaderDeps = { model: LanguageModel; limits: ReaderLimits; logCost: (entry: CostEntry) => void };
+type Deps = { sql: SQL; github: GithubRepoClient; reader: ReaderDeps };
 
 /** Reads the repo at the pinned SHA, scores confidence, stores both; all-or-nothing. Throws only to be retried. */
 async function fetchRepo({ sql, github }: Deps, { jobId }: GenerateRequested) {
@@ -78,6 +91,67 @@ async function fetchRepo({ sql, github }: Deps, { jobId }: GenerateRequested) {
   return { status: "fetched", confidence } as const;
 }
 
+/** Reads through repo_file_cache, so a retried step makes no GitHub call for a file it already read. */
+function cachedReadFile(sql: SQL, github: GithubRepoClient, repo: string, sha: string): ReadFile {
+  return async (path) => {
+    const [hit] = await sql`
+      SELECT content FROM repo_file_cache WHERE repo_full_name = ${repo} AND commit_sha = ${sha} AND path = ${path}`;
+    if (hit) return hit.content as string | null;
+    const content = await github.readFile(repo, sha, path);
+    await sql`
+      INSERT INTO repo_file_cache (repo_full_name, commit_sha, path, content) VALUES (${repo}, ${sha}, ${path}, ${content})
+      ON CONFLICT DO NOTHING`;
+    return content;
+  };
+}
+
+/** The bounded reader as a tool of the workflow: stores 3-10 ranked core files for the repo + SHA. */
+async function pickCoreFilesStep({ sql, github, reader }: Deps, { jobId }: GenerateRequested) {
+  const [job] = await sql`SELECT repo_full_name, commit_sha, status FROM generation_jobs WHERE id = ${jobId}`;
+  if (!job) throw new NonRetriableError(`unknown job ${jobId}`);
+  const repo = job.repo_full_name as string;
+  const sha = job.commit_sha as string;
+  if (job.status === "failed") return { status: "failed", reason: "job-failed" } as const;
+  const stored = async (): Promise<CoreFile[]> =>
+    await sql`SELECT path, reason FROM core_files WHERE repo_full_name = ${repo} AND commit_sha = ${sha} ORDER BY rank`;
+  let coreFiles = await stored();
+  if (coreFiles.length === 0) {
+    await sql`
+      UPDATE generation_jobs SET status = 'picking', updated_at = now() WHERE id = ${jobId} AND status = 'fetched'`;
+    const [snap] = await sql`
+      SELECT tree, tree_truncated FROM repo_snapshots WHERE repo_full_name = ${repo} AND commit_sha = ${sha}`;
+    if (!snap) throw new NonRetriableError(`no snapshot for ${repo}@${sha}`);
+    try {
+      ({ coreFiles } = await pickCoreFiles({
+        repo,
+        sha,
+        tree: snap.tree as TreeEntry[],
+        treeTruncated: snap.tree_truncated as boolean,
+        model: reader.model,
+        limits: reader.limits,
+        readFile: cachedReadFile(sql, github, repo, sha),
+        onUsage: (u) => reader.logCost({ ...u, jobId, repo, sha, step: PICK_CORE_FILES_STEP }),
+      }));
+    } catch (err) {
+      if (!(err instanceof ReaderInvalidOutputError)) throw err; // model 429/529, GitHub 5xx: Inngest retries this step
+      await failJob(sql, jobId, err.code);
+      return { status: "failed", reason: err.code } as const;
+    }
+    await sql.begin(async (tx) => {
+      for (const [i, f] of coreFiles.entries()) {
+        await tx`
+          INSERT INTO core_files (repo_full_name, commit_sha, rank, path, reason)
+          VALUES (${repo}, ${sha}, ${i + 1}, ${f.path}, ${f.reason})
+          ON CONFLICT DO NOTHING`;
+      }
+    });
+    coreFiles = await stored(); // another job for the same repo + SHA may have stored its picks first
+  }
+  await sql`
+    UPDATE generation_jobs SET status = 'picked', updated_at = now() WHERE id = ${jobId} AND status IN ('fetched', 'picking')`;
+  return { status: "picked", coreFiles: coreFiles.map((f) => ({ path: f.path, reason: f.reason })) } as const;
+}
+
 export function ladderGenerateFunction(inngest: Inngest, deps: Deps) {
   return inngest.createFunction(
     {
@@ -92,7 +166,9 @@ export function ladderGenerateFunction(inngest: Inngest, deps: Deps) {
     },
     async ({ event, step }) => {
       const data = eventData(event.data);
-      return step.run("fetch-repo", () => fetchRepo(deps, data));
+      const fetched = await step.run("fetch-repo", () => fetchRepo(deps, data));
+      if (fetched.status !== "fetched") return fetched;
+      return step.run(PICK_CORE_FILES_STEP, () => pickCoreFilesStep(deps, data));
     },
   );
 }

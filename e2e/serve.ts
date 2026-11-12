@@ -11,6 +11,7 @@ import { migrateUp } from "../src/server/migrate.ts";
 import { adminUrl } from "../tests/support/db.ts";
 import { fixtureFetch, loadFixture, rateLimited, V0_REPOS, type V0Repo } from "../tests/support/github-fixtures.ts";
 import { startGithubStub } from "../tests/support/github-stub.ts";
+import { testReader } from "../tests/support/mock-model.ts";
 
 export const APP_PORT = 54401;
 const STUB_PORT = 54400;
@@ -38,6 +39,8 @@ const config = loadConfig({
   GITHUB_CLIENT_SECRET: "e2e-client-secret",
   GITHUB_APP_TOKEN: "e2e-app-token",
   SESSION_SECRET: crypto.randomUUID() + crypto.randomUUID(),
+  ANTHROPIC_API_KEY: "sk-ant-test",
+  MODEL_A_ID: "test-model",
   GITHUB_OAUTH_BASE_URL: stub.url,
   GITHUB_API_BASE_URL: stub.url,
   NODE_ENV: "test",
@@ -65,7 +68,7 @@ const github: GithubRepoClient = {
     return fixtureClient.fetchSnapshot(repo, sha);
   },
 };
-const fn = ladderGenerateFunction(createInngest(), { sql, github });
+const fn = ladderGenerateFunction(createInngest(), { sql, github, reader: testReader() });
 
 const app = createApp({
   config,

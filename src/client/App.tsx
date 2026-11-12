@@ -72,12 +72,19 @@ function StartProblem({ error, resetAt, retryAt }: { error: string; resetAt?: st
   );
 }
 
-type Job = { status: "queued" | "running" | "fetched" | "failed"; repo: string; reason?: string; resetAt?: string };
+type Job = {
+  status: "queued" | "running" | "fetched" | "picking" | "picked" | "failed";
+  repo: string;
+  reason?: string;
+  resetAt?: string;
+};
 const POLL_MS = 2_000;
 const STATUS_TEXT: Record<Job["status"], string> = {
   queued: "Queued",
   running: "Reading the repo",
-  fetched: "Done",
+  fetched: "Picking core files",
+  picking: "Picking core files",
+  picked: "Done",
   failed: "Failed",
 };
 const FAILED_DETAIL: Record<string, (job: Job) => string> = {
@@ -86,7 +93,7 @@ const FAILED_DETAIL: Record<string, (job: Job) => string> = {
   "queue-unavailable": () => "The ladder queue was not available. Try again in a few minutes.",
 };
 
-/** /jobs/:jobId: polls the job every 2 s and stops on a final status (fetched, failed). */
+/** /jobs/:jobId: polls the job every 2 s and stops on a final status (picked, failed). */
 function JobStatus({ jobId }: { jobId: string }) {
   const [job, setJob] = useState<Job>();
   const [missing, setMissing] = useState(false);
@@ -102,7 +109,7 @@ function JobStatus({ jobId }: { jobId: string }) {
           const next = (await res.json()) as Job;
           if (stopped) return;
           setJob(next);
-          if (next.status === "fetched" || next.status === "failed") return;
+          if (next.status === "picked" || next.status === "failed") return;
         }
       } catch {
         // network blip: try again on the next tick
@@ -136,8 +143,8 @@ function JobStatus({ jobId }: { jobId: string }) {
     ? ""
     : job.status === "failed"
       ? (FAILED_DETAIL[job.reason ?? ""]?.(job) ?? "Something went wrong while reading the repo. Try again later.")
-      : job.status === "fetched"
-        ? "The repo is read and its snapshot is saved."
+      : job.status === "picked"
+        ? "The repo is read and its core files are picked."
         : "This page updates by itself.";
   return (
     <main className="page" aria-live="polite">

@@ -1,6 +1,7 @@
 // AI SDK mock language model for the repo reader: each call returns the next scripted reply.
 import type { LanguageModelV3CallOptions, LanguageModelV3GenerateResult } from "@ai-sdk/provider";
 import { MockLanguageModelV3 } from "ai/test";
+import type { ReaderDeps } from "../../src/server/ladder-generate.ts";
 
 export type Reply = { tools: { name: string; input: unknown }[] } | { text: string } | { error: Error };
 
@@ -55,3 +56,19 @@ export function toolResults(options: LanguageModelV3CallOptions): string[] {
 
 export const answer = (files: { path: string; reason?: string }[]) =>
   JSON.stringify({ coreFiles: files.map((f) => ({ path: f.path, reason: f.reason ?? `core: ${f.path}` })) });
+
+/**
+ * Reader deps for workflow tests that are not about the reader: list("") once, then answer with the first three
+ * root files from that listing. No GitHub call, no cost log.
+ */
+export function testReader(): ReaderDeps {
+  const model = scriptedModel((call, options) => {
+    if (call % 2 === 0) return { tools: [{ name: "list", input: { path: "" } }] };
+    const listing = JSON.parse(toolResults(options).at(-1) ?? '""') as { value?: string };
+    const files = String(listing.value ?? "")
+      .split("\n")
+      .filter((l) => l && !l.endsWith("/") && !l.startsWith("("));
+    return { text: answer(files.slice(0, 3).map((path) => ({ path }))) };
+  });
+  return { model, limits: { maxSteps: 15, tokenBudget: 80_000 }, logCost: () => {} };
+}

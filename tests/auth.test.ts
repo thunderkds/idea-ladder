@@ -24,6 +24,8 @@ beforeAll(async () => {
     GITHUB_CLIENT_SECRET: CLIENT_SECRET,
     GITHUB_APP_TOKEN: "test-app-token",
     SESSION_SECRET: "x".repeat(48),
+    ANTHROPIC_API_KEY: "sk-ant-test",
+    MODEL_A_ID: "test-model",
     GITHUB_OAUTH_BASE_URL: stub.url,
     GITHUB_API_BASE_URL: stub.url,
     NODE_ENV: "test",

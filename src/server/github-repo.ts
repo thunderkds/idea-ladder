@@ -140,6 +140,24 @@ export function githubRepoClient(opts: { baseUrl: string; token: string; fetch?:
       return { fullName: canonical.toLowerCase(), sha: commit.sha };
     },
 
+    /**
+     * T006: one file's text at a pinned SHA (contents API, raw media type), or null for a binary file
+     * (a NUL byte in the first 8,000 bytes). Text past 1 MB is cut: the reader shows at most 400 lines per call.
+     */
+    async readFile(fullName: string, sha: string, path: string): Promise<string | null> {
+      if (!FULL_NAME.test(fullName)) throw new Error(`expected owner/name, got: ${fullName}`);
+      if (!SHA.test(sha)) throw new Error(`expected a 40-hex sha, got: ${sha}`);
+      const segments = path.split("/");
+      if (segments.some((p) => p === "" || p === "." || p === ".."))
+        throw new Error(`expected a repo path, got: ${path}`);
+      const apiPath = `/repos/${fullName}/contents/${segments.map(encodeURIComponent).join("/")}?ref=${sha}`;
+      const res = await get(apiPath, "application/vnd.github.raw+json");
+      if (!res.ok) throw new GitHubError(res.status, apiPath);
+      const bytes = new Uint8Array(await res.arrayBuffer());
+      if (bytes.subarray(0, 8000).includes(0)) return null;
+      return new TextDecoder().decode(bytes.subarray(0, 1024 * 1024));
+    },
+
     /** Reads one repo at a pinned SHA. All-or-nothing: any error throws, no partial snapshot. 6 calls. */
     async fetchSnapshot(fullName: string, sha: string): Promise<RepoSnapshot> {
       if (!FULL_NAME.test(fullName)) throw new Error(`expected owner/name, got: ${fullName}`);

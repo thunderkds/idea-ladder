@@ -14,6 +14,11 @@ export type Config = {
   startMaxNewJobsPerHour: number;
   /** Public origin Inngest calls back; never derived from the request Host header. Required in production. */
   inngestServeOrigin?: string;
+  /** Model A for the repo reader: always the API back end (Anthropic provider), never the subscription. */
+  anthropicApiKey: string;
+  modelAId: string;
+  readerMaxSteps: number;
+  readerTokenBudget: number;
 };
 
 export class ConfigError extends Error {}
@@ -24,6 +29,8 @@ const REQUIRED = [
   "GITHUB_CLIENT_SECRET",
   "GITHUB_APP_TOKEN",
   "SESSION_SECRET",
+  "ANTHROPIC_API_KEY",
+  "MODEL_A_ID",
 ] as const;
 
 /** Validates the environment once at start, so a bad setup fails with variable names, not deep in OAuth code. */
@@ -51,6 +58,14 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
   const limitRaw = env.START_MAX_NEW_JOBS_PER_HOUR || "20";
   const startMaxNewJobsPerHour = /^[1-9][0-9]*$/.test(limitRaw) ? Number(limitRaw) : 0;
   if (!startMaxNewJobsPerHour) problems.push("START_MAX_NEW_JOBS_PER_HOUR must be a positive integer");
+  const positive = (name: string, fallback: string) => {
+    const raw = env[name] || fallback;
+    if (/^[1-9][0-9]*$/.test(raw)) return Number(raw);
+    problems.push(`${name} must be a positive integer`);
+    return 0;
+  };
+  const readerMaxSteps = positive("READER_MAX_STEPS", "15");
+  const readerTokenBudget = positive("READER_TOKEN_BUDGET", "80000");
 
   if (env.NODE_ENV === "production") {
     if (env.INNGEST_DEV) problems.push("INNGEST_DEV must not be set in production");
@@ -71,6 +86,10 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     port,
     secureCookies: env.NODE_ENV !== "development" && env.NODE_ENV !== "test",
     startMaxNewJobsPerHour,
+    anthropicApiKey: env.ANTHROPIC_API_KEY as string,
+    modelAId: env.MODEL_A_ID as string,
+    readerMaxSteps,
+    readerTokenBudget,
     ...(inngestServeOrigin ? { inngestServeOrigin } : {}),
   };
 }
