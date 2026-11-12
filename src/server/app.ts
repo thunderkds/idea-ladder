@@ -27,6 +27,7 @@ import {
 } from "./github-repo.ts";
 import { getLadderView, ladderExists, listLadders, noPasses, type PassedLevels } from "./ladder-view.ts";
 import { offlinePack, syncRatings } from "./offline.ts";
+import { checkSubscribe, isEndpoint, pushStatus, subscribe, unsubscribe } from "./push.ts";
 import { checkRateRequest, rateCard, reviewQueue } from "./review.ts";
 import {
   checkUrl,
@@ -127,6 +128,7 @@ export function createApp(opts: {
     "/jobs/*",
     REVIEW_PATH,
     "/api/review/*",
+    "/api/push/*",
   ]) {
     app.use(path, async (c, next) => {
       await next();
@@ -292,6 +294,33 @@ export function createApp(opts: {
     const body = await c.req.json().catch(() => undefined);
     const result = await syncRatings(sql, user.userId, body, new Date(now()), passedLevels);
     return typeof result === "string" ? c.json({ error: result }, 400) : c.json(result);
+  });
+
+  // T015: push reminders. Only the VAPID public key ever reaches a client.
+  app.get("/api/push/status", async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    return c.json(await pushStatus(sql, user.userId, config.vapid?.publicKey));
+  });
+
+  app.post("/api/push/subscribe", async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    if (!config.vapid) return c.json({ error: "push-not-configured", configured: false }, 503);
+    const req = checkSubscribe(await c.req.json().catch(() => undefined));
+    if (!req) return c.json({ error: "invalid-request" }, 400);
+    await subscribe(sql, user.userId, req);
+    return c.json({ ok: true });
+  });
+
+  app.post("/api/push/unsubscribe", async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const body = (await c.req.json().catch(() => undefined)) as { endpoint?: unknown } | undefined;
+    if (!body || typeof body !== "object" || !isEndpoint(body.endpoint))
+      return c.json({ error: "invalid-request" }, 400);
+    await unsubscribe(sql, user.userId, body.endpoint);
+    return c.json({ ok: true });
   });
 
   if (opts.inngestHandler) app.on(["GET", "POST", "PUT"], "/api/inngest", opts.inngestHandler);
