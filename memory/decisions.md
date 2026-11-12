@@ -36,6 +36,11 @@
 **Why**: T004 acceptance criteria; auto verify pass 2026-11-12 (commit 082092d); Stage 4 code-review 0 P0/P1.
 **Files**: eval/, tasks/TASK_GUIDE_T004.md, tasks/TASK_REVIEW_T004.md
 
+### 2026-11-12 — T003 merged: v1 app scaffold
+**Decision**: Server = Hono 4.13.13 on `Bun.serve` (own choice after comparing plain `Bun.serve` and Elysia). Migrations = own ~100-line SQL runner on Bun's built-in `SQL` client (`NNNN_name.up.sql` / `.down.sql`, one transaction per file, advisory lock); `db:migrate:down` refuses unless `MIGRATE_ALLOW_DOWN=1` and always refuses when `NODE_ENV=production`. Auth = hand-written GitHub OAuth (`read:user`, signed state cookie with 10-minute expiry, sessions in Postgres storing only an HMAC of the token; the GitHub access token is discarded). Client = React + Vite. Bun smoke check passed: an Inngest step served by `inngest/hono` called AI SDK `generateText` against a local stub (a real provider and Inngest Cloud signing are not proven). Details: docs/decisions/0001-web-framework.md.
+**Why**: T003 acceptance criteria; auto verify pass 2026-11-12 (commit b688b44); Stage 4 reviews: 0 P0, security P1 (unguarded down migration) fixed. Open for T018: CSP header, `__Host-` cookie names, delete the old session on re-login, build the client before `start`, `CREATE EXTENSION vector` needs superuser on managed hosts, real-GitHub sign-in not yet run (needs the owner's OAuth app in `.env`), `.github/workflows/ci.yml` never ran on GitHub (no remote).
+**Files**: src/server/, src/client/, migrations/, .github/workflows/ci.yml, docs/decisions/0001-web-framework.md, tasks/TASK_GUIDE_T003.md, tasks/TASK_REVIEW_T003.md
+
 ## Infrastructure
 
 ### 2026-11-01 — Idea Ladder uses board mode local
