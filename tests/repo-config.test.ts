@@ -21,6 +21,7 @@ describe("CI workflow (.github/workflows/ci.yml, AC 7)", async () => {
       "bun run db:migrate && bun run db:migrate:down && bun run db:migrate",
       "bun run test:e2e -- sign-in",
       "bun run test:e2e -- start-flow",
+      "bun run test:e2e -- ladder-view",
     ];
     const positions = expected.map((cmd) => runs.indexOf(cmd));
     expect(positions.every((p) => p >= 0)).toBe(true);

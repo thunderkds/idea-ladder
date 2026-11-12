@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { LadderPage } from "./LadderView.tsx";
 
 function Home() {
   return (
@@ -14,13 +15,20 @@ function Home() {
   );
 }
 
+type LadderListItem = { ladderId: string; repo: string };
+
 function Ladders() {
   const [login, setLogin] = useState<string>();
+  const [ladders, setLadders] = useState<LadderListItem[]>();
   useEffect(() => {
     fetch("/api/me")
       .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
       .then((me: { login: string }) => setLogin(me.login))
       .catch(() => window.location.assign("/"));
+    fetch("/api/ladders")
+      .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
+      .then((list: LadderListItem[]) => setLadders(list))
+      .catch(() => setLadders([]));
   }, []);
   return (
     <main className="page">
@@ -34,9 +42,22 @@ function Ladders() {
         </form>
       </header>
       <h1>My ladders</h1>
-      <section className="empty">
-        <p>No ladders yet</p>
-      </section>
+      {ladders === undefined ? null : ladders.length === 0 ? (
+        <section className="empty">
+          <p>No ladders yet</p>
+        </section>
+      ) : (
+        <ul className="ladder-list">
+          {ladders.map((ladder) => (
+            <li key={ladder.ladderId} className="ladder-row">
+              <span className="long-text">{ladder.repo}</span>
+              <a className="button button-quiet" href={`/ladders/${ladder.ladderId}`}>
+                Open ladder<span className="visually-hidden"> {ladder.repo}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
     </main>
   );
 }
@@ -154,6 +175,7 @@ function JobStatus({ jobId }: { jobId: string }) {
 export function App() {
   const path = window.location.pathname;
   if (path === "/ladders") return <Ladders />;
+  if (path.startsWith("/ladders/")) return <LadderPage ladderId={path.slice("/ladders/".length)} />;
   if (path.startsWith("/jobs/")) return <JobStatus jobId={path.slice("/jobs/".length)} />;
   const root = document.getElementById("root");
   if (path === "/start" && root?.dataset.error) {

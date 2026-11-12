@@ -25,6 +25,45 @@ dbUrl.pathname = `/${DB_NAME}`;
 const sql = new SQL(dbUrl.toString());
 await migrateUp(sql);
 
+// T010 seeds (e2e/ladder-view.e2e.ts). Repos differ from the start-flow ones, so /start there never hits a cache.
+// Level rows come from T008 later; here they are inserted directly. Passes belong to T012, so klona's L0 and L1 are
+// reported as passed through the app's `passedLevels` seam.
+const SEED_SHA = "6b41670516ed8e8b738612f60491995470aa63b3";
+const LONG_GOAL = `${"Explain how the core loop works end to end, ".repeat(6)}https://example.com/${"x".repeat(120)}`;
+const LEVELS: [id: string, title: string, goal: string, kind: string, test: string][] = [
+  ["L0", "Prerequisites", "Learn the concepts you are missing", "concept-ladder-tests", "Concept ladder tests"],
+  ["L1", "Run it", "Clone the repo and run it", "run-evidence", "Screenshot or log + 3-sentence explanation"],
+  [
+    "L2",
+    "Modify",
+    "Change one small thing",
+    "diff-questions",
+    "Branch or diff link + questions generated from your diff",
+  ],
+  ["L3", "Understand", LONG_GOAL, "core-mcq", "Verified MCQs on core files"],
+  ["L4", "Rebuild or contribute", "Rebuild a minimal version", "repo-or-pr-link", "Repo link or PR link"],
+];
+async function seedLadder(repo: string, sha: string, withLevels: boolean, startedBy?: string) {
+  const [row] =
+    await sql`INSERT INTO ladders (repo_full_name, commit_sha, status) VALUES (${repo}, ${sha}, 'unverified') RETURNING id::text AS id`;
+  if (withLevels) {
+    for (const [level, title, goal, kind, test] of LEVELS) {
+      await sql`INSERT INTO ladder_levels (ladder_id, level, title, goal, pass_test_kind, pass_test_description) VALUES (${row.id}, ${level}, ${title}, ${goal}, ${kind}, ${test})`;
+    }
+  }
+  if (startedBy) {
+    await sql`INSERT INTO generation_jobs (repo_full_name, commit_sha, status, started_by) VALUES (${repo}, ${sha}, 'fetched', ${startedBy})`;
+  }
+  return row.id as string;
+}
+// A second learner owns the jobs behind "My ladders", so octo's page stays empty for the sign-in e2e.
+const [reader] = await sql`INSERT INTO users (github_id, github_login) VALUES (43, 'reader') RETURNING id::text AS id`;
+const seeded = {
+  next: await seedLadder("vercel/next.js", SEED_SHA, true, reader.id),
+  klona: await seedLadder("lukeed/klona", "2f3c9d1e8a7b4c5d6e7f8091a2b3c4d5e6f70812", true, reader.id),
+  plain: await seedLadder("sindresorhus/p-map", "3".repeat(40), false),
+};
+
 const stub = startGithubStub({
   user: { id: 42, login: "octo" },
   clientId: "e2e-client-id",
@@ -69,6 +108,7 @@ const fn = ladderGenerateFunction(createInngest(), { sql, github });
 
 const app = createApp({
   config,
+  passedLevels: async (ladderId) => (ladderId === seeded.klona ? ["L0", "L1"] : []),
   sql,
   clientDir: "dist/client",
   github,
@@ -83,3 +123,17 @@ const app = createApp({
 });
 Bun.serve({ port: APP_PORT, fetch: app.fetch });
 console.log(`e2e server on http://localhost:${APP_PORT} (stub GitHub ${stub.url})`);
+
+// Test-only control port: the seeded ladder ids, and a switch for who the GitHub stub signs in.
+Bun.serve({
+  port: APP_PORT + 1,
+  fetch(req) {
+    const url = new URL(req.url);
+    if (url.pathname === "/ladders") return Response.json(seeded);
+    if (url.pathname === "/set-user") {
+      stub.setUser({ id: Number(url.searchParams.get("id")), login: url.searchParams.get("login") ?? "octo" });
+      return new Response("ok");
+    }
+    return new Response("not found", { status: 404 });
+  },
+});
