@@ -11,6 +11,21 @@ const IANA_NAME = /^[A-Za-z][A-Za-z0-9_+-]*(\/[A-Za-z0-9_+-]+)*$/; // excludes o
 const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 const isKey = (v: unknown) => typeof v === "string" && v.length <= MAX_KEY && BASE64URL.test(v);
 
+/**
+ * The push services the server may POST to (it sends to the endpoint a learner subscribes, so nothing else is
+ * accepted): Google (Chrome, Edge on Android, most Chromium browsers), Mozilla (Firefox), Apple (Safari), and
+ * Microsoft's WNS (Edge on Windows). A host matches itself or any subdomain.
+ */
+export const PUSH_SERVICE_HOSTS = [
+  "fcm.googleapis.com",
+  "updates.push.services.mozilla.com",
+  "push.services.mozilla.com",
+  "web.push.apple.com",
+  "push.apple.com",
+  "notify.windows.com",
+] as const;
+
+/** Any https URL within the length cap (enough to name the row to delete on unsubscribe). */
 export function isEndpoint(v: unknown): v is string {
   if (typeof v !== "string" || v.length > MAX_ENDPOINT) return false;
   try {
@@ -18,6 +33,16 @@ export function isEndpoint(v: unknown): v is string {
   } catch {
     return false;
   }
+}
+
+/** An endpoint the server may send to: https on 443, no userinfo, a DNS name under one of `PUSH_SERVICE_HOSTS`. */
+export function isPushServiceEndpoint(v: unknown): v is string {
+  if (!isEndpoint(v)) return false;
+  const url = new URL(v);
+  const host = url.hostname; // lowercased by URL; IPv6 literals keep their brackets
+  if (url.username || url.password || url.port !== "") return false; // "" also when ":443" was written
+  if (host.startsWith("[") || /^[0-9.]+$/.test(host) || host === "localhost") return false;
+  return PUSH_SERVICE_HOSTS.some((h) => host === h || host.endsWith(`.${h}`));
 }
 
 /** True for a time zone name Intl knows (an IANA name, not a UTC offset). */
@@ -36,7 +61,7 @@ export function checkSubscribe(body: unknown): PushSubscribeRequest | undefined 
   if (!isObject(body) || !isObject(body.subscription) || !isObject(body.subscription.keys)) return undefined;
   const { endpoint, keys } = body.subscription as { endpoint: unknown; keys: Record<string, unknown> };
   const { hour, timezone } = body;
-  if (!isEndpoint(endpoint) || !isKey(keys.p256dh) || !isKey(keys.auth)) return undefined;
+  if (!isPushServiceEndpoint(endpoint) || !isKey(keys.p256dh) || !isKey(keys.auth)) return undefined;
   if (typeof hour !== "number" || !Number.isInteger(hour) || hour < 0 || hour > 23 || !isTimeZone(timezone))
     return undefined;
   return {

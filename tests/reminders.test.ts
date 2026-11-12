@@ -24,7 +24,7 @@ beforeEach(async () => {
 
 let n = 0;
 /** A learner with `due` due cards (New cards) and one card due far in the future, subscribed at `hour` in `tz`. */
-async function subscriber(hour: number, timezone: string, due: number, endpoint = `https://push.example/${n}`) {
+async function subscriber(hour: number, timezone: string, due: number, endpoint = `https://fcm.googleapis.com/fcm/send/${n}`) {
   const i = n++;
   const [u] =
     await db.sql`INSERT INTO users (github_id, github_login) VALUES (${9000 + i}, ${`r${i}`}) RETURNING id::text AS id`;
@@ -147,10 +147,10 @@ describe("T015 reminder tick (AC 4, Success Criteria 5)", () => {
   });
 
   test("404 and 410 delete the subscription; other errors keep it and log no endpoint or key", async () => {
-    const gone = await subscriber(9, "UTC", 1, "https://push.example/gone-410");
-    const missing = await subscriber(9, "UTC", 1, "https://push.example/missing-404");
-    const flaky = await subscriber(9, "UTC", 1, "https://push.example/flaky-500");
-    const fine = await subscriber(9, "UTC", 1, "https://push.example/fine");
+    const gone = await subscriber(9, "UTC", 1, "https://fcm.googleapis.com/fcm/send/gone-410");
+    const missing = await subscriber(9, "UTC", 1, "https://fcm.googleapis.com/fcm/send/missing-404");
+    const flaky = await subscriber(9, "UTC", 1, "https://fcm.googleapis.com/fcm/send/flaky-500");
+    const fine = await subscriber(9, "UTC", 1, "https://fcm.googleapis.com/fcm/send/fine");
     const codes: Record<string, number> = { [gone.endpoint]: 410, [missing.endpoint]: 404, [flaky.endpoint]: 500 };
     const f = fakeSender((e) => codes[e]);
     const warn = spyOn(console, "warn").mockImplementation(() => {});
@@ -163,7 +163,7 @@ describe("T015 reminder tick (AC 4, Success Criteria 5)", () => {
       const logged = JSON.stringify(warn.mock.calls);
       expect(warn).toHaveBeenCalledTimes(1);
       expect(logged).toContain("500");
-      for (const secret of ["push.example", "p256dh-secret", "auth-secret"]) expect(logged).not.toContain(secret);
+      for (const secret of ["fcm.googleapis.com", "p256dh-secret", "auth-secret"]) expect(logged).not.toContain(secret);
     } finally {
       warn.mockRestore();
     }

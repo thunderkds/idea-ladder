@@ -291,7 +291,7 @@ describe("T015 0006_push_subscriptions", () => {
 
   test("up / down / up with rows present; down drops only push_subscriptions", async () => {
     await migrateUp(db.sql);
-    await sub(await user(6006), "https://push.example/a");
+    await sub(await user(6006), "https://fcm.googleapis.com/fcm/send/a");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0006_push_subscriptions");
     expect(await tables(db.sql)).toEqual(ALL.filter((t) => !T0006.includes(t)));
     expect(await migrateUp(db.sql)).toEqual(["0006_push_subscriptions"]);
@@ -315,12 +315,12 @@ describe("T015 0006_push_subscriptions", () => {
       "last_sent_at:YES",
     ]);
     const a = await user(6007);
-    await sub(a, "https://push.example/one");
-    await expect((async () => await sub(a, "https://push.example/one"))()).rejects.toThrow(/unique|duplicate/i);
-    await expect((async () => await sub(a, "https://push.example/h24", 24))()).rejects.toThrow(/check/i);
-    await expect((async () => await sub(a, "https://push.example/h-1", -1))()).rejects.toThrow(/check/i);
-    await sub(a, "https://push.example/h0", 0);
-    await sub(a, "https://push.example/h23", 23);
+    await sub(a, "https://fcm.googleapis.com/fcm/send/one");
+    await expect((async () => await sub(a, "https://fcm.googleapis.com/fcm/send/one"))()).rejects.toThrow(/unique|duplicate/i);
+    await expect((async () => await sub(a, "https://fcm.googleapis.com/fcm/send/h24", 24))()).rejects.toThrow(/check/i);
+    await expect((async () => await sub(a, "https://fcm.googleapis.com/fcm/send/h-1", -1))()).rejects.toThrow(/check/i);
+    await sub(a, "https://fcm.googleapis.com/fcm/send/h0", 0);
+    await sub(a, "https://fcm.googleapis.com/fcm/send/h23", 23);
     await db.sql`DELETE FROM users WHERE id = ${a}`;
     expect(await db.sql`SELECT count(*)::int AS n FROM push_subscriptions`).toEqual([{ n: 0 }]);
   });

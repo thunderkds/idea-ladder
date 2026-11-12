@@ -1,6 +1,7 @@
 // T015: push reminder subscriptions: GET /api/push/status, POST /api/push/subscribe, POST /api/push/unsubscribe.
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import webpush from "web-push";
+import { checkSubscribe, PUSH_SERVICE_HOSTS } from "../src/server/push.ts";
 import type { PushStatus, PushSubscribeRequest } from "../src/shared/offline.ts";
 import { BASE, startHarness } from "./support/start-harness.ts";
 
@@ -122,7 +123,7 @@ describe("T015 push subscribe / unsubscribe (AC 4)", () => {
       { ...ok, timezone: 5 },
       { ...ok, subscription: { ...sub, endpoint: "http://push.example/x" } },
       { ...ok, subscription: { ...sub, endpoint: "not a url" } },
-      { ...ok, subscription: { ...sub, endpoint: `https://push.example/${"x".repeat(2049)}` } },
+      { ...ok, subscription: { ...sub, endpoint: `https://fcm.googleapis.com/fcm/send/${"x".repeat(2049)}` } },
       { ...ok, subscription: { ...sub, keys: { ...sub.keys, p256dh: "" } } },
       { ...ok, subscription: { ...sub, keys: { ...sub.keys, p256dh: "has spaces=" } } },
       { ...ok, subscription: { ...sub, keys: { ...sub.keys, auth: "a".repeat(257) } } },
@@ -144,22 +145,22 @@ describe("T015 push subscribe / unsubscribe (AC 4)", () => {
   test("unsubscribe deletes only my own row and is idempotent; another learner cannot delete or read mine", async () => {
     const me = await learner();
     const other = await learner();
-    await post(h, "/api/push/subscribe", subscribeBody("https://push.example/mine"), me.cookie);
-    await post(h, "/api/push/subscribe", subscribeBody("https://push.example/theirs", 7, "UTC"), other.cookie);
-    const theirTry = await post(h, "/api/push/unsubscribe", { endpoint: "https://push.example/mine" }, other.cookie);
+    await post(h, "/api/push/subscribe", subscribeBody("https://fcm.googleapis.com/fcm/send/mine"), me.cookie);
+    await post(h, "/api/push/subscribe", subscribeBody("https://fcm.googleapis.com/fcm/send/theirs", 7, "UTC"), other.cookie);
+    const theirTry = await post(h, "/api/push/unsubscribe", { endpoint: "https://fcm.googleapis.com/fcm/send/mine" }, other.cookie);
     expect(theirTry.status).toBe(200);
     expect((await rows()).map((r: { endpoint: string }) => r.endpoint)).toEqual([
-      "https://push.example/mine",
-      "https://push.example/theirs",
+      "https://fcm.googleapis.com/fcm/send/mine",
+      "https://fcm.googleapis.com/fcm/send/theirs",
     ]);
     const status = (await (await h.get("/api/push/status", other.cookie)).json()) as PushStatus;
     expect(status).toMatchObject({ subscribed: true, hour: 7, timezone: "UTC" });
     for (let i = 0; i < 2; i++) {
-      const res = await post(h, "/api/push/unsubscribe", { endpoint: "https://push.example/mine" }, me.cookie);
+      const res = await post(h, "/api/push/unsubscribe", { endpoint: "https://fcm.googleapis.com/fcm/send/mine" }, me.cookie);
       expect(res.status).toBe(200);
       expect(await res.json()).toEqual({ ok: true });
     }
-    expect((await rows()).map((r: { endpoint: string }) => r.endpoint)).toEqual(["https://push.example/theirs"]);
+    expect((await rows()).map((r: { endpoint: string }) => r.endpoint)).toEqual(["https://fcm.googleapis.com/fcm/send/theirs"]);
     expect(((await (await h.get("/api/push/status", me.cookie)).json()) as PushStatus).subscribed).toBe(false);
     for (const bad of [{}, { endpoint: 5 }, { endpoint: "x".repeat(2049) }, null]) {
       expect((await post(h, "/api/push/unsubscribe", bad, me.cookie)).status).toBe(400);
@@ -169,13 +170,13 @@ describe("T015 push subscribe / unsubscribe (AC 4)", () => {
   test("one browser, a second account: the endpoint moves to the account that subscribed last", async () => {
     const first = await learner();
     const second = await learner();
-    await post(h, "/api/push/subscribe", subscribeBody("https://push.example/shared"), first.cookie);
+    await post(h, "/api/push/subscribe", subscribeBody("https://fcm.googleapis.com/fcm/send/shared"), first.cookie);
     await h.db.sql`UPDATE push_subscriptions SET last_sent_at = now()`;
-    await post(h, "/api/push/subscribe", subscribeBody("https://push.example/shared", 6, "UTC"), second.cookie);
+    await post(h, "/api/push/subscribe", subscribeBody("https://fcm.googleapis.com/fcm/send/shared", 6, "UTC"), second.cookie);
     expect(await rows()).toEqual([
       {
         learner: second.id,
-        endpoint: "https://push.example/shared",
+        endpoint: "https://fcm.googleapis.com/fcm/send/shared",
         reminder_hour: 6,
         timezone: "UTC",
         last_sent_at: null,
@@ -183,11 +184,41 @@ describe("T015 push subscribe / unsubscribe (AC 4)", () => {
     ]);
   });
 
+  test("endpoint host: only the known push services (and their subdomains) over https on 443", async () => {
+    const accepted = (endpoint: string) => checkSubscribe(subscribeBody(endpoint)) !== undefined;
+    for (const host of PUSH_SERVICE_HOSTS) {
+      expect([host, accepted(`https://${host}/send/abc`)]).toEqual([host, true]);
+      expect([host, accepted(`https://edge-1.${host}/send/abc`)]).toEqual([host, true]);
+    }
+    expect(accepted("https://FCM.googleapis.com:443/fcm/send/abc")).toBe(true); // URL lowercases; 443 is the default
+    for (const bad of [
+      "https://evil.example/",
+      "https://fcm.googleapis.com.evil.example/",
+      "https://notfcm.googleapis.com@evil.example/",
+      "https://notfcm.googleapis.com/x",
+      "http://fcm.googleapis.com/x",
+      "https://127.0.0.1/x",
+      "https://[::1]/x",
+      "https://localhost/x",
+      "https://fcm.googleapis.com:8443/x",
+      "https://user:pass@fcm.googleapis.com/x",
+      "https://user@fcm.googleapis.com/x",
+      "https://googleapis.com/x",
+    ]) {
+      expect([bad, accepted(bad)]).toEqual([bad, false]);
+    }
+    const me = await learner();
+    const res = await post(h, "/api/push/subscribe", subscribeBody("https://evil.example/x"), me.cookie);
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "invalid-request" });
+    expect(await rows()).toEqual([]);
+  });
+
   test("signed out: 401 on all three routes; all are no-store", async () => {
     for (const res of [
       await h.get("/api/push/status"),
       await post(h, "/api/push/subscribe", subscribeBody()),
-      await post(h, "/api/push/unsubscribe", { endpoint: "https://push.example/x" }),
+      await post(h, "/api/push/unsubscribe", { endpoint: "https://fcm.googleapis.com/fcm/send/x" }),
     ]) {
       expect(res.status).toBe(401);
       expect(await res.json()).toEqual({ error: "unauthorized" });
