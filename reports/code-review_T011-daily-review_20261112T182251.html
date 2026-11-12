@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Code Review Report — T011-daily-review</title>
+<style>
+  :root {
+    --bg:        #0a0a12;
+    --surface:   #111128;
+    --surface2:  #16162e;
+    --border:    #1e1e42;
+    --border-glow: #2a2a6e;
+    --text:      #e2e2f0;
+    --muted:     #6b6b9a;
+    --cyan:      #00d4ff;
+    --green:     #00ff88;
+    --amber:     #ffb800;
+    --red:       #ff3b6b;
+    --purple:    #a855f7;
+    --cyan-dim:  rgba(0,212,255,.12);
+    --green-dim: rgba(0,255,136,.12);
+    --red-dim:   rgba(255,59,107,.12);
+    --amber-dim: rgba(255,184,0,.12);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.5;
+  }
+  h1 { margin: 0; font-size: 1.25rem; color: #fff; letter-spacing: .02em; }
+  h2 { font-size: .85rem; color: var(--muted); margin: 0 0 .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--cyan);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 0 24px rgba(0,212,255,.08), 0 4px 24px rgba(0,0,0,.5);
+  }
+  .header-meta { color: var(--muted); font-size: .85rem; margin-top: .3rem; }
+  .header-meta code { color: var(--cyan); background: var(--cyan-dim); padding: .1rem .4rem; border-radius: 4px; font-size: .8rem; }
+
+  /* ── OVERALL BADGE ── */
+  .badge { display: inline-block; padding: .3rem .9rem; border-radius: 999px; font-weight: 700; font-size: .8rem; letter-spacing: .05em; text-transform: uppercase; }
+  .badge-green  { background: var(--green-dim); color: var(--green); border: 1px solid rgba(0,255,136,.3); box-shadow: 0 0 8px rgba(0,255,136,.2); }
+  .badge-yellow { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(255,184,0,.3); box-shadow: 0 0 8px rgba(255,184,0,.2); }
+  .badge-red    { background: var(--red-dim);   color: var(--red);   border: 1px solid rgba(255,59,107,.3); box-shadow: 0 0 8px rgba(255,59,107,.2); }
+
+  /* ── SEVERITY BADGES ── */
+  .sev { display: inline-block; padding: .15rem .55rem; border-radius: 999px; font-weight: 700; font-size: .75rem; white-space: nowrap; letter-spacing: .04em; }
+  .sev-high { background: var(--red-dim);   color: var(--red);   border: 1px solid rgba(255,59,107,.25); }
+  .sev-med  { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(255,184,0,.25); }
+  .sev-low  { background: var(--cyan-dim);  color: var(--cyan);  border: 1px solid rgba(0,212,255,.25); }
+  .sev-info { background: rgba(168,85,247,.1); color: var(--purple); border: 1px solid rgba(168,85,247,.25); }
+
+  /* ── GAUGE CARDS ── */
+  .gauges { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+  .gauge-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+    transition: border-color .2s;
+  }
+  .gauge-card:hover { border-color: var(--border-glow); }
+  .gauge-label { font-size: .7rem; font-weight: 700; letter-spacing: .1em; color: var(--muted); text-transform: uppercase; margin-bottom: .5rem; }
+  .gauge-value { font-size: 2rem; font-weight: 700; margin-bottom: .6rem; font-variant-numeric: tabular-nums; }
+  .gauge-value-risk    { color: var(--red); text-shadow: 0 0 12px rgba(255,59,107,.5); }
+  .gauge-value-quality { color: var(--green); text-shadow: 0 0 12px rgba(0,255,136,.5); }
+  .gauge-value-effort  { color: var(--amber); text-shadow: 0 0 12px rgba(255,184,0,.5); }
+  .bar-bg   { background: var(--border); border-radius: 999px; height: 6px; overflow: hidden; }
+  .bar-fill { height: 6px; border-radius: 999px; }
+  .bar-risk    { background: linear-gradient(90deg, #ff3b6b, #ff006e); box-shadow: 0 0 8px rgba(255,59,107,.6); }
+  .bar-quality { background: linear-gradient(90deg, #00c96e, #00ff88); box-shadow: 0 0 8px rgba(0,255,136,.6); }
+  .bar-effort  { background: linear-gradient(90deg, #e0a000, #ffb800); box-shadow: 0 0 8px rgba(255,184,0,.6); }
+
+  /* ── SECTION CARD ── */
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 16px rgba(0,0,0,.4);
+  }
+  .section-head {
+    padding: .7rem 1.25rem;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ── TABLE ── */
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left;
+    padding: .6rem 1.25rem;
+    font-size: .72rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: .8rem 1.25rem;
+    font-size: .875rem;
+    border-top: 1px solid var(--border);
+    vertical-align: top;
+    color: var(--text);
+  }
+  tr:hover td { background: rgba(255,255,255,.02); }
+  td pre {
+    margin: 0;
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    font-size: .78rem;
+    background: #0d0d1f;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--cyan);
+    border-radius: 4px;
+    padding: .5rem .75rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: #b0c4ff;
+    line-height: 1.6;
+  }
+  td code {
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    background: var(--cyan-dim);
+    color: var(--cyan);
+    padding: .1rem .4rem;
+    border-radius: 3px;
+    font-size: .78rem;
+  }
+
+  /* ── PROSE ── */
+  .prose {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.5rem;
+    line-height: 1.8;
+    margin-bottom: 1.5rem;
+    font-size: .9rem;
+    color: #c0c0e0;
+    box-shadow: 0 2px 16px rgba(0,0,0,.4);
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    font-size: .72rem;
+    color: var(--muted);
+    text-align: center;
+    padding-bottom: 2rem;
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+    margin-top: .5rem;
+  }
+  .footer code { color: var(--purple); background: rgba(168,85,247,.1); padding: .1rem .4rem; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══════════════════════════════════════════════════════════ -->
+<div class="header">
+  <div>
+    <h1>Code Review</h1>
+    <div class="header-meta">
+      Branch: <code>T011-daily-review</code> &nbsp;·&nbsp; 2026-11-12
+    </div>
+  </div>
+  <span class="badge badge-green">Healthy</span>
+</div>
+
+<!-- ═══ DIMENSION GAUGES ═════════════════════════════════════════════════ -->
+<!--
+  OVERALL_CLASS  : green | yellow | red
+  OVERALL_LABEL  : e.g. "Healthy" | "Needs Attention" | "Critical"
+  RISK_SCORE     : integer 0–100 (higher = more risk)
+  QUALITY_SCORE  : integer 0–100 (higher = better quality)
+  EFFORT_SCORE   : integer 0–100 (higher = more adaptation work needed)
+-->
+<div class="gauges">
+  <div class="gauge-card">
+    <div class="gauge-label">Risk</div>
+    <div class="gauge-value gauge-value-risk">22%</div>
+    <div class="bar-bg"><div class="bar-fill bar-risk" style="width:22%"></div></div>
+  </div>
+  <div class="gauge-card">
+    <div class="gauge-label">Code Quality</div>
+    <div class="gauge-value gauge-value-quality">80%</div>
+    <div class="bar-bg"><div class="bar-fill bar-quality" style="width:80%"></div></div>
+  </div>
+  <div class="gauge-card">
+    <div class="gauge-label">Adaptation Effort</div>
+    <div class="gauge-value gauge-value-effort">25%</div>
+    <div class="bar-bg"><div class="bar-fill bar-effort" style="width:25%"></div></div>
+  </div>
+</div>
+
+<!-- ═══ FINDINGS TABLE ═══════════════════════════════════════════════════ -->
+<!--
+  Replace <tr>
+  <td><span class="sev sev-med">Med P2</span></td>
+  <td><code>tasks/TASK_GUIDE_T011.md (Entry point)</code></td>
+  <td>—</td>
+  <td><pre>Declared entry point `submitReviewRating` is not found anywhere in src, e2e or tests. The rating handler is `rateCard` (src/server/review.ts) behind `POST /api/review/rate` (src/server/app.ts); the `Start review` label part of the entry point exists (LadderView.tsx, App.tsx). Confidence 100. Action: correct the guide's Entry point line to the real identifier, or waive it explicitly.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-med">Med P2</span></td>
+  <td><code>tasks/TASK_GUIDE_T011.md (lane_check)</code></td>
+  <td>—</td>
+  <td><pre>lane_check: C2, 33 files, 1805 lines, EXCEEDS (files 33 > 14; lines 1805 > 500). 15 of the files are PNG baselines; about 19 are source, tests and docs. Unpredicted paths include bun.lock, docs/decisions/0003-review-tables.md and the baselines. Confidence 100 on the numbers. Action: Supervisor to decide whether T011 is under-labelled (C2); warn-only, not a block.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low P3</span></td>
+  <td><code>src/client/App.tsx, src/client/LadderView.tsx</code></td>
+  <td>App.tsx:57, LadderView.tsx:148</td>
+  <td><pre>ux-evaluate (run by the frontend agent, baseline checks only; the guide has no UX Acceptance Criteria rows): 8 pass, 1 fail (older). B-a on My ladders: the page has no primary action, and T011 adds one identical quiet `Start review` link per row although the queue covers all ladders. Confidence 80. Action: decide whether one page-level primary `Start review` above the list is wanted.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low P3</span></td>
+  <td><code>src/client/Review.tsx</code></td>
+  <td>rate(), the 404 branch</td>
+  <td><pre>A 404 on a rating moves to the next card without counting it or telling the learner. Not in the API contract; the frontend agent asked for confirmation. Confidence 80. Action: confirm the behaviour or show a one-line notice.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low P3</span></td>
+  <td><code>src/client/Review.tsx + src/server/review.ts</code></td>
+  <td>rate(); earlier()</td>
+  <td><pre>After a failed rating the other rating buttons stay enabled and reuse the same idempotency key. If the first request had actually been saved (response lost), a different rating with that key is answered with the first result (duplicate: true) and the learner's second choice is silently dropped. Confidence 75. Action: disable the other buttons while a retry is pending, or accept for v1.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low P3</span></td>
+  <td><code>src/server/review.ts</code></td>
+  <td>unlockedLevels, ~L22-31</td>
+  <td><pre>unlockedLevels calls the passedLevels seam once per ladder in a loop. Cheap with T010's default (no passes); an N+1 once T012 supplies a database-backed seam. Confidence 75. Action: batch the seam in T012, or note it there.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low P3</span></td>
+  <td><code>e2e/baseline/ladder-view-*.png, ladders-two-*.png</code></td>
+  <td>—</td>
+  <td><pre>T010's baselines now miss the new `Start review` link. No test compares them. Confidence 100. Action: refresh them in a later UI task.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-info">Lead</span></td>
+  <td><code>src/server/review.ts, src/server/app.ts</code></td>
+  <td>rateCard; POST /api/review/rate</td>
+  <td><pre>needs_validation (security): a signed-in learner can append unlimited review_log rows (a new idempotency key each time), and the log is append-only. Missing fact: whether a per-learner rate limit is wanted before launch. Safe check: send 1000 ratings with distinct keys and measure growth. Also: the POST handler parses JSON whatever the Content-Type; the SameSite=Lax session cookie is not sent on cross-site POSTs, so no issue is expected. Action: add both to the T018 hardening list.</pre></td>
+</tr>
+ with one <tr> per finding.
+  Severity class: sev-high | sev-med | sev-low | sev-info
+  Finding description goes inside <pre>...</pre> — do NOT HTML-escape manually;
+  wrap the text in <pre> and let the browser handle rendering safely.
+
+  Example row:
+  <tr>
+    <td><span class="sev sev-high">High</span></td>
+    <td><code>scripts/setup.sh</code></td>
+    <td>42–55</td>
+    <td><pre>Unquoted variable $TARGET_DIR in rm call — word-splitting can delete wrong path.</pre></td>
+  </tr>
+-->
+<div class="section">
+  <div class="section-head"><h2>Findings</h2></div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:90px">Severity</th>
+        <th style="width:200px">File</th>
+        <th style="width:80px">Lines</th>
+        <th>Finding</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+  <td><span class="sev sev-med">Med P2</span></td>
+  <td><code>tasks/TASK_GUIDE_T011.md (Entry point)</code></td>
+  <td>—</td>
+  <td><pre>Declared entry point `submitReviewRating` is not found anywhere in src, e2e or tests. The rating handler is `rateCard` (src/server/review.ts) behind `POST /api/review/rate` (src/server/app.ts); the `Start review` label part of the entry point exists (LadderView.tsx, App.tsx). Confidence 100. Action: correct the guide's Entry point line to the real identifier, or waive it explicitly.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-med">Med P2</span></td>
+  <td><code>tasks/TASK_GUIDE_T011.md (lane_check)</code></td>
+  <td>—</td>
+  <td><pre>lane_check: C2, 33 files, 1805 lines, EXCEEDS (files 33 > 14; lines 1805 > 500). 15 of the files are PNG baselines; about 19 are source, tests and docs. Unpredicted paths include bun.lock, docs/decisions/0003-review-tables.md and the baselines. Confidence 100 on the numbers. Action: Supervisor to decide whether T011 is under-labelled (C2); warn-only, not a block.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low P3</span></td>
+  <td><code>src/client/App.tsx, src/client/LadderView.tsx</code></td>
+  <td>App.tsx:57, LadderView.tsx:148</td>
+  <td><pre>ux-evaluate (run by the frontend agent, baseline checks only; the guide has no UX Acceptance Criteria rows): 8 pass, 1 fail (older). B-a on My ladders: the page has no primary action, and T011 adds one identical quiet `Start review` link per row although the queue covers all ladders. Confidence 80. Action: decide whether one page-level primary `Start review` above the list is wanted.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low P3</span></td>
+  <td><code>src/client/Review.tsx</code></td>
+  <td>rate(), the 404 branch</td>
+  <td><pre>A 404 on a rating moves to the next card without counting it or telling the learner. Not in the API contract; the frontend agent asked for confirmation. Confidence 80. Action: confirm the behaviour or show a one-line notice.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low P3</span></td>
+  <td><code>src/client/Review.tsx + src/server/review.ts</code></td>
+  <td>rate(); earlier()</td>
+  <td><pre>After a failed rating the other rating buttons stay enabled and reuse the same idempotency key. If the first request had actually been saved (response lost), a different rating with that key is answered with the first result (duplicate: true) and the learner's second choice is silently dropped. Confidence 75. Action: disable the other buttons while a retry is pending, or accept for v1.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low P3</span></td>
+  <td><code>src/server/review.ts</code></td>
+  <td>unlockedLevels, ~L22-31</td>
+  <td><pre>unlockedLevels calls the passedLevels seam once per ladder in a loop. Cheap with T010's default (no passes); an N+1 once T012 supplies a database-backed seam. Confidence 75. Action: batch the seam in T012, or note it there.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low P3</span></td>
+  <td><code>e2e/baseline/ladder-view-*.png, ladders-two-*.png</code></td>
+  <td>—</td>
+  <td><pre>T010's baselines now miss the new `Start review` link. No test compares them. Confidence 100. Action: refresh them in a later UI task.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-info">Lead</span></td>
+  <td><code>src/server/review.ts, src/server/app.ts</code></td>
+  <td>rateCard; POST /api/review/rate</td>
+  <td><pre>needs_validation (security): a signed-in learner can append unlimited review_log rows (a new idempotency key each time), and the log is append-only. Missing fact: whether a per-learner rate limit is wanted before launch. Safe check: send 1000 ratings with distinct keys and measure growth. Also: the POST handler parses JSON whatever the Content-Type; the SameSite=Lax session cookie is not sent on cross-site POSTs, so no issue is expected. Action: add both to the T018 hardening list.</pre></td>
+</tr>
+
+    </tbody>
+  </table>
+</div>
+
+<!-- ═══ SUMMARY PROSE ════════════════════════════════════════════════════ -->
+<!--
+  Replace code-review for T011 (branch T011-daily-review, HEAD 387832d, 11 commits ahead of main: BEFORE capture, API contract types, server, tests, seeds, client, e2e, baselines). Scope: src/server/review.ts, scheduler.ts, app.ts, src/shared/review.ts, src/client/Review.tsx, App.tsx, LadderView.tsx, styles.css, migrations/0005_review, tests/review-*.test.ts, tests/migrate.test.ts, e2e/review.e2e.ts and e2e/serve.ts. Checks re-run by the Supervisor at HEAD: npm run test 172 pass / 0 fail (29 T011 tests), tsc --noEmit clean, biome and token check clean, ts-fsrs pinned exactly at 5.4.2. The migration-safety gate was GO with the dry-run-on-production-data box accepted as N/A by the user. Always-on reviewers found no P0 or P1: the rating is one transaction with a row lock, the review_log unique key is the only dedupe, ratings and queue are authorised through the learner's started ladders and the T010 lock rule, and a trigger makes the log append-only. The security-reviewer and adversarial personas were activated for the new endpoints; the one lead is listed as needs_validation. The startup-reads lines of the infrastructure, backend and frontend agents name PROJECT_SPEC.md, the TASK_GUIDE and the agent role guide. The independent QA run against the real seeded app was still in progress when this report was written, so its results are not included. 0 P0, 0 P1, 2 P2, 5 P3, 1 lead. No safe fixes applied (none are P0/P1). Diff ready for the Supervisor decision after QA and the security review. with the LLM's full narrative text.
+  Plain text is safe here; no HTML escaping needed for prose.
+-->
+<div class="prose">
+  code-review for T011 (branch T011-daily-review, HEAD 387832d, 11 commits ahead of main: BEFORE capture, API contract types, server, tests, seeds, client, e2e, baselines). Scope: src/server/review.ts, scheduler.ts, app.ts, src/shared/review.ts, src/client/Review.tsx, App.tsx, LadderView.tsx, styles.css, migrations/0005_review, tests/review-*.test.ts, tests/migrate.test.ts, e2e/review.e2e.ts and e2e/serve.ts. Checks re-run by the Supervisor at HEAD: npm run test 172 pass / 0 fail (29 T011 tests), tsc --noEmit clean, biome and token check clean, ts-fsrs pinned exactly at 5.4.2. The migration-safety gate was GO with the dry-run-on-production-data box accepted as N/A by the user. Always-on reviewers found no P0 or P1: the rating is one transaction with a row lock, the review_log unique key is the only dedupe, ratings and queue are authorised through the learner's started ladders and the T010 lock rule, and a trigger makes the log append-only. The security-reviewer and adversarial personas were activated for the new endpoints; the one lead is listed as needs_validation. The startup-reads lines of the infrastructure, backend and frontend agents name PROJECT_SPEC.md, the TASK_GUIDE and the agent role guide. The independent QA run against the real seeded app was still in progress when this report was written, so its results are not included. 0 P0, 0 P1, 2 P2, 5 P3, 1 lead. No safe fixes applied (none are P0/P1). Diff ready for the Supervisor decision after QA and the security review.
+</div>
+
+<!-- ═══ FOOTER ═══════════════════════════════════════════════════════════ -->
+<!--
+  MODEL     : e.g. claude-sonnet-4-6
+  TASK_ID   : e.g. T001 (or "—" if not task-scoped)
+  TIMESTAMP : ISO-8601, e.g. 2026-06-18T14:30:22
+-->
+<div class="footer">
+  Model: <code>claude-sonnet-5-5</code> &nbsp;·&nbsp; Task: T011 &nbsp;·&nbsp; Generated: 2026-11-12T18:22:51
+</div>
+
+</body>
+</html>

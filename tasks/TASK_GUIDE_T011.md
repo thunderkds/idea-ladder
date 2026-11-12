@@ -62,7 +62,7 @@ Source (`docs/REQUIREMENT_SOURCE.md`):
 ## Dependencies & Reachability
 
 **Depends on**: T010 — the ladder view, its level lock state and its link target for "Start review"; T010 in turn reads the ladder and card tables that T003/T005 created.
-**Entry point**: `Start review` (button label on the ladder view and on "My ladders"), handled by `submitReviewRating`
+**Entry point**: `Start review` (button label on the ladder view and on "My ladders"), handled by `rateCard` (`POST /api/review/rate`, `src/server/review.ts`); the guide first named it `submitReviewRating`
 
 ---
 
