@@ -12,7 +12,7 @@ import { type Fixture, fixtureFetch, loadFixture, type Override, V0_REPOS } from
 export const BASE = "http://localhost";
 export const SECRET = "x".repeat(48);
 
-export async function startHarness() {
+export async function startHarness(extraEnv: Record<string, string> = {}) {
   const db = await createTestDatabase();
   await migrateUp(db.sql);
   const fixtures: Fixture[] = await Promise.all(
@@ -31,6 +31,7 @@ export async function startHarness() {
     GITHUB_APP_TOKEN: "test-app-token",
     SESSION_SECRET: SECRET,
     NODE_ENV: "test",
+    ...extraEnv,
   });
   const app = createApp({
     config,

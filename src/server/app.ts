@@ -33,6 +33,7 @@ import {
   MAX_URL_LENGTH,
   type StartResult,
   startLadder,
+  TooManyStartsError,
 } from "./start.ts";
 
 const FAILED_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Sign-in failed</title>
@@ -48,13 +49,16 @@ function startPath(value: string | undefined): string | undefined {
   return url.origin === "http://idea-ladder.invalid" && url.pathname === "/start" ? value : undefined;
 }
 
-type Problem = { status: 400 | 404 | 422 | 502 | 503; error: string; resetAt?: string };
+type Problem = { status: 400 | 404 | 422 | 429 | 502 | 503; error: string; resetAt?: string; retryAt?: string };
 
 /** Maps a start failure to an HTTP problem; anything unknown is re-thrown (500). */
 function startProblem(err: unknown): Problem {
   if (err instanceof RepoNotFoundError) return { status: 404, error: "repo-not-found" };
   if (err instanceof RepoEmptyError) return { status: 422, error: "repo-empty" };
   if (err instanceof RateLimitError) return { status: 503, error: "rate-limited", resetAt: err.resetAt.toISOString() };
+  if (err instanceof TooManyStartsError) {
+    return { status: 429, error: "too-many-starts", retryAt: err.retryAt.toISOString() };
+  }
   if (err instanceof EnqueueError) return { status: 503, error: "queue-unavailable" };
   if (err instanceof GitHubError) {
     console.warn("start: GitHub call failed:", err.message);
@@ -143,14 +147,17 @@ export function createApp(opts: {
 
   // The client page with a problem code for /start; codes and the ISO time are fixed strings, never user input.
   const startPage = async (c: Context, p: Problem) => {
-    const attrs = `data-error="${p.error}"${p.resetAt ? ` data-reset-at="${p.resetAt}"` : ""}`;
+    const attrs =
+      `data-error="${p.error}"` +
+      (p.resetAt ? ` data-reset-at="${p.resetAt}"` : "") +
+      (p.retryAt ? ` data-retry-at="${p.retryAt}"` : "");
     return c.html((await indexHtml()).replace('<div id="root">', `<div id="root" ${attrs}>`), p.status);
   };
   const runStart = async (userId: string, input: unknown): Promise<StartResult | Problem> => {
     const ref = checkUrl(input);
     if (typeof ref === "string") return { status: 400, error: ref };
     try {
-      return await startLadder({ sql, github, enqueue }, userId, ref);
+      return await startLadder({ sql, github, enqueue, maxNewJobsPerHour: config.startMaxNewJobsPerHour }, userId, ref);
     } catch (err) {
       return startProblem(err);
     }

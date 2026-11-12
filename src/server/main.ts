@@ -26,7 +26,12 @@ const app = createApp({
   enqueue: async (data) => {
     await inngest.send({ id: data.jobId, name: LADDER_GENERATE_EVENT, data });
   },
-  inngestHandler: serve({ client: inngest, functions: [ladderGenerateFunction(inngest, { sql, github })] }),
+  inngestHandler: serve({
+    client: inngest,
+    functions: [ladderGenerateFunction(inngest, { sql, github })],
+    // Never derive the callback origin from the request Host header (required in production by loadConfig).
+    ...(config.inngestServeOrigin ? { serveOrigin: config.inngestServeOrigin } : {}),
+  }),
 });
 const server = Bun.serve({ port: config.port, fetch: app.fetch });
 console.log(`Idea Ladder listening on http://localhost:${server.port}`);

@@ -10,6 +10,10 @@ export type Config = {
   port: number;
   /** Cookies get `Secure` everywhere except local development and tests. */
   secureCookies: boolean;
+  /** New generation jobs one learner may create per hour (joins and cache hits do not count). */
+  startMaxNewJobsPerHour: number;
+  /** Public origin Inngest calls back; never derived from the request Host header. Required in production. */
+  inngestServeOrigin?: string;
 };
 
 export class ConfigError extends Error {}
@@ -44,6 +48,17 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
   const port = Number(env.PORT || 3000);
   if (!Number.isInteger(port) || port < 0 || port > 65535) problems.push("PORT must be an integer 0-65535");
 
+  const limitRaw = env.START_MAX_NEW_JOBS_PER_HOUR || "20";
+  const startMaxNewJobsPerHour = /^[1-9][0-9]*$/.test(limitRaw) ? Number(limitRaw) : 0;
+  if (!startMaxNewJobsPerHour) problems.push("START_MAX_NEW_JOBS_PER_HOUR must be a positive integer");
+
+  if (env.NODE_ENV === "production") {
+    if (env.INNGEST_DEV) problems.push("INNGEST_DEV must not be set in production");
+    const missingInngest = ["INNGEST_SIGNING_KEY", "INNGEST_EVENT_KEY", "INNGEST_SERVE_ORIGIN"].filter((n) => !env[n]);
+    if (missingInngest.length) problems.push(`production requires: ${missingInngest.join(", ")}`);
+  }
+  const inngestServeOrigin = env.INNGEST_SERVE_ORIGIN ? url("INNGEST_SERVE_ORIGIN", "") : undefined;
+
   if (problems.length) throw new ConfigError(`Invalid configuration: ${problems.join("; ")}`);
   return {
     databaseUrl: env.DATABASE_URL as string,
@@ -55,5 +70,7 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     githubApiBaseUrl,
     port,
     secureCookies: env.NODE_ENV !== "development" && env.NODE_ENV !== "test",
+    startMaxNewJobsPerHour,
+    ...(inngestServeOrigin ? { inngestServeOrigin } : {}),
   };
 }

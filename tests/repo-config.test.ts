@@ -44,7 +44,7 @@ describe("CI workflow (.github/workflows/ci.yml, AC 7)", async () => {
 });
 
 describe("env files and secrets (AC 8)", () => {
-  test(".env.example lists exactly the variable names (T003's four, T005's three), all empty", async () => {
+  test(".env.example lists exactly the variable names (T003's four, T005's five), all empty", async () => {
     const assignments = (await Bun.file(`${root}/.env.example`).text())
       .split("\n")
       .map((line) => line.trim())
@@ -56,7 +56,9 @@ describe("env files and secrets (AC 8)", () => {
       "GITHUB_APP_TOKEN=",
       "INNGEST_EVENT_KEY=",
       "INNGEST_SIGNING_KEY=",
+      "INNGEST_SERVE_ORIGIN=",
       "SESSION_SECRET=",
+      "START_MAX_NEW_JOBS_PER_HOUR=",
     ]);
   });
 

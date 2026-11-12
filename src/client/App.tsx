@@ -45,7 +45,7 @@ function Ladders() {
 const when = (iso: string | undefined) => (iso ? new Date(iso).toLocaleString() : "later");
 
 /** /start problems: the server serves the client with `data-error` (a fixed code) on #root. */
-function StartProblem({ error, resetAt }: { error: string; resetAt?: string }) {
+function StartProblem({ error, resetAt, retryAt }: { error: string; resetAt?: string; retryAt?: string }) {
   const given = new URLSearchParams(window.location.search).get("url") ?? "";
   const messages: Record<string, [title: string, detail: string]> = {
     "unsupported-url": ["Only GitHub repos work for now", "Paste a link to a public GitHub repo. You gave:"],
@@ -54,6 +54,7 @@ function StartProblem({ error, resetAt }: { error: string; resetAt?: string }) {
     "repo-not-found": ["Repo not found", "GitHub has no public repo at this link. You gave:"],
     "repo-empty": ["This repo is empty", "It has no commits yet, so there is nothing to read."],
     "rate-limited": ["GitHub is busy", `The GitHub rate limit is used up. Try again after ${when(resetAt)}.`],
+    "too-many-starts": ["Too many new ladders", `You started the hourly maximum. Try again after ${when(retryAt)}.`],
     "queue-unavailable": ["Could not start", "The ladder queue is not available. Try again in a few minutes."],
     "github-unavailable": ["Could not reach GitHub", "Try again in a few minutes."],
   };
@@ -156,7 +157,7 @@ export function App() {
   if (path.startsWith("/jobs/")) return <JobStatus jobId={path.slice("/jobs/".length)} />;
   const root = document.getElementById("root");
   if (path === "/start" && root?.dataset.error) {
-    return <StartProblem error={root.dataset.error} resetAt={root.dataset.resetAt} />;
+    return <StartProblem error={root.dataset.error} resetAt={root.dataset.resetAt} retryAt={root.dataset.retryAt} />;
   }
   return <Home />;
 }

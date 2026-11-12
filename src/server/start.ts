@@ -10,6 +10,14 @@ export type StartResult = { ladderId: string } | { jobId: string };
 
 export class EnqueueError extends Error {}
 
+/** The learner created the hourly maximum of new jobs; `retryAt` is when the oldest one leaves the window. */
+export class TooManyStartsError extends Error {
+  constructor(public readonly retryAt: Date) {
+    super("too many new generation jobs in the last hour");
+    this.name = "TooManyStartsError";
+  }
+}
+
 /** Checks the raw `url` input; returns the repo or an error code. Makes no network call. */
 export function checkUrl(input: unknown): RepoRef | "url-required" | "url-too-long" | "unsupported-url" {
   if (typeof input !== "string" || !input.trim()) return "url-required";
@@ -23,18 +31,30 @@ export function checkUrl(input: unknown): RepoRef | "url-required" | "url-too-lo
 }
 
 export async function startLadder(
-  deps: { sql: SQL; github: GithubRepoClient; enqueue: Enqueue },
+  deps: { sql: SQL; github: GithubRepoClient; enqueue: Enqueue; maxNewJobsPerHour: number },
   userId: string,
   ref: RepoRef,
 ): Promise<StartResult> {
-  const { sql, github, enqueue } = deps;
+  const { sql, github, enqueue, maxNewJobsPerHour } = deps;
   const { fullName: repo, sha } = await github.resolveHead(ref);
 
   const [ladder] = await sql`SELECT id::text FROM ladders WHERE repo_full_name = ${repo} AND commit_sha = ${sha}`;
   if (ladder) return { ladderId: ladder.id };
 
   // Insert-on-conflict on the open-job key: concurrent callers get the same row; only the inserter sends the event.
+  // Per-learner limit on NEW jobs only; a per-learner advisory lock keeps parallel starts from overshooting it.
   const job = await sql.begin(async (tx) => {
+    await tx`SELECT pg_advisory_xact_lock(hashtext(${`start-limit:${userId}`}))`;
+    const [open] = await tx`
+      SELECT 1 FROM generation_jobs WHERE repo_full_name = ${repo} AND commit_sha = ${sha} AND status <> 'failed'`;
+    if (!open) {
+      const [recent] = await tx`
+        SELECT count(*)::int AS n, min(created_at) AS oldest FROM generation_jobs
+        WHERE started_by = ${userId} AND created_at > now() - interval '1 hour'`;
+      if (recent.n >= maxNewJobsPerHour) {
+        throw new TooManyStartsError(new Date((recent.oldest as Date).getTime() + 3_600_000));
+      }
+    }
     const [row] = await tx`
       INSERT INTO generation_jobs (repo_full_name, commit_sha, started_by) VALUES (${repo}, ${sha}, ${userId})
       ON CONFLICT (repo_full_name, commit_sha) WHERE status <> 'failed'
