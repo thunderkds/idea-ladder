@@ -25,6 +25,7 @@ const T0001 = ["schema_migrations", "sessions", "users"];
 const ALL = [
   "generation_job_waiters",
   "generation_jobs",
+  "ladder_levels",
   "ladders",
   "repo_confidence",
   "repo_snapshots",
@@ -65,15 +66,17 @@ describe("migrations (AC 1)", () => {
 
   test("down reverts to an empty schema, with rows present; up again succeeds", async () => {
     await db.sql`INSERT INTO users (github_id, github_login) VALUES (7, 'has-data')`;
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0004_ladder_levels");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0002_start_jobs");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0001_init");
     expect(await tables(db.sql)).toEqual([]);
     expect(await extensions(db.sql)).not.toContain("vector");
-    expect(await migrateUp(db.sql)).toEqual(["0001_init", "0002_start_jobs"]);
+    expect(await migrateUp(db.sql)).toEqual(["0001_init", "0002_start_jobs", "0004_ladder_levels"]);
     expect(await tables(db.sql)).toEqual(ALL);
   });
 
   test("down on an empty schema is a no-op", async () => {
+    await migrateDown(db.sql, undefined, ALLOW_DOWN);
     await migrateDown(db.sql, undefined, ALLOW_DOWN);
     await migrateDown(db.sql, undefined, ALLOW_DOWN);
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBeUndefined();
@@ -125,8 +128,8 @@ describe("down migration guard (destructive)", () => {
 
   test("allowed with MIGRATE_ALLOW_DOWN=1", async () => {
     await migrateUp(db.sql);
-    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0002_start_jobs");
-    expect(await tables(db.sql)).toEqual(T0001);
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0004_ladder_levels");
+    expect(await tables(db.sql)).toEqual(ALL.filter((t) => t !== "ladder_levels"));
   });
 
   test("CLI `bun run db:migrate:down` without the opt-in exits 1 and names the variable", async () => {
@@ -148,9 +151,10 @@ describe("0002_start_jobs (T005)", () => {
     await migrateUp(db.sql);
     await db.sql`INSERT INTO ladders (repo_full_name, commit_sha, status) VALUES ('developit/mitt', ${SHA}, 'unverified')`;
     await openJob("developit/mitt");
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0004_ladder_levels");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0002_start_jobs");
     expect(await tables(db.sql)).toEqual(T0001);
-    expect(await migrateUp(db.sql)).toEqual(["0002_start_jobs"]);
+    expect(await migrateUp(db.sql)).toEqual(["0002_start_jobs", "0004_ladder_levels"]);
     expect(await tables(db.sql)).toEqual(ALL);
   });
 
@@ -173,5 +177,32 @@ describe("0002_start_jobs (T005)", () => {
       (async () =>
         await db.sql`INSERT INTO generation_jobs (repo_full_name, commit_sha, status) VALUES ('a/b', ${SHA}, 'done')`)(),
     ).rejects.toThrow(/check/i);
+  });
+});
+
+describe("0004_ladder_levels (T010)", () => {
+  const SHA = "6b41670516ed8e8b738612f60491995470aa63b3";
+  const level = (id: number, l: string) =>
+    db.sql`INSERT INTO ladder_levels (ladder_id, level, title, goal, pass_test_kind, pass_test_description) VALUES (${id}, ${l}, 't', 'g', 'k', 'd')`;
+
+  test("up / down / up with rows present; down drops only ladder_levels", async () => {
+    await migrateUp(db.sql);
+    const [ladder] =
+      await db.sql`INSERT INTO ladders (repo_full_name, commit_sha, status) VALUES ('developit/mitt', ${SHA}, 'unverified') RETURNING id`;
+    await level(ladder.id, "L0");
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0004_ladder_levels");
+    expect(await tables(db.sql)).toEqual(ALL.filter((t) => t !== "ladder_levels"));
+    expect(await migrateUp(db.sql)).toEqual(["0004_ladder_levels"]);
+    expect(await tables(db.sql)).toEqual(ALL);
+  });
+
+  test("level is L0..L4 and unique per ladder; the ladder must exist", async () => {
+    await migrateUp(db.sql);
+    const [ladder] =
+      await db.sql`INSERT INTO ladders (repo_full_name, commit_sha, status) VALUES ('lukeed/dset', ${SHA}, 'unverified') RETURNING id`;
+    await level(ladder.id, "L1");
+    await expect((async () => await level(ladder.id, "L1"))()).rejects.toThrow(/unique|duplicate/i);
+    await expect((async () => await level(ladder.id, "L5"))()).rejects.toThrow(/check/i);
+    await expect((async () => await level(987654, "L0"))()).rejects.toThrow(/foreign key/i);
   });
 });

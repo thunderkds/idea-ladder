@@ -32,6 +32,7 @@ const steps: [name: string, cmd: string[], env?: Record<string, string>][] = [
   ["migrate up again", ["bun", "run", "db:migrate"], { DATABASE_URL: ciDb.toString() }],
   ["e2e sign-in", ["bun", "run", "test:e2e", "--", "sign-in"]],
   ["e2e start-flow", ["bun", "run", "test:e2e", "--", "start-flow"]],
+  ["e2e ladder-view", ["bun", "run", "test:e2e", "--", "ladder-view"]],
 ];
 
 await resetCiDatabase(false);
