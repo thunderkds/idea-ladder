@@ -21,7 +21,8 @@
     "hono": "4.13.13",
     "inngest": "4.24.0",
     "react": "19.1.10",
-    "react-dom": "19.1.10"
+    "react-dom": "19.1.10",
+    "ts-fsrs": "5.4.2"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",
