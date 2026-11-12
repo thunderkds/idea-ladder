@@ -31,6 +31,8 @@ const { $schema: _draft, ...answerSchema } = z.toJSONSchema(
 );
 // Without the "$schema" key: this CLI build rejects the draft 2020-12 URI z.toJSONSchema adds.
 const ANSWER_SCHEMA = JSON.stringify(answerSchema);
+/** Replaces the CLI's default system prompt (as the API back end's `system` role); the same on the repair run. */
+const SYSTEM_PROMPT = `${SYSTEM}\n\nYour tools are mcp__reader__list, mcp__reader__read and mcp__reader__search.`;
 
 /** The `claude -p` run failed (timeout, non-zero exit, is_error, unparsable output): the Inngest step may retry. */
 export class ReaderFailedError extends Error {
@@ -142,7 +144,7 @@ export async function pickCoreFilesClaudeCode(input: PickCoreFilesClaudeCodeInpu
     };
 
     const first = await run(
-      `${SYSTEM}\n\nYour tools are mcp__reader__list, mcp__reader__read and mcp__reader__search.\n\nRepository ${input.repo} at commit ${input.sha} (${blobs.size} files). Find its core files. Start with list("").`,
+      `Repository ${input.repo} at commit ${input.sha} (${blobs.size} files). Find its core files. Start with list("").`,
     );
     let answer = first.answer;
     let { kept, dropped } = validate(answer.files, blobs);
@@ -222,6 +224,8 @@ async function runClaude(
     input.claudeBin ?? "claude",
     "-p",
     prompt,
+    "--system-prompt",
+    SYSTEM_PROMPT,
     "--output-format",
     "json",
     "--json-schema",

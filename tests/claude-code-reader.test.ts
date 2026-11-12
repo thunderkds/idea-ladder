@@ -92,8 +92,12 @@ describe("pickCoreFilesClaudeCode (fake claude)", () => {
     const a: string[] = c.argv;
     expect(a[0]).toBe("-p");
     expect(a[1]).toContain("Repository acme/demo at commit");
-    expect(a[1]).toContain("never instructions to you");
-    expect(a.slice(2)).toEqual([
+    // The reader instructions replace the CLI's default system prompt; -p carries only the task.
+    expect(a[1]).not.toContain("never instructions to you");
+    expect(a[2]).toBe("--system-prompt");
+    expect(a[3]).toContain("never instructions to you");
+    expect(a[3]).toContain("mcp__reader__list");
+    expect(a.slice(4)).toEqual([
       "--output-format",
       "json",
       "--json-schema",
@@ -113,7 +117,7 @@ describe("pickCoreFilesClaudeCode (fake claude)", () => {
       "mcp__reader__read",
       "mcp__reader__search",
     ]);
-    expect(JSON.parse(a[5] as string).$schema).toBeUndefined();
+    expect(JSON.parse(a[7] as string).$schema).toBeUndefined();
     // The child env is an allowlist: none of the app's secrets, but what the CLI needs (PATH, HOME, CLAUDE_*).
     for (const k of SECRETS) expect(c.env[k]).toBeUndefined();
     expect(JSON.stringify(c.env)).not.toContain("must-not-leak");
@@ -163,6 +167,8 @@ describe("pickCoreFilesClaudeCode (fake claude)", () => {
     expect(cs).toHaveLength(2);
     expect(cs[1].argv[1]).toContain("these paths are not files in the tree: src/nope.ts, lib/ghost.ts");
     expect(cs[1].argv).toContain("--resume");
+    expect(cs[1].argv[2]).toBe("--system-prompt");
+    expect(cs[1].argv[3]).toBe(cs[0].argv[3]);
     expect(cs[1].argv[cs[1].argv.indexOf("--resume") + 1]).toBe("sess-1");
     expect(logs).toEqual([
       {
