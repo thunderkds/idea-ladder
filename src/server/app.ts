@@ -26,6 +26,7 @@ import {
   RepoNotFoundError,
 } from "./github-repo.ts";
 import { getLadderView, ladderExists, listLadders, noPasses, type PassedLevels } from "./ladder-view.ts";
+import { offlinePack, syncRatings } from "./offline.ts";
 import { checkRateRequest, rateCard, reviewQueue } from "./review.ts";
 import {
   checkUrl,
@@ -276,6 +277,21 @@ export function createApp(opts: {
     if (!req) return c.json({ error: "invalid-request" }, 400);
     const result = await rateCard(sql, user.userId, req, new Date(now()), passedLevels);
     return result ? c.json(result) : c.json({ error: "not-found" }, 404);
+  });
+
+  // T015: the cards to review offline, and the ratings queued while offline (each applied through rateCard).
+  app.get("/api/review/offline-pack", async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    return c.json(await offlinePack(sql, user.userId, new Date(now()), passedLevels));
+  });
+
+  app.post("/api/review/sync", async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const body = await c.req.json().catch(() => undefined);
+    const result = await syncRatings(sql, user.userId, body, new Date(now()), passedLevels);
+    return typeof result === "string" ? c.json({ error: result }, 400) : c.json(result);
   });
 
   if (opts.inngestHandler) app.on(["GET", "POST", "PUT"], "/api/inngest", opts.inngestHandler);
