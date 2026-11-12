@@ -83,4 +83,21 @@ describe("loadConfig", () => {
     expect(loadConfig({ ...valid, NODE_ENV: "test" }).inngestServeOrigin).toBeUndefined();
     expect(() => loadConfig({ ...prod, INNGEST_SERVE_ORIGIN: "not a url" })).toThrow(/INNGEST_SERVE_ORIGIN/);
   });
+
+  test("T006: model A and reader limits; defaults 15 steps / 80,000 tokens; bad limits are refused", () => {
+    const c = loadConfig(valid);
+    expect({ m: c.modelAId, k: c.anthropicApiKey, s: c.readerMaxSteps, b: c.readerTokenBudget }).toEqual({
+      m: "test-model",
+      k: "sk-ant-test",
+      s: 15,
+      b: 80_000,
+    });
+    expect(loadConfig({ ...valid, READER_MAX_STEPS: "8", READER_TOKEN_BUDGET: "20000" }).readerMaxSteps).toBe(8);
+    const { ANTHROPIC_API_KEY: _k, MODEL_A_ID: _m, ...noModel } = valid;
+    expect(() => loadConfig(noModel)).toThrow(/ANTHROPIC_API_KEY, MODEL_A_ID/);
+    expect(() => loadConfig({ ...valid, READER_MAX_STEPS: "0" })).toThrow(
+      /READER_MAX_STEPS must be a positive integer/,
+    );
+    expect(() => loadConfig({ ...valid, READER_TOKEN_BUDGET: "-5" })).toThrow(/READER_TOKEN_BUDGET/);
+  });
 });
