@@ -47,16 +47,16 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass / ☐ fail | [test file path(s) — required before Done] |
-| Verification command run | ☐ pass / ☐ fail | [paste actual output] |
-| Negative cases hold | ☐ pass / ☐ fail | |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | `tests/level-lock-state.test.ts` (AC 2, SC 1-3), `tests/ladder-view.test.ts` (AC 1, 6, 7, SC 7; endpoints 401/404/no-store, return-to-ladder cookie), `tests/migrate.test.ts` (0004 up/down/up), `e2e/ladder-view.e2e.ts` (AC 3-7, SC 4-6, axe, tokens, 3 viewports). `bun test`: `142 pass, 0 fail, 497 expect() calls` (ci:local, 2026-11-12). `bun run test:e2e -- ladder-view`: `7 passed (6.2s)`. |
+| Verification command run | ☑ pass | `bun run ci:local` ends `ci:local: all steps passed`: typecheck clean; lint `Checked 51 files ... No fixes applied.` + `check-tokens: 0 color literals outside src/client/tokens.css`; unit `142 pass 0 fail`; migrate up/down/up ok; e2e sign-in `3 passed`, start-flow `6 passed`, ladder-view `7 passed`. Guide's `bun test ladder-view level-lock-state` is covered by `bun test` (the two files are in it). |
+| Negative cases hold | ☑ pass | Unknown/non-numeric/overflow ids give `undefined` (loader) and 404 (API + page: `Ladder not found`); signed-out API 401; signed-out page redirects to `/auth/github?next=%2Fladders%2F<id>` and returns to the ladder; look-alike return targets (`/ladders/42/x`, `//evil...`, CRLF) refused; `Cache-Control: no-store` on every ladder route; out-of-order passes do not open L3. |
 | verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
-| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
-| Full smoke suite still green (no regression) | ☐ pass / ☐ fail | |
+| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | Not run by the implementer: `code-review` skill is not available in this sub-agent's tool set; Supervisor to run it. Blast radius for the reviewer: `src/server/app.ts` (new routes, `returnPath` replaces `startPath` and now also accepts `/ladders/<id>`), `src/client/App.tsx`, new `src/client/LadderView.tsx`, `src/shared/levels.ts`, `src/server/ladder-view.ts`, `migrations/0004_*`, `tests/migrate.test.ts` (hard-coded last-migration names), `e2e/serve.ts`, CI lists. |
+| Full smoke suite still green (no regression) | ☑ pass | `bun run ci:local` all steps passed, including the earlier sign-in and start-flow e2e. |
 | **Companion score (easy-verifier)** | ☐ pass / ☐ fail / ☐ N/A | [`overall` and `change_risk` as the tool returned them, the scope, the ref, and the absolute path of the verifier report after a literal `report:` label — e.g. "overall 86 (>= 80), change_risk pass, scope changes, ref `main...HEAD`, report: `/home/me/.easy-verifier-reports/kit/score_changes_20261028T0530Z.html`". The gate reads the path that follows `report:` and nothing else, so with no label, or a path that is absent, the row is unscored — write ☑ N/A instead. ☑ N/A with a reason when neither companion tool was run: the merge gate blocks on ☑ fail only, never on an absent or N/A row] |
-| **UI: Visual regression (diff or verdict pasted)** | ☐ pass / ☐ fail / ☐ N/A | [screenshot path or LLM verdict — required for UI tasks, Hard-Stop Gate 6] |
-| **UI: Design-system compliance (tokens/colors/typography verified)** | ☐ pass / ☐ fail / ☐ N/A | [method used + output] |
-| **UI: Responsiveness at target viewports** | ☐ pass / ☐ fail / ☐ N/A | [viewports tested, any overflow findings] |
+| **UI: Visual regression (diff or verdict pasted)** | ☑ pass | Screenshots at 360/768/1280 in `test-results/screenshots/` (git-ignored): `ladder-view-no-passes-*`, `ladder-view-passed-*`, `ladder-view-fallback-*`, `ladders-two-*`. Own visual verdict (agent read the PNGs, not a separate vision run): no passes, 1280: header with badge `Unverified`, `Pinned to 6b41670`, both link-out buttons, L0 in an accent-bordered card with `Open now`, L1-L4 muted with lock icon and `Locked — pass L<n-1> first`. Passed, 360 and 1280: L0/L1 `Passed`, L2 open, L3/L4 locked, 300+ char unbroken URL wraps inside the card. My ladders at 768: two rows with repo name and `Open ladder`. No baseline PNGs committed (the earlier tasks keep theirs in `e2e/baseline/`; the Supervisor may promote these). |
+| **UI: Design-system compliance (tokens/colors/typography verified)** | ☑ pass | `check-tokens: 0 color literals outside src/client/tokens.css`; Playwright computed-style checks in `e2e/ladder-view.e2e.ts` match `tokens.css` for open/locked/passed card colors, badge (size/weight/family/border), level title/goal type, `.levels` gap, card padding, `main` max-width. axe 0 serious/critical on all 4 ladder-view states and My ladders (axe-core 4.14.0 via `@axe-core/playwright` 4.14.0, exact pins, published 2026-10-05). |
+| **UI: Responsiveness at target viewports** | ☑ pass | 360x740, 768x1024, 1280x800: `scrollWidth <= viewport` asserted for every screenshot; link-out buttons full width at 360 (asserted); at >= 1024 px the buttons sit beside the header. |
 
 ---
 
@@ -83,9 +83,23 @@ error: script "test:e2e" exited with code 1
 
 At this commit `GET /ladders/:ladderId` has no route (T005 redirects a cache hit there and it 404s), there is no `levelLockState`, no `getLadderView`, and `My ladders` renders only `No ladders yet`.
 
-**AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
+**AFTER**: 2026-11-12 (worktree wt-t010, after the last commit):
 
-**DELTA**: [one sentence — what a user can now do that they could not before]
+```
+$ bun test level-lock-state ladder-view   (both files run inside the full `bun test`: 142 pass, 0 fail)
+$ bun run test:e2e -- ladder-view
+  ✓ SC 4: seeded ladder shows 5 levels L0-L4, Unverified badge, SHA 6b41670 and the two link-outs
+  ✓ SC 5: keyboard reaches the open level; locked levels have nothing to focus and announce aria-disabled
+  ✓ L0 and L1 passed: L2 open, L3 and L4 locked; a very long goal wraps at 360px
+  ✓ SC 7: a ladder with no level rows shows five levels with `Not generated yet`
+  ✓ SC 6: an unknown ladder id shows the 404 page
+  ✓ AC 6: signed out, a ladder URL goes to sign-in and back to the same ladder
+  ✓ AC 7: My ladders lists the saved ladders the learner started, each with Open ladder
+  7 passed (6.2s)
+$ bun run ci:local  ->  ci:local: all steps passed
+```
+
+**DELTA**: A signed-in learner can open `/ladders/:ladderId` from `My ladders` and see L0-L4 with goals, pass tests and lock state, the `Unverified` badge, the pinned SHA, and links to the README at that SHA and to DeepWiki.
 
 **WITNESS**: [who ran it and when — derived from `memory/event-trace/Txxx.jsonl`, never the
 implementing agent alone]

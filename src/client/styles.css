@@ -216,3 +216,12 @@ a.button {
 .back-link {
   color: var(--color-text);
 }
+@media (min-width: 1024px) {
+  .ladder-head {
+    flex-wrap: nowrap;
+  }
+  .ladder-links {
+    flex-direction: column;
+    flex: none;
+  }
+}
