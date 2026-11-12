@@ -1,0 +1,34 @@
+{
+  "name": "idea-ladder",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Idea Ladder v1 app: Bun + Hono server, React client (Vite), Postgres + pgvector.",
+  "scripts": {
+    "dev": "bun scripts/dev.ts",
+    "build": "vite build",
+    "start": "bun src/server/main.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check . && bun scripts/check-tokens.ts",
+    "test": "bun test",
+    "test:e2e": "playwright test",
+    "db:migrate": "bun src/server/migrate.ts up",
+    "db:migrate:down": "bun src/server/migrate.ts down",
+    "ci:local": "bun scripts/ci-local.ts"
+  },
+  "dependencies": {
+    "hono": "4.13.13",
+    "react": "19.1.10",
+    "react-dom": "19.1.10"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@playwright/test": "1.64.1",
+    "@types/bun": "1.4.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "typescript": "7.0.2",
+    "vite": "8.3.4"
+  }
+}
