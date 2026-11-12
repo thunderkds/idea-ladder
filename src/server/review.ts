@@ -1,6 +1,7 @@
 // T011: the review queue and one rating -> ts-fsrs next state -> one review log row. Never calls an LLM.
 import type { SQL } from "bun";
 import { LEVEL_IDS, levelLockState } from "../shared/levels.ts";
+import { FUTURE_SLACK_MS } from "../shared/offline.ts";
 import {
   RATINGS,
   type RateRequest,
@@ -19,9 +20,11 @@ const MAX_KEY_LENGTH = 200;
 /** Stored elapsed time is capped at 24 h: a tab left open overnight still saves its rating. */
 const MAX_ELAPSED_MS = 86_400_000;
 const CARD_ID = /^[1-9][0-9]{0,17}$/; // fits a bigint
+/** T015: an ISO 8601 date-time with seconds and an explicit offset (what `Date.toISOString()` sends). */
+const ISO_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?(Z|[+-]\d{2}:\d{2})$/;
 
 /** `ladderId:level` for every level not locked for this learner, on every ladder they started. */
-async function unlockedLevels(sql: SQL, userId: string, passed: PassedLevels) {
+export async function unlockedLevels(sql: SQL, userId: string, passed: PassedLevels) {
   const ladderIds = (await listLadders(sql, userId)).map((l) => l.ladderId);
   const keys: string[] = [];
   for (const ladderId of ladderIds) {
@@ -86,16 +89,20 @@ export async function reviewQueue(sql: SQL, userId: string, now: Date, passed: P
 /** The rating request, or undefined when any field is missing or of the wrong kind. */
 export function checkRateRequest(body: unknown): RateRequest | undefined {
   if (!body || typeof body !== "object" || Array.isArray(body)) return undefined;
-  const { cardId, rating, idempotencyKey, elapsedMs } = body as Record<string, unknown>;
+  const { cardId, rating, idempotencyKey, elapsedMs, reviewedAt } = body as Record<string, unknown>;
   if (typeof cardId !== "string") return undefined;
   if (typeof rating !== "string" || !(RATINGS as readonly string[]).includes(rating)) return undefined;
   if (typeof idempotencyKey !== "string" || !idempotencyKey || idempotencyKey.length > MAX_KEY_LENGTH) return undefined;
   if (typeof elapsedMs !== "number" || !Number.isFinite(elapsedMs) || elapsedMs < 0) return undefined;
-  return { cardId, rating: rating as RateRequest["rating"], idempotencyKey, elapsedMs };
+  const req: RateRequest = { cardId, rating: rating as RateRequest["rating"], idempotencyKey, elapsedMs };
+  if (reviewedAt === undefined) return req;
+  if (typeof reviewedAt !== "string" || !ISO_TIME.test(reviewedAt) || !Number.isFinite(Date.parse(reviewedAt)))
+    return undefined;
+  return { ...req, reviewedAt };
 }
 
 /** True when the card is on a ladder this learner started, in a level not locked for them. */
-async function mayRate(sql: SQL, userId: string, cardId: string, passed: PassedLevels): Promise<boolean> {
+export async function mayRate(sql: SQL, userId: string, cardId: string, passed: PassedLevels): Promise<boolean> {
   if (!CARD_ID.test(cardId)) return false;
   const [card] = await sql`SELECT ladder_id::text AS ladder_id, level FROM review_cards WHERE id = ${cardId}`;
   if (!card) return false;
@@ -121,7 +128,18 @@ async function earlier(sql: SQL, userId: string, key: string): Promise<RateRespo
 }
 
 /**
- * Applies one rating at server time `now`: locks the learner's card state row (created as New on the first rating),
+ * T015: the instant a rating is applied at. The client `reviewedAt` is used only when it is after the card's last review
+ * and not later than server time + 5 min; otherwise the T011 rule: server time, never before the last review.
+ */
+export function reviewInstant(now: Date, lastReview: Date | undefined, reviewedAt?: string) {
+  const client = reviewedAt === undefined ? Number.NaN : Date.parse(reviewedAt);
+  const last = lastReview?.getTime() ?? Number.NEGATIVE_INFINITY;
+  if (client > last && client <= now.getTime() + FUTURE_SLACK_MS) return { at: new Date(client), usedClientTime: true };
+  return { at: new Date(Math.max(now.getTime(), lastReview?.getTime() ?? 0)), usedClientTime: false };
+}
+
+/**
+ * Applies one rating at server time `now` (or at the client `reviewedAt` under `reviewInstant`): locks the learner's card state row (created as New on the first rating),
  * computes the next state with ts-fsrs, writes it and one review log row in one transaction. A second tab waits on
  * the lock and rates the state the first tab wrote.
  * Undefined when the learner may not rate this card (nothing is written).
@@ -146,7 +164,8 @@ export async function rateCard(
         FROM card_states WHERE learner_id = ${userId} AND card_id = ${req.cardId} FOR UPDATE`;
       const before: Card = { ...s, last_review: s.last_review ?? undefined };
       // A request that waited on the lock may hold an earlier `now` than the rating that just committed: never go back.
-      const at = new Date(Math.max(now.getTime(), before.last_review?.getTime() ?? 0));
+      // The stored reviewed_at is always the instant given to scheduleNext, so the log still replays to the state.
+      const { at, usedClientTime } = reviewInstant(now, before.last_review, req.reviewedAt);
       const after = scheduleNext(before, req.rating, at);
       await tx`
         UPDATE card_states SET due = ${after.due}, stability = ${after.stability}, difficulty = ${after.difficulty},
@@ -157,7 +176,13 @@ export async function rateCard(
         INSERT INTO review_log (learner_id, card_id, rating, state_before, state_after, reviewed_at, elapsed_ms, idempotency_key)
         VALUES (${userId}, ${req.cardId}, ${req.rating}, ${JSON.stringify(before)}::text::jsonb, ${JSON.stringify(after)}::text::jsonb,
           ${at}, ${Math.min(req.elapsedMs, MAX_ELAPSED_MS)}, ${req.idempotencyKey})`;
-      return { cardId: req.cardId, dueAt: after.due.toISOString(), state: cardState(after.state), duplicate: false };
+      const res: RateResponse = {
+        cardId: req.cardId,
+        dueAt: after.due.toISOString(),
+        state: cardState(after.state),
+        duplicate: false,
+      };
+      return req.reviewedAt === undefined ? res : { ...res, usedClientTime };
     });
   } catch (err) {
     // A key this learner already used (a retry, a double tap, or two at once): the review_log unique key rejected the

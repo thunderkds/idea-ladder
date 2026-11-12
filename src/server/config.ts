@@ -14,6 +14,8 @@ export type Config = {
   startMaxNewJobsPerHour: number;
   /** Public origin Inngest calls back; never derived from the request Host header. Required in production. */
   inngestServeOrigin?: string;
+  /** Web Push (VAPID) keys; absent = reminders off. Only `publicKey` ever reaches the client; the private key is never logged. */
+  vapid?: { publicKey: string; privateKey: string; subject: string };
 };
 
 export class ConfigError extends Error {}
@@ -59,6 +61,24 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
   }
   const inngestServeOrigin = env.INNGEST_SERVE_ORIGIN ? url("INNGEST_SERVE_ORIGIN", "") : undefined;
 
+  // Messages name the variable only: a key value is never part of an error.
+  const VAPID = ["VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY", "VAPID_SUBJECT"] as const;
+  const vapidMissing = VAPID.filter((n) => !env[n]);
+  if (vapidMissing.length > 0 && vapidMissing.length < VAPID.length)
+    problems.push(`VAPID push keys: set all three or none (missing: ${vapidMissing.join(", ")})`);
+  const base64urlBytes = (value = "") => (/^[A-Za-z0-9_-]+$/.test(value) ? Buffer.from(value, "base64url").length : 0);
+  let vapid: Config["vapid"];
+  if (!vapidMissing.length) {
+    const subject = env.VAPID_SUBJECT as string;
+    if (base64urlBytes(env.VAPID_PUBLIC_KEY) !== 65)
+      problems.push("VAPID_PUBLIC_KEY must be a base64url P-256 public key");
+    if (base64urlBytes(env.VAPID_PRIVATE_KEY) !== 32)
+      problems.push("VAPID_PRIVATE_KEY must be a base64url P-256 private key");
+    if (!/^mailto:.+@.+/.test(subject) && !/^https:\/\/[^/\s]+/.test(subject))
+      problems.push("VAPID_SUBJECT must be a mailto: address or an https URL");
+    vapid = { publicKey: env.VAPID_PUBLIC_KEY as string, privateKey: env.VAPID_PRIVATE_KEY as string, subject };
+  }
+
   if (problems.length) throw new ConfigError(`Invalid configuration: ${problems.join("; ")}`);
   return {
     databaseUrl: env.DATABASE_URL as string,
@@ -72,5 +92,6 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     secureCookies: env.NODE_ENV !== "development" && env.NODE_ENV !== "test",
     startMaxNewJobsPerHour,
     ...(inngestServeOrigin ? { inngestServeOrigin } : {}),
+    ...(vapid ? { vapid } : {}),
   };
 }

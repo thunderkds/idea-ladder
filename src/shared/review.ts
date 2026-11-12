@@ -19,5 +19,19 @@ export type ReviewQueue = {
   nextDueAt: string | null;
   cards: ReviewCard[];
 };
-export type RateRequest = { cardId: string; rating: Rating; idempotencyKey: string; elapsedMs: number };
-export type RateResponse = { cardId: string; dueAt: string; state: CardState; duplicate: boolean };
+/** T015: `reviewedAt` (ISO date-time) is the client's rating time; the server uses it only inside the rule in rateCard. */
+export type RateRequest = {
+  cardId: string;
+  rating: Rating;
+  idempotencyKey: string;
+  elapsedMs: number;
+  reviewedAt?: string;
+};
+/** T015: `usedClientTime` is present only when the request carried a `reviewedAt`. */
+export type RateResponse = {
+  cardId: string;
+  dueAt: string;
+  state: CardState;
+  duplicate: boolean;
+  usedClientTime?: boolean;
+};

@@ -267,13 +267,16 @@ describe("T011 rating (AC 2, AC 3, Success Criteria 2, 3)", () => {
     expect(stored?.lapses).toBeGreaterThan(0);
   });
 
-  test("server time is the only reviewed_at; the client sends none", async () => {
+  // T015 narrowed this: a client reviewedAt is now used inside a window (tests/offline-sync.test.ts); one before the
+  // card's last review is still ignored for server time.
+  test("a client reviewedAt before the card's last review is ignored: server time", async () => {
     const me = await learner();
     const card = await seedCard(await seedLadder(me.id), "L0");
+    expect((await postRate(req(card, "good"), me.cookie)).status).toBe(200);
     const before = Date.now();
     const res = await postRate({ ...req(card, "easy"), reviewedAt: "1999-01-01T00:00:00Z" }, me.cookie);
     expect(res.status).toBe(200);
-    const [row] = await logRows(me.id);
+    const [, row] = await logRows(me.id);
     expect(row.reviewed_at.getTime()).toBeGreaterThanOrEqual(before);
     expect(row.reviewed_at.getTime()).toBeLessThanOrEqual(Date.now());
   });

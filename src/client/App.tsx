@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { LadderPage } from "./LadderView.tsx";
+import { OfflineNotice, requireOnline } from "./offline.tsx";
+import { expireSession, signOut } from "./offline-store.ts";
 import { ReviewPage } from "./Review.tsx";
+import { SettingsPage } from "./Settings.tsx";
 
 function Home() {
   return (
@@ -21,11 +24,16 @@ type LadderListItem = { ladderId: string; repo: string };
 function Ladders() {
   const [login, setLogin] = useState<string>();
   const [ladders, setLadders] = useState<LadderListItem[]>();
+  const [offline, setOffline] = useState(false);
   useEffect(() => {
     fetch("/api/me")
       .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
       .then((me: { login: string }) => setLogin(me.login))
-      .catch(() => window.location.assign("/"));
+      .catch((reason) => {
+        if (reason === 401) return void expireSession();
+        if (!requireOnline()) return setOffline(true);
+        window.location.assign("/");
+      });
     fetch("/api/ladders")
       .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
       .then((list: LadderListItem[]) => setLadders(list))
@@ -33,17 +41,34 @@ function Ladders() {
   }, []);
   return (
     <main className="page">
-      <header className="bar">
+      <header className="bar bar-wrap">
         <span className="brand">Idea Ladder</span>
-        <form action="/auth/sign-out" method="post">
-          <span className="muted">{login ? `@${login} ` : ""}</span>
-          <button className="button button-quiet" type="submit">
-            Sign out
-          </button>
-        </form>
+        <span className="bar-links">
+          <a className="back-link" href="/settings">
+            Settings
+          </a>
+          {/* Sign-out first syncs queued ratings (online, at most 2 s), then forgets this learner's offline review
+              data and cached pages (T015). */}
+          <form
+            action="/auth/sign-out"
+            method="post"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const form = e.currentTarget;
+              void signOut().then(() => form.submit());
+            }}
+          >
+            <span className="muted">{login ? `@${login} ` : ""}</span>
+            <button className="button button-quiet" type="submit">
+              Sign out
+            </button>
+          </form>
+        </span>
       </header>
       <h1>My ladders</h1>
-      {ladders === undefined ? null : ladders.length === 0 ? (
+      {offline ? (
+        <OfflineNotice retryHref="/ladders" />
+      ) : ladders === undefined ? null : ladders.length === 0 ? (
         <section className="empty">
           <p>No ladders yet</p>
         </section>
@@ -123,7 +148,7 @@ function JobStatus({ jobId }: { jobId: string }) {
     const poll = async () => {
       try {
         const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}`);
-        if (res.status === 401) return window.location.assign("/");
+        if (res.status === 401) return expireSession();
         if (res.status === 404) return setMissing(true);
         if (res.ok) {
           const next = (await res.json()) as Job;
@@ -182,11 +207,21 @@ export function App() {
   const path = window.location.pathname;
   if (path === "/ladders") return <Ladders />;
   if (path === "/review") return <ReviewPage />;
+  if (path === "/settings") return <SettingsPage />;
   if (path.startsWith("/ladders/")) return <LadderPage ladderId={path.slice("/ladders/".length)} />;
   if (path.startsWith("/jobs/")) return <JobStatus jobId={path.slice("/jobs/".length)} />;
   const root = document.getElementById("root");
   if (path === "/start" && root?.dataset.error) {
     return <StartProblem error={root.dataset.error} resetAt={root.dataset.resetAt} retryAt={root.dataset.retryAt} />;
+  }
+  // Ladder generation needs the server: offline, the service worker serves the shell and nothing is sent or queued.
+  if (path === "/start" && !requireOnline()) {
+    return (
+      <main className="page">
+        <h1>Start a ladder</h1>
+        <OfflineNotice retryHref={window.location.pathname + window.location.search} />
+      </main>
+    );
   }
   return <Home />;
 }
