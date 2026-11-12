@@ -66,7 +66,7 @@ second provider blind-solves (model B)". T001 result: lexical check alone — ca
 ## Dependencies & Reachability
 
 **Depends on**: T008 — MCQ pools after `check-and-dedupe`, the regeneration loop, and step `save-ladder` in `ladder-generate`
-**Entry point**: `blindSolve` (called by Inngest step `blind-solve` in `ladder-generate`); measurement script `pnpm eval:blind-solver`
+**Entry point**: `blindSolve` (called by Inngest step `blind-solve` in `ladder-generate`); measurement script `bun run eval:blind-solver`
 
 ---
 
@@ -79,7 +79,7 @@ second provider blind-solves (model B)". T001 result: lexical check alone — ca
 | 3 | Step `blind-solve` runs after `check-and-dedupe` and before `save-ladder`. Agree → keep. Disagree → model A regenerates that MCQ (with the code check of T008) at most 2 times, each new version blind-solved again; still disagreeing → dropped with reason `blind-solve-mismatch`. Counts go into `generation_report`. | a different answer from the key means discard; regenerate, max 2 |
 | 4 | Negative: model B output that fails the schema, or a provider error after the step's retries → that MCQ counts as disagreement (dropped), never as agreement. Each model B call is logged with `logStepCost` (`step: "blind-solve"`). | discard on mismatch; cost per step |
 | 5 | Independent seed set `eval/seed/blind-solver-seed.json`: ≥ 40 original MCQs from ≥ 4 golden-set repos that are not the 3 v0 repos, written before the first measurement run and never edited after it; it includes ≥ 8 items whose distractor also appears in the chunk and ≥ 8 items with paraphrase keys (the T001 blind spots). Wrong keys seeded as in T001 (each distractor in turn becomes the key). | re-measure on an independent seed set |
-| 6 | `pnpm eval:blind-solver` reports catch rate and false-reject rate, with counts, for (a) code check alone, (b) blind solver alone, (c) both (keep only if both pass); per item kind; cost per 100 questions; and one verdict line per threshold. Output: `eval/reports/blind-solver-<timestamp>.md`. | measure the catch rate; catches more wrong keys per dollar |
+| 6 | `bun run eval:blind-solver` reports catch rate and false-reject rate, with counts, for (a) code check alone, (b) blind solver alone, (c) both (keep only if both pass); per item kind; cost per 100 questions; and one verdict line per threshold. Output: `eval/reports/blind-solver-<timestamp>.md`. | measure the catch rate; catches more wrong keys per dollar |
 | 7 | Boundary: model B is called with temperature 0; running the measurement twice on the same seed gives the same verdict lines, or the report lists the items whose answer changed. | deterministic, reproducible measurement |
 
 ---
@@ -100,22 +100,22 @@ Tests assert code and metric arithmetic only. A missed threshold is a valid resu
 
 | # | Given (input/state) | Expect (output/behavior) | How it's checked |
 |---|---------------------|--------------------------|------------------|
-| 1 | Mock model B; inspect the prompt for an MCQ with key `off` | prompt contains the 4 options and the chunk, not a marker of which option is the key | vitest |
-| 2 | `MODEL_B_PROVIDER=anthropic` | config validation throws at start | vitest |
-| 3 | Mock B disagrees 3 times in a row | 2 regenerations by mock A, then dropped `blind-solve-mismatch` | vitest |
-| 4 | Mock B returns `{ answerIndex: 7 }` / throws | MCQ dropped, not kept | vitest |
-| 5 | Inngest test run with mock A and B | step order `check-and-dedupe` → `blind-solve` → `save-ladder`; retry of `blind-solve` does not re-run generators | vitest + Inngest test helper |
-| 6 | 4 hand-made MCQs with scripted B answers | metric function returns the exact counts for (a), (b), (c) | vitest |
+| 1 | Mock model B; inspect the prompt for an MCQ with key `off` | prompt contains the 4 options and the chunk, not a marker of which option is the key | bun test |
+| 2 | `MODEL_B_PROVIDER=anthropic` | config validation throws at start | bun test |
+| 3 | Mock B disagrees 3 times in a row | 2 regenerations by mock A, then dropped `blind-solve-mismatch` | bun test |
+| 4 | Mock B returns `{ answerIndex: 7 }` / throws | MCQ dropped, not kept | bun test |
+| 5 | Inngest test run with mock A and B | step order `check-and-dedupe` → `blind-solve` → `save-ladder`; retry of `blind-solve` does not re-run generators | bun test + Inngest test helper |
+| 6 | 4 hand-made MCQs with scripted B answers | metric function returns the exact counts for (a), (b), (c) | bun test |
 | 7 | Seed set + live model B | report with 3 policies, per-kind table, cost, verdict lines | command run (paid) |
 
 ### Verification Command (exact, runnable)
 
 ```bash
 # ci: skip — the measurement calls model B (paid, needs the second provider's API key); CI runs the unit tests only
-pnpm install --frozen-lockfile
-pnpm typecheck && pnpm lint
-pnpm test -- blind-solver seed-schema blind-solver-metrics
-pnpm eval:blind-solver
+bun install --frozen-lockfile
+bun run typecheck && bun run lint
+bun test blind-solver seed-schema blind-solver-metrics
+bun run eval:blind-solver
 ```
 
 ### Evidence (filled by reviewer at Stage 4/5)
@@ -141,7 +141,7 @@ pnpm eval:blind-solver
 - entailment check (only if thresholds fail)
 - diff questions (T014)
 
-1. Choose model B in the brainstorm. Criteria: a non-Anthropic provider with an AI SDK provider package; structured output support; price per 1M tokens; shortlist ≤ 2 candidates and measure both on the seed set, keep the one with the higher catch rate per dollar that meets the thresholds. Code names the model only through env `MODEL_B_PROVIDER` / `MODEL_B_ID`; no model id is hard-coded. If no candidate's API key is in env, stop with `Status: blocked` + `Question:` naming the provider(s) and the env key needed. Record the choice and its price source in `docs/decisions/0003-model-b.md`; add its price to `eval/prices.json`.
+1. Choose model B in the brainstorm. The Claude subscription never serves model B: it is the same provider as model A, which AC 2 forbids, so model B always uses an API key (user decision 2026-11-12: the subscription is for model A generation only). Criteria: a non-Anthropic provider with an AI SDK provider package; structured output support; price per 1M tokens; shortlist ≤ 2 candidates and measure both on the seed set, keep the one with the higher catch rate per dollar that meets the thresholds. Code names the model only through env `MODEL_B_PROVIDER` / `MODEL_B_ID`; no model id is hard-coded. If no candidate's API key is in env, stop with `Status: blocked` + `Question:` naming the provider(s) and the env key needed. Record the choice and its price source in `docs/decisions/0003-model-b.md`; add its price to `eval/prices.json`.
 2. Write the seed set before any model B run. Commit it in its own commit; the measurement script refuses to run if the seed file changed after that commit (hash check against `eval/seed/blind-solver-seed.sha256`).
 3. Prompt for model B: the cited chunk, the question, 4 shuffled options; answer with an index only. Cap the chunk at 2,000 chars.
 4. Wire `blind-solve` into `ladder-generate`; regeneration reuses T008's generator for the one item.
@@ -170,7 +170,7 @@ pnpm eval:blind-solver
 | `eval/src/blind-solver-measure.ts`, `eval/package.json` script `eval:blind-solver` | measurement |
 | `eval/prices.json` | model B price |
 | `.env.example` | `MODEL_B_PROVIDER`, `MODEL_B_ID`, provider key name |
-| `package.json`, `pnpm-lock.yaml` | AI SDK provider package for model B (pinned) |
+| `package.json`, `bun.lock` | AI SDK provider package for model B (pinned) |
 | `docs/decisions/0003-model-b.md` | provider decision |
 | tests | AC 1–7 |
 | `tasks/TASK_REVIEW_T009.md` | Evidence + report (reviewer) |
@@ -189,7 +189,7 @@ pnpm eval:blind-solver
 
 ## Test Plan
 
-vitest with AI SDK mock models for A and B: prompt content, shuffle mapping, disagreement loop, failure-as-disagreement, config guard (AC 1–4); Inngest test helper for step order and retry (AC 3); metric unit tests with scripted answers (AC 6); seed schema test (AC 5). Real run: `pnpm eval:blind-solver` twice (AC 7); paste both reports' verdict lines and the per-kind table.
+bun test with AI SDK mock models for A and B: prompt content, shuffle mapping, disagreement loop, failure-as-disagreement, config guard (AC 1–4); Inngest test helper for step order and retry (AC 3); metric unit tests with scripted answers (AC 6); seed schema test (AC 5). Real run: `bun run eval:blind-solver` twice (AC 7); paste both reports' verdict lines and the per-kind table.
 
 ---
 
@@ -198,7 +198,7 @@ vitest with AI SDK mock models for A and B: prompt content, shuffle mapping, dis
 - [ ] Implementation done
 - [ ] Self-review: `Skill({ skill: "code-review" })` run
 - [ ] Security review: `Skill({ skill: "security-review" })` run (Medium risk)
-- [ ] Lint passes (`pnpm lint`, `pnpm typecheck`)
+- [ ] Lint passes (`bun run lint`, `bun run typecheck`)
 - [ ] Tests written AND pass — output pasted into `tasks/TASK_REVIEW_T009.md` Evidence (Hard-Stop Gate 5)
 - [ ] `Skill({ skill: "verify" })` run — headless auto verify
 - [ ] Supervisor notified: task ready for Stage 4 review

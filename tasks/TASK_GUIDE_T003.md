@@ -29,8 +29,8 @@ Question 4): "accounts from day one (GitHub OAuth; progress, reviews, evidence i
 "iOS clears PWA storage? … sync to backend".
 
 **Restated intent** (Supervisor's interpretation):
-> Stand up the one v1 app every later task builds on: a TypeScript web app (framework chosen in this task by
-> brainstorm), Postgres + pgvector with reversible migrations, GitHub OAuth sign-in, and CI. The tracer bullet
+> Stand up the one v1 app every later task builds on: a TypeScript web app (Bun server and React client, decided
+> by the user on 2026-11-12), Postgres + pgvector with reversible migrations, GitHub OAuth sign-in, and CI. The tracer bullet
 > is: a learner signs in with GitHub and sees an empty "My ladders" page.
 
 **Out of scope** (what this task explicitly does NOT do):
@@ -68,13 +68,13 @@ Question 4): "accounts from day one (GitHub OAuth; progress, reviews, evidence i
 
 | # | Criterion (testable) | Traces to requirement |
 |---|----------------------|-----------------------|
-| 1 | `pnpm db:migrate` on an empty Postgres creates the `vector` extension and the `users` (`id`, `github_id` unique, `github_login`, `created_at`, `updated_at`) and `sessions` tables. `pnpm db:migrate:down` reverts to an empty schema; running up again succeeds. | Postgres with pgvector; migrations |
+| 1 | `bun run db:migrate` on an empty Postgres creates the `vector` extension and the `users` (`id`, `github_id` unique, `github_login`, `created_at`, `updated_at`) and `sessions` tables. `bun run db:migrate:down` reverts to an empty schema; running up again succeeds. | Postgres with pgvector; migrations |
 | 2 | Signed out, `/` shows a `Sign in with GitHub` button. It redirects to GitHub's authorize URL with `client_id`, a random `state`, and scope `read:user` only (no `repo` scope). | GitHub OAuth sign-in |
 | 3 | The OAuth callback with a valid `code` + `state` upserts the user by `github_id` (not by login), sets a session cookie (`HttpOnly`, `SameSite=Lax`, `Secure` outside local dev), and redirects to `/ladders`, which shows the heading `My ladders` and the empty state `No ladders yet`. | tracer: sign in, see empty "My ladders" |
 | 4 | Negative: a callback with a missing or mismatched `state`, or a failed token exchange, returns 400 / an error page, creates no `users` row and sets no session cookie. | identity binding must not be forgeable |
 | 5 | Boundary: the same GitHub account signs in twice after renaming its login → still one `users` row; `github_login` is updated. | "every artifact must belong to that GitHub account" |
 | 6 | Signed out, `GET /ladders` redirects to `/` (302); after sign-out the old session cookie no longer opens `/ladders`. | accounts from day one |
-| 7 | `.github/workflows/ci.yml` runs `pnpm install --frozen-lockfile`, typecheck, lint, unit tests, migrations up/down against a `pgvector` Postgres service, and the sign-in e2e test. `pnpm ci:local` runs the same steps locally and passes. | CI |
+| 7 | `.github/workflows/ci.yml` runs `bun install --frozen-lockfile`, typecheck, lint, unit tests, migrations up/down against a `pgvector` Postgres service, and the sign-in e2e test. `bun run ci:local` runs the same steps locally and passes. | CI |
 | 8 | Secrets: `.env.example` lists variable names only (`DATABASE_URL`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `SESSION_SECRET`); `.env*` except `.env.example` is git-ignored; `git grep` for the client secret value finds nothing. | PROJECT_SPEC Critical Constraints (never commit secrets) |
 
 ---
@@ -90,17 +90,17 @@ Question 4): "accounts from day one (GitHub OAuth; progress, reviews, evidence i
 | 3 | Callback with `state` that differs from the cookie | 400, `users` count unchanged, no `Set-Cookie` for the session | automated test |
 | 4 | Stub returns `{ id: 42, login: "octo-renamed" }` on a second sign-in | one row with `github_id = 42`, `github_login = 'octo-renamed'` | automated test |
 | 5 | No session cookie, `GET /ladders` | 302 to `/` | automated test |
-| 6 | `pnpm ci:local` | exit 0 | command run |
+| 6 | `bun run ci:local` | exit 0 | command run |
 
 ### Verification Command (exact, runnable)
 
 ```bash
 docker compose up -d db
-pnpm install --frozen-lockfile
-pnpm db:migrate && pnpm db:migrate:down && pnpm db:migrate
-pnpm typecheck && pnpm lint && pnpm test
-pnpm test:e2e -- sign-in
-pnpm ci:local
+bun install --frozen-lockfile
+bun run db:migrate && bun run db:migrate:down && bun run db:migrate
+bun run typecheck && bun run lint && bun test
+bun run test:e2e -- sign-in
+bun run ci:local
 ```
 
 ### Evidence (filled by reviewer at Stage 4/5)
@@ -147,7 +147,7 @@ pnpm ci:local
 
 ## Approach
 
-**Pattern reference**: `None — no comparable prior art in this repo` (only the throwaway `experiments/core-spike`; copy its pinning discipline and vitest setup from `experiments/core-spike/package.json`, not its structure)
+**Pattern reference**: `None — no comparable prior art in this repo` (only the throwaway `experiments/core-spike`; copy its pinning discipline from `experiments/core-spike/package.json`, not its structure or its vitest setup; the app uses `bun test`)
 
 **Vital slice**: GitHub sign-in → session → empty `My ladders` page, on a migrated Postgres + pgvector, green in CI.
 **Cut list**:
@@ -158,12 +158,12 @@ pnpm ci:local
 - storing the GitHub OAuth access token (no task needs it yet; T013 decides if it does)
 - account deletion and profile settings
 
-1. Run `Skill({ skill: "brainstorming" })` for the web framework. Hard constraints: TypeScript; server routes for `/start?url=` and the OAuth callback; can host an Inngest serve handler and Vercel AI SDK calls; can ship a PWA (service worker) later; not tied to one host (T018 decides hosting). Compare at least 3 candidates (for example Next.js, SvelteKit, Hono + Vite SPA) on these constraints. Decide the migration tool and the OAuth/session approach in the same brainstorm. Write the decision and its reasons to `docs/decisions/0001-web-framework.md`; the Supervisor copies it to `memory/decisions.md`.
-2. Use pnpm. Pin every dependency to an exact version published at least 2 weeks before 2026-11-01. Commit the lockfile.
+1. Run `Skill({ skill: "brainstorming" })` for the server HTTP layer. Fixed by the user on 2026-11-12, not for debate: Bun as runtime and test runner; a React client built with Vite; Postgres + pgvector. Hard constraints: TypeScript; server routes for `/start?url=` and the OAuth callback; can host an Inngest serve handler and Vercel AI SDK calls on Bun (run a small smoke check for this in the task and record the result in the decision file; if it fails, stop with `Status: blocked` + `Question:`); can ship a PWA (service worker) later; not tied to one host (T018 decides hosting). Compare at least 3 candidates for the server layer (for example `Bun.serve` with a small router, Hono, Elysia) on these constraints. Decide the migration tool and the OAuth/session approach in the same brainstorm. Write the decision and its reasons to `docs/decisions/0001-web-framework.md`; the Supervisor copies it to `memory/decisions.md`.
+2. Use Bun (`bun install`, lockfile `bun.lock`). Pin every dependency to an exact version published at least 2 weeks before 2026-11-01. Commit the lockfile.
 3. Local Postgres: `docker-compose.yml` with a pinned `pgvector/pgvector` image tag.
 4. OAuth: scope `read:user` only. `state` in a short-lived HttpOnly cookie, compared in constant time. Identity key = GitHub numeric `id`. Base URLs for GitHub OAuth/API come from env so tests use a local stub; production defaults are `https://github.com` / `https://api.github.com`.
 5. Apply `Skill({ skill: "migration-safety" })` before applying the first migration (responsibility #4 in `agents/common-infrastructure.md`).
-6. CI: this guide is the Supervisor's approval to create `.github/workflows/ci.yml` (Constraint "Never modify CI/CD … without explicit Supervisor approval"). The repo has no remote yet, so `pnpm ci:local` is the runnable proof.
+6. CI: this guide is the Supervisor's approval to create `.github/workflows/ci.yml` (Constraint "Never modify CI/CD … without explicit Supervisor approval"). The repo has no remote yet, so `bun run ci:local` is the runnable proof.
 7. After merge, the Supervisor runs `/map-codebase`; later guides read the layout from `memory/codebase-map.md`.
 
 ---
@@ -175,7 +175,7 @@ pnpm ci:local
 - [ ] GitHub returns an error query (`error=access_denied`) on the callback → friendly page, no session
 - [ ] Login renamed on GitHub → matched by `github_id`, login updated (AC 5)
 - [ ] Two different GitHub accounts → two rows; one cannot read the other's session
-- [ ] `pnpm db:migrate:down` on a database with rows in `users` → documented behavior (drops; the migration-safety report states it); never runs in production without the T018 runbook
+- [ ] `bun run db:migrate:down` on a database with rows in `users` → documented behavior (drops; the migration-safety report states it); never runs in production without the T018 runbook
 - [ ] `vector` extension missing on the server → migration fails with a clear message, not a half-applied schema (migration runs in one transaction)
 - [ ] Missing env var at start → process exits with the variable name, not a stack trace from deep inside OAuth code
 
@@ -185,7 +185,7 @@ pnpm ci:local
 
 | File | Change |
 |------|--------|
-| `package.json`, `pnpm-lock.yaml`, `tsconfig.json`, lint config | new app root (TypeScript, pnpm scripts `dev`, `build`, `typecheck`, `lint`, `test`, `test:e2e`, `db:migrate`, `db:migrate:down`, `ci:local`) |
+| `package.json`, `bun.lock`, `tsconfig.json`, lint config | new app root (TypeScript, package scripts run with `bun run`: `dev`, `build`, `typecheck`, `lint`, `test`, `test:e2e`, `db:migrate`, `db:migrate:down`, `ci:local`) |
 | app source tree (layout set by the brainstorm decision) | home page, OAuth routes, session handling, `/ladders` page, tokens file |
 | migrations directory (layout set by the chosen migration tool) | first migration: `vector` extension, `users`, `sessions` |
 | `docker-compose.yml` | local `pgvector/pgvector` Postgres |
@@ -208,10 +208,10 @@ pnpm ci:local
 
 ## Test Plan
 
-- Unit/integration (vitest): OAuth `state` check, callback handler with the stub, user upsert by `github_id`, session guard on `/ladders`, env validation.
+- Unit/integration (bun test): OAuth `state` check, callback handler with the stub, user upsert by `github_id`, session guard on `/ladders`, env validation.
 - Migration test: up → assert extension + tables; down → assert empty; up again.
 - e2e (Playwright, stub OAuth): sign-in tracer (AC 3), sign-out (AC 6), screenshots for the UI section at 360/768/1280 px.
-- Real run: `pnpm dev`, sign in with a real GitHub OAuth app (owner's client id in `.env`), see `My ladders`. Paste the observation into the review file.
+- Real run: `bun run dev`, sign in with a real GitHub OAuth app (owner's client id in `.env`), see `My ladders`. Paste the observation into the review file.
 
 ---
 
@@ -221,7 +221,7 @@ pnpm ci:local
 - [ ] Self-review: `Skill({ skill: "code-review" })` run
 - [ ] Security review: `Skill({ skill: "security-review" })` run (Medium risk)
 - [ ] Migration safety: `Skill({ skill: "migration-safety" })` run (first schema)
-- [ ] Lint passes (`pnpm lint`, `pnpm typecheck`)
+- [ ] Lint passes (`bun run lint`, `bun run typecheck`)
 - [ ] Tests written AND pass — output pasted into `tasks/TASK_REVIEW_T003.md` Evidence (Hard-Stop Gate 5)
 - [ ] `Skill({ skill: "verify" })` run — headless auto verify
 - [ ] Supervisor notified: task ready for Stage 4 review

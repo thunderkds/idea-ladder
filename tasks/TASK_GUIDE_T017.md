@@ -36,6 +36,7 @@ Source:
 **Out of scope** (what this task explicitly does NOT do):
 - Changing model A or model B, or prompts, to cut cost (a later decision from these numbers).
 - Per-learner billing, quotas or payments.
+- Pricing the `claude-code` (subscription) back end of model A: it has no per-token price (user decision 2026-11-12). The cost run uses `MODEL_A_BACKEND=api`. The report may add one subscription run, recorded as tokens and any usage-limit message, never as dollars.
 - Cost of diff questions (T014) — measured only if T014 is merged; otherwise listed as not measured.
 - A cost dashboard (the report file is the output).
 
@@ -72,7 +73,7 @@ Supervisor recommendation: A, with the cap value the user names after reading th
 ## Dependencies & Reachability
 
 **Depends on**: T009 — the complete generation workflow (reader, concept mapper, generators, code checks, blind solver) whose cost is measured; T004 — the golden set of 20 repos, the eval harness and the per-step cost log.
-**Entry point**: `pnpm cost:measure` (script) and `enforceCostCap` (called inside each LLM step of the generation workflow)
+**Entry point**: `bun run cost:measure` (script) and `enforceCostCap` (called inside each LLM step of the generation workflow)
 
 ---
 
@@ -80,11 +81,11 @@ Supervisor recommendation: A, with the cap value the user names after reading th
 
 | # | Criterion (testable) | Traces to requirement |
 |---|----------------------|-----------------------|
-| 1 | `pnpm cost:measure` runs the generation workflow on all 20 golden-set repos, twice: run 1 with an empty ladder cache and no prompt cache warm, run 2 right after with prompt caching on. Per-step cost = tokens from the provider usage response × the price in `pricing.json`. | "Cost and accuracy per step on the golden set" |
+| 1 | `bun run cost:measure` runs the generation workflow on all 20 golden-set repos, twice: run 1 with an empty ladder cache and no prompt cache warm, run 2 right after with prompt caching on. Per-step cost = tokens from the provider usage response × the price in `pricing.json`. | "Cost and accuracy per step on the golden set" |
 | 2 | `docs/COST_REPORT.md` shows, per run: median, p95 and max cost per ladder in USD, cost per step (reader, concept mapper, generators, blind solver), input / output / cached tokens, and the ladder-quality score of T004's harness, so cost and accuracy sit side by side. | "Cost per ladder too high, or accuracy gap is small" |
 | 3 | `pricing.json` lists each model's input, output, cache-write and cache-read price per million tokens, with the provider pricing page URL and the date read. Cost code never contains a price literal. A model with no `pricing.json` entry fails the run with `missing-price:<model id>`. | measured, not assumed |
 | 4 | Provider prompt caching is on for model A: the stable prefix (system prompt + repo context) is marked cacheable through the AI SDK provider options; run 2 shows cache-read tokens > 0 for model A steps. For model B (second provider, chosen in T009), caching is used if the provider supports it, else the report says "not supported". | "provider prompt caching" |
-| 5 | (After the user's answer) the cap value and rule are stored in config (`COST_CAP_USD_PER_LADDER`). `enforceCostCap` runs before each LLM step with the spend so far plus the step's estimated maximum cost (max output tokens × price); if that passes the cap, the workflow ends with status `cost-cap-reached` (option A) and saves no partial ladder. | "cost cap per ladder" |
+| 5 | (After the user's answer) the cap value and rule are stored in config (`COST_CAP_USD_PER_LADDER`). `enforceCostCap` runs before each LLM step with the spend so far plus the step's estimated maximum cost (max output tokens × price); if that passes the cap, the workflow ends with status `cost-cap-reached` (option A) and saves no partial ladder. `enforceCostCap` does nothing for the `claude-code` back end; the cap applies from the day `MODEL_A_BACKEND=api` is switched on, which must happen before T018 lets other learners generate. | "cost cap per ladder" |
 | 6 | Boundary: spend + estimate exactly equal to the cap → allowed; 1 cent above → stopped. A cache hit on repo + SHA costs 0 and is never counted against the cap. | cap enforcement; "First learner pays generation" |
 
 ---
@@ -95,10 +96,10 @@ Supervisor recommendation: A, with the cap value the user names after reading th
 
 | # | Given (input/state) | Expect (output/behavior) | How it's checked |
 |---|---------------------|--------------------------|------------------|
-| 1 | Fake usage `{ input: 1,000,000, output: 0 }` and a test `pricing.json` with input price 3.00 | cost 3.00 USD | vitest |
-| 2 | Model id absent from `pricing.json` | run fails `missing-price:<model id>` | vitest |
+| 1 | Fake usage `{ input: 1,000,000, output: 0 }` and a test `pricing.json` with input price 3.00 | cost 3.00 USD | bun test |
+| 2 | Model id absent from `pricing.json` | run fails `missing-price:<model id>` | bun test |
 | 3 | Cap 0.50 USD; mock steps costing 0.20, 0.20, then a step estimated 0.11 | workflow stops before the 3rd LLM call; status `cost-cap-reached`; no ladder row | integration test (Inngest test engine, mock models) |
-| 4 | Cap 0.50; spend 0.39 + estimate 0.11 | step runs | vitest |
+| 4 | Cap 0.50; spend 0.39 + estimate 0.11 | step runs | bun test |
 | 5 | Second `/start` for the same repo + SHA | cache hit; cost log shows 0; cap not consulted | integration test |
 | 6 | Real run on the golden set (API keys in env) | `docs/COST_REPORT.md` with both runs, all 20 repos, cache-read tokens > 0 in run 2 | command run (manual, recorded in review) |
 
@@ -106,9 +107,9 @@ Supervisor recommendation: A, with the cap value the user names after reading th
 
 ```bash
 # describe blocks of this task start with "T017"; the suite uses mock models and fixtures
-pnpm install --frozen-lockfile && pnpm typecheck && pnpm lint && pnpm test -- -t "T017"
+bun install --frozen-lockfile && bun run typecheck && bun run lint && bun test -t "T017"
 # ci: skip — real-cost run: needs model A and model B API keys and spends real money; run once by hand, output goes in the review
-pnpm cost:measure && cat docs/COST_REPORT.md
+bun run cost:measure && cat docs/COST_REPORT.md
 ```
 
 ### Evidence (filled by reviewer at Stage 4/5)
@@ -155,9 +156,9 @@ Before the real run, print the expected maximum spend (20 repos × 2 runs × the
 | `pricing.json` (config folder set by T003) | new: prices with source URL and date |
 | cost module: `costOf(usage, model)`, `enforceCostCap` | new |
 | generation workflow LLM steps (T006–T009) | call `enforceCostCap`; add cache-control provider options for model A |
-| `pnpm cost:measure` script + `package.json` script entry | new |
+| `bun run cost:measure` script + `package.json` script entry | new |
 | `docs/COST_REPORT.md` | new: measured numbers, decision |
-| tests (vitest + Inngest test engine) | AC 1, 3, 5, 6 |
+| tests (bun test + Inngest test engine) | AC 1, 3, 5, 6 |
 | `tasks/TASK_REVIEW_T017.md` | Evidence (reviewer) |
 
 ## Files Must NOT Touch
@@ -175,7 +176,7 @@ Before the real run, print the expected maximum spend (20 repos × 2 runs × the
 
 ## Test Plan
 
-Unit (vitest): cost arithmetic incl. cache-read and cache-write prices, missing price, cap boundary (equal / 1 cent over). Integration (vitest + Inngest test engine + mock models): cap stop with no partial ladder, cache hit at 0 cost, retried step counted once. Real run once by hand (`pnpm cost:measure`), report pasted into the review. Paste `pnpm test` output into the report.
+Unit (bun test): cost arithmetic incl. cache-read and cache-write prices, missing price, cap boundary (equal / 1 cent over). Integration (bun test + Inngest test engine + mock models): cap stop with no partial ladder, cache hit at 0 cost, retried step counted once. Real run once by hand (`bun run cost:measure`), report pasted into the review. Paste `bun test` output into the report.
 
 ---
 
@@ -184,7 +185,7 @@ Unit (vitest): cost arithmetic incl. cache-read and cache-write prices, missing 
 - [ ] Implementation done
 - [ ] Self-review: `Skill({ skill: "code-review" })` run
 - [ ] Security review: `Skill({ skill: "security-review" })` run (Medium risk)
-- [ ] Lint passes (`pnpm lint`, `pnpm typecheck`)
+- [ ] Lint passes (`bun run lint`, `bun run typecheck`)
 - [ ] Tests written AND pass — output pasted into `tasks/TASK_REVIEW_T017.md` Evidence (Hard-Stop Gate 5)
 - [ ] `Skill({ skill: "verify" })` run — headless auto verify
 - [ ] Supervisor notified: task ready for Stage 4 review
