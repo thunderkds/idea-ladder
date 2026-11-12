@@ -25,6 +25,11 @@
 **Why**: User choice 2026-11-12 ("Bun for BE, React base for FE, Postgres and pgvector, using the Claude subscription to generate the lesson if possible"). The subscription limit is the Supervisor's reading that subscription sign-in is for the owner's own use; check Anthropic's current terms before relying on it. Open risk: Inngest on Bun is not proven (T003 smoke check).
 **Files**: PROJECT_SPEC.md, tasks/TASK_GUIDE_T003.md, tasks/TASK_GUIDE_T008.md, tasks/TASK_GUIDE_T009.md, tasks/TASK_GUIDE_T017.md. The other open guides (T004–T007, T010–T016, T018–T030) got the same command swap on 2026-11-12 (pnpm → bun, vitest → bun test, pnpm exec → bunx); T001 and T002 are done and unchanged.
 
+### 2026-11-12 — Gate 1 waived: v1 starts now
+**Decision**: The user waived Gate 1 ("let start the tasks already") before the 14-day v0 run finished. v1 tasks may start; first picks are T003 (scaffold) and T004 (golden set), which are P0 and independent. Gate 2 (v2) and Gate 3 (v3) still apply. Stage 0.5 approval of BRAINSTORMING_LOG.md is still not recorded.
+**Why**: Explicit user instruction. Risk the user accepted: v1 may be built on a v0 result (usable ladders, daily review habit) that has not been measured.
+**Files**: PROJECT_SPEC.md, PRD.md, PROJECT_KANBAN.md, tasks/TASK_GUIDE_T003.md, tasks/TASK_GUIDE_T004.md
+
 ## Infrastructure
 
 ### 2026-11-01 — Idea Ladder uses board mode local

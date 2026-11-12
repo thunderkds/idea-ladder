@@ -34,10 +34,10 @@ v0 (now): no product code. Experiments only — the v0 ladder kit (T002) and a d
 - **Requirements**: PRD.md (source: docs/REQUIREMENT_SOURCE.md)
 - **Direction**: BRAINSTORMING_LOG.md (auto mode — Option B narrowed; report reports/thinking-report_plan-idea-ladder-init_20261101T090447.html)
 - **Codebase map**: none — blank scaffold
-- **Tech stack**: v0 spikes: TypeScript on Node v26, pnpm, vitest, node:crypto (Ed25519, SHA-256); no storage, no hosting. v1 target (stack decided 2026-11-12; code still waits for Gate 1): Bun (server, package manager, test runner), React + Vite (client, PWA), Postgres + pgvector, Vercel AI SDK, Inngest, FSRS. Model A generation: the owner's Claude subscription (`claude -p`) while only the owner generates, an API key before any other learner does; model B and embeddings always use API keys (`memory/decisions.md` 2026-11-12). Inngest on Bun is unproven until T003's smoke check
+- **Tech stack**: v0 spikes: TypeScript on Node v26, pnpm, vitest, node:crypto (Ed25519, SHA-256); no storage, no hosting. v1 target (stack decided 2026-11-12; Gate 1 waived by the user 2026-11-12): Bun (server, package manager, test runner), React + Vite (client, PWA), Postgres + pgvector, Vercel AI SDK, Inngest, FSRS. Model A generation: the owner's Claude subscription (`claude -p`) while only the owner generates, an API key before any other learner does; model B and embeddings always use API keys (`memory/decisions.md` 2026-11-12). Inngest on Bun is unproven until T003's smoke check
 - **Main flow**: docs/MAIN_FLOW.md
 - **Approved by**:
-- **Waived**:
+- **Waived**: user 2026-11-12 — owner chose to start v1 before the 14-day v0 run (Gate 1) ends; Stage 0.5 approval of BRAINSTORMING_LOG.md is still not recorded
 
 ---
 
@@ -45,7 +45,7 @@ v0 (now): no product code. Experiments only — the v0 ladder kit (T002) and a d
 
 - The LLM never decides a pass, never schedules a review, never sits in the proof trust path (§ LLM strategy, § Proof architecture).
 - No shared database, login or API with Idea Radar; the only contract is `/start?url=` (§ Architecture).
-- No v1 product code before Gate 1 (v0: review on ≥10 of 14 days, ladders usable) passes (§ Roadmap).
+- Gate 1 (v0: review on ≥10 of 14 days, ladders usable) was waived by the user on 2026-11-12 so v1 work may start. v2 and v3 still wait for Gate 2 and Gate 3 (§ Roadmap).
 - Spikes live under `experiments/` and are throwaway: no production abstractions, no persistence beyond files.
 - Never commit secrets or private keys; spike signing keys are generated per run in memory.
 - Cards are original text; never copy repo code or docs into cards (§ Grill #9).
@@ -77,10 +77,11 @@ v0 (now): no product code. Experiments only — the v0 ladder kit (T002) and a d
 
 | CLI | Run command | C0 | C1 | C2 | C3 |
 |---|---|---|---|---|---|
-| claude | `claude` | | | | |
+| claude | `claude` | haiku-5-5 | sonnet-5-5 | sonnet-5-5 or opus-5-5 | opus-5-5 |
 
-> Auto mode (2026-11-01): the user did not list CLIs or models. Cells stay empty; spawns use the CLI and
-> model this session runs as (`docs/claude-md/tracks.md` § Auto mode row 14).
+> Set by the Supervisor on 2026-11-12 (user: "supervisor should evaluate and set that"). C2: Sonnet when
+> Risk is Low, Opus when Risk is Medium or High. C3 always Opus. Model ids: `claude-haiku-5-5`,
+> `claude-sonnet-5-5`, `claude-opus-5-5`.
 
 ---
 
