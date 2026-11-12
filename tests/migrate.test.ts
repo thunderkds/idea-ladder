@@ -21,6 +21,17 @@ const tables = async (sql: SQL) =>
   (await sql`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name`).map(
     (r: { table_name: string }) => r.table_name,
   );
+const T0001 = ["schema_migrations", "sessions", "users"];
+const ALL = [
+  "generation_job_waiters",
+  "generation_jobs",
+  "ladders",
+  "repo_confidence",
+  "repo_snapshots",
+  "schema_migrations",
+  "sessions",
+  "users",
+];
 const extensions = async (sql: SQL) =>
   (await sql`SELECT extname FROM pg_extension`).map((r: { extname: string }) => r.extname);
 
@@ -28,7 +39,7 @@ describe("migrations (AC 1)", () => {
   test("up creates vector, users and sessions", async () => {
     await migrateUp(db.sql);
     expect(await extensions(db.sql)).toContain("vector");
-    expect(await tables(db.sql)).toEqual(["schema_migrations", "sessions", "users"]);
+    expect(await tables(db.sql)).toEqual(ALL);
     const cols =
       await db.sql`SELECT column_name FROM information_schema.columns WHERE table_name = 'users' ORDER BY ordinal_position`;
     expect(cols.map((c: { column_name: string }) => c.column_name)).toEqual([
@@ -54,14 +65,16 @@ describe("migrations (AC 1)", () => {
 
   test("down reverts to an empty schema, with rows present; up again succeeds", async () => {
     await db.sql`INSERT INTO users (github_id, github_login) VALUES (7, 'has-data')`;
-    await migrateDown(db.sql, undefined, ALLOW_DOWN);
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0002_start_jobs");
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0001_init");
     expect(await tables(db.sql)).toEqual([]);
     expect(await extensions(db.sql)).not.toContain("vector");
-    expect(await migrateUp(db.sql)).toEqual(["0001_init"]);
-    expect(await tables(db.sql)).toEqual(["schema_migrations", "sessions", "users"]);
+    expect(await migrateUp(db.sql)).toEqual(["0001_init", "0002_start_jobs"]);
+    expect(await tables(db.sql)).toEqual(ALL);
   });
 
   test("down on an empty schema is a no-op", async () => {
+    await migrateDown(db.sql, undefined, ALLOW_DOWN);
     await migrateDown(db.sql, undefined, ALLOW_DOWN);
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBeUndefined();
     expect(await tables(db.sql)).toEqual([]);
@@ -99,7 +112,7 @@ describe("down migration guard (destructive)", () => {
     await expect(migrateDown(db.sql, undefined, { MIGRATE_ALLOW_DOWN: "true" })).rejects.toThrow(
       /MIGRATE_ALLOW_DOWN=1/,
     );
-    expect(await userTables(db.sql)).toEqual(["sessions", "users"]);
+    expect(await userTables(db.sql)).toEqual(ALL.filter((t) => t !== "schema_migrations"));
   });
 
   test("refused when NODE_ENV=production, even with MIGRATE_ALLOW_DOWN=1", async () => {
@@ -107,13 +120,13 @@ describe("down migration guard (destructive)", () => {
     await expect(migrateDown(db.sql, undefined, { MIGRATE_ALLOW_DOWN: "1", NODE_ENV: "production" })).rejects.toThrow(
       /NODE_ENV=production.*MIGRATE_ALLOW_DOWN/,
     );
-    expect(await userTables(db.sql)).toEqual(["sessions", "users"]);
+    expect(await userTables(db.sql)).toEqual(ALL.filter((t) => t !== "schema_migrations"));
   });
 
   test("allowed with MIGRATE_ALLOW_DOWN=1", async () => {
     await migrateUp(db.sql);
-    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0001_init");
-    expect(await tables(db.sql)).toEqual([]);
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0002_start_jobs");
+    expect(await tables(db.sql)).toEqual(T0001);
   });
 
   test("CLI `bun run db:migrate:down` without the opt-in exits 1 and names the variable", async () => {
@@ -122,6 +135,43 @@ describe("down migration guard (destructive)", () => {
     const proc = Bun.spawnSync(["bun", "run", "db:migrate:down"], { env: { ...env, DATABASE_URL: db.url } });
     expect(proc.exitCode).toBe(1);
     expect(proc.stderr.toString()).toContain("MIGRATE_ALLOW_DOWN=1");
-    expect(await userTables(db.sql)).toEqual(["sessions", "users"]);
+    expect(await userTables(db.sql)).toEqual(ALL.filter((t) => t !== "schema_migrations"));
+  });
+});
+
+describe("0002_start_jobs (T005)", () => {
+  const SHA = "6b41670516ed8e8b738612f60491995470aa63b3";
+  const openJob = (repo: string) =>
+    db.sql`INSERT INTO generation_jobs (repo_full_name, commit_sha) VALUES (${repo}, ${SHA}) RETURNING id`;
+
+  test("up / down / up with rows present", async () => {
+    await migrateUp(db.sql);
+    await db.sql`INSERT INTO ladders (repo_full_name, commit_sha, status) VALUES ('developit/mitt', ${SHA}, 'unverified')`;
+    await openJob("developit/mitt");
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0002_start_jobs");
+    expect(await tables(db.sql)).toEqual(T0001);
+    expect(await migrateUp(db.sql)).toEqual(["0002_start_jobs"]);
+    expect(await tables(db.sql)).toEqual(ALL);
+  });
+
+  test("one open job per repo + SHA; a failed job does not block a new one", async () => {
+    await migrateUp(db.sql);
+    const [first] = await openJob("lukeed/dset");
+    await expect((async () => await openJob("lukeed/dset"))()).rejects.toThrow(/unique|duplicate/i);
+    await db.sql`UPDATE generation_jobs SET status = 'failed', reason = 'rate-limited' WHERE id = ${first.id}`;
+    expect((await openJob("lukeed/dset")).length).toBe(1);
+  });
+
+  test("repo names must be lower-case and SHAs 40-hex; status is one of four", async () => {
+    await migrateUp(db.sql);
+    await expect((async () => await openJob("Developit/Mitt"))()).rejects.toThrow(/check/i);
+    await expect(
+      (async () =>
+        await db.sql`INSERT INTO ladders (repo_full_name, commit_sha, status) VALUES ('a/b', 'abc', 'unverified')`)(),
+    ).rejects.toThrow(/check/i);
+    await expect(
+      (async () =>
+        await db.sql`INSERT INTO generation_jobs (repo_full_name, commit_sha, status) VALUES ('a/b', ${SHA}, 'done')`)(),
+    ).rejects.toThrow(/check/i);
   });
 });

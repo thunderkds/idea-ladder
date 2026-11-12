@@ -22,6 +22,7 @@ beforeAll(async () => {
     DATABASE_URL: db.url,
     GITHUB_CLIENT_ID: CLIENT_ID,
     GITHUB_CLIENT_SECRET: CLIENT_SECRET,
+    GITHUB_APP_TOKEN: "test-app-token",
     SESSION_SECRET: "x".repeat(48),
     GITHUB_OAUTH_BASE_URL: stub.url,
     GITHUB_API_BASE_URL: stub.url,

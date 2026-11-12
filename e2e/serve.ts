@@ -30,6 +30,7 @@ const config = loadConfig({
   DATABASE_URL: dbUrl.toString(),
   GITHUB_CLIENT_ID: "e2e-client-id",
   GITHUB_CLIENT_SECRET: "e2e-client-secret",
+  GITHUB_APP_TOKEN: "e2e-app-token",
   SESSION_SECRET: crypto.randomUUID() + crypto.randomUUID(),
   GITHUB_OAUTH_BASE_URL: stub.url,
   GITHUB_API_BASE_URL: stub.url,

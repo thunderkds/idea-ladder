@@ -2,6 +2,8 @@ export type Config = {
   databaseUrl: string;
   githubClientId: string;
   githubClientSecret: string;
+  /** Fine-grained token, public read only: the app's own GitHub API calls (repo reads). Never logged. */
+  githubAppToken: string;
   sessionSecret: string;
   githubOauthBaseUrl: string;
   githubApiBaseUrl: string;
@@ -12,7 +14,13 @@ export type Config = {
 
 export class ConfigError extends Error {}
 
-const REQUIRED = ["DATABASE_URL", "GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET", "SESSION_SECRET"] as const;
+const REQUIRED = [
+  "DATABASE_URL",
+  "GITHUB_CLIENT_ID",
+  "GITHUB_CLIENT_SECRET",
+  "GITHUB_APP_TOKEN",
+  "SESSION_SECRET",
+] as const;
 
 /** Validates the environment once at start, so a bad setup fails with variable names, not deep in OAuth code. */
 export function loadConfig(env: Record<string, string | undefined>): Config {
@@ -41,6 +49,7 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     databaseUrl: env.DATABASE_URL as string,
     githubClientId: env.GITHUB_CLIENT_ID as string,
     githubClientSecret: env.GITHUB_CLIENT_SECRET as string,
+    githubAppToken: env.GITHUB_APP_TOKEN as string,
     sessionSecret: env.SESSION_SECRET as string,
     githubOauthBaseUrl,
     githubApiBaseUrl,

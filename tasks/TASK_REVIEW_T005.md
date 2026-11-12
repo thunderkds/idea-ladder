@@ -67,8 +67,21 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 > **before any implementation commit exists**; if it does not (docs, templates, skill-instruction
 > text), BEFORE is the **verbatim prior content** of what changed — a quoted excerpt, not a command.
 
-**BEFORE**: [pasted timestamped command output showing the thing absent/failing, captured before the
-first implementation commit] OR [verbatim excerpt of the prior content, for non-executable changes]
+**BEFORE**: captured on branch `T005-start-job` at `c152afa`, before any implementation commit. Command:
+`bun <scratchpad>/before.ts` (calls `createApp(...).request()` in-process on the four T005 entry points),
+then the guide's test filter `bun test start-ladder repo-url fetch-repo jobs`.
+
+```
+2026-11-12T08:50:32Z
+GET /start?url=https://github.com/lukeed/dset -> 404
+POST /api/start -> 404
+GET /api/jobs/00000000-0000-0000-0000-000000000000 -> 404
+GET /jobs/00000000-0000-0000-0000-000000000000 -> 404
+bun test v1.4.3 (c6da4a4d3)
+The following filters did not match any test files in --cwd="/home/thunderkds/workspace/pets/wt-t005":
+ start-ladder repo-url fetch-repo jobs
+10 files were searched [2.00ms]
+```
 
 **AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
 
