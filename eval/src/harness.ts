@@ -10,14 +10,15 @@ export type Step = "core-files" | "concepts";
 export const STEPS: readonly Step[] = ["core-files", "concepts"];
 
 interface RowBase { fullName: string; tier: string; predicted: string[]; missed: string[]; extra: string[]; error?: string }
-export interface CoreFilesRow extends RowBase { recall: number; precision: number; modelCalls?: number; usd?: number; hitLimit?: boolean }
+export interface CoreFilesRow extends RowBase { recall: number; precision: number; modelCalls?: number; usd?: number | null; tokens?: number; hitLimit?: boolean }
 export interface ConceptsRow extends RowBase { overlap: number }
 
 interface ReportBase { subject: string; generatedAt: string }
 export interface CoreFilesReport extends ReportBase {
   step: "core-files";
   rows: CoreFilesRow[];
-  mean: { recall: number; precision: number; usd?: number; modelCalls?: number };
+  /** `usd: null`: at least one run was on the subscription (claude-code); `tokens` is then the mean tokens. */
+  mean: { recall: number; precision: number; usd?: number | null; tokens?: number; modelCalls?: number };
   /** Runs stopped by a step cap or token budget (subjects with run stats only). */
   hitLimitRuns?: number;
   baseline?: { subject: string; meanRecall: number };
@@ -65,8 +66,11 @@ export async function runEval(o: RunOptions & { step: Step }): Promise<Report> {
   if (step === "core-files") {
     const r = rows as CoreFilesRow[];
     const withStats = r.filter((x) => x.usd !== undefined);
+    const subscription = withStats.some((x) => x.usd === null);
     const statsPart = withStats.length === 0 ? {} : {
-      usd: mean(withStats.map((x) => x.usd ?? 0)),
+      ...(subscription
+        ? { usd: null, tokens: mean(withStats.map((x) => x.tokens ?? 0)) }
+        : { usd: mean(withStats.map((x) => x.usd ?? 0)) }),
       modelCalls: mean(withStats.map((x) => x.modelCalls ?? 0)),
     };
     return {
@@ -86,10 +90,12 @@ export function renderMarkdown(report: Report): string {
   const lines = [`# Eval: ${report.step} · subject ${report.subject}`, "", `Generated ${report.generatedAt} · ${report.rows.length} repos`, ""];
   if (report.step === "core-files") {
     const st = report.mean.usd !== undefined;
-    const statCells = (r: CoreFilesRow) => (st ? ` ${r.modelCalls ?? ""} | ${r.usd === undefined ? "" : r.usd.toFixed(4)} | ${r.hitLimit ? "yes" : ""} |` : "");
+    const usd = (u: number | null | undefined, tokens: number | undefined) =>
+      u === undefined ? "" : u === null ? `n/a (subscription), ${Math.round(tokens ?? 0)} tokens` : u.toFixed(4);
+    const statCells = (r: CoreFilesRow) => (st ? ` ${r.modelCalls ?? ""} | ${usd(r.usd, r.tokens)} | ${r.hitLimit ? "yes" : ""} |` : "");
     lines.push(`| Repo | Tier | Recall | Precision | Missed | Extra |${st ? " Model calls | USD | Hit limit |" : ""}`, `|---|---|---|---|---|---|${st ? "---|---|---|" : ""}`);
     for (const r of report.rows) lines.push(`| ${r.fullName} | ${r.tier} | ${f(r.recall)} | ${f(r.precision)} | ${cell(r.missed)} | ${cell(r.extra)}${r.error ? ` (error: ${r.error})` : ""} |${statCells(r)}`);
-    lines.push(`| **mean** | | ${f(report.mean.recall)} | ${f(report.mean.precision)} | | |${st ? ` ${f(report.mean.modelCalls ?? 0)} | ${(report.mean.usd ?? 0).toFixed(4)} | ${report.hitLimitRuns} of ${report.rows.length} |` : ""}`);
+    lines.push(`| **mean** | | ${f(report.mean.recall)} | ${f(report.mean.precision)} | | |${st ? ` ${f(report.mean.modelCalls ?? 0)} | ${usd(report.mean.usd, report.mean.tokens)} | ${report.hitLimitRuns} of ${report.rows.length} |` : ""}`);
     if (report.baseline) lines.push("", `Baseline \`${report.baseline.subject}\` mean recall: ${f(report.baseline.meanRecall)}`);
     if (report.verdicts?.length) lines.push("", ...report.verdicts.map((v) => `- ${v}`));
   } else {

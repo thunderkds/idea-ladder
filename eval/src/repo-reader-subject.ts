@@ -1,6 +1,7 @@
 // T006: the repo reader as an eval subject. The factory takes the model, file access and cost logger, so tests
 // run it offline with a mock model; `src/subjects/repo-reader.ts` wires the real model A and GitHub.
 import type { LanguageModel } from "ai";
+import { pickCoreFilesClaudeCode, ReaderFailedError } from "../../src/server/claude-code-reader.ts";
 import { parsePositiveInt, READER_LIMIT_MAX } from "../../src/server/config.ts";
 import {
   type CallUsage,
@@ -45,41 +46,47 @@ export function readerLimitsFromEnv(env: Record<string, string | undefined>): Re
   };
 }
 
-export interface RepoReaderDeps {
-  model: LanguageModel;
+export type RepoReaderDeps = {
   limits: ReaderLimits;
-  readFile: (fx: Fixture) => ReadFile;
-  /** Logs one model call for one repo; returns its USD cost. */
-  logCost: (fx: Fixture, usage: CallUsage) => number;
-}
+  /** Logs one model call for one repo; returns its USD cost, or null on the subscription (claude-code). */
+  logCost: (fx: Fixture, usage: CallUsage) => number | null;
+} & (
+  | { model: LanguageModel; readFile: (fx: Fixture) => ReadFile }
+  | { claudeCode: { modelId?: string; githubToken?: string; claudeBin?: string } }
+);
 
 export function createRepoReaderSubject(deps: RepoReaderDeps): MeasuredSubject {
   const stats = new Map<string, RunStats>();
   return {
     name: "repo-reader",
     async coreFiles(fx) {
-      const s: RunStats = { modelCalls: 0, usd: 0, hitLimit: false };
+      const s: RunStats = { modelCalls: 0, usd: 0, hitLimit: false, tokens: 0 };
       stats.set(fx.fullName, s);
+      const common = { repo: fx.fullName, sha: fx.sha, tree: fx.tree, treeTruncated: fx.treeTruncated, limits: deps.limits };
+      const onUsage = (u: CallUsage) => {
+        s.modelCalls++;
+        s.tokens = (s.tokens ?? 0) + u.inputTokens + u.cachedInputTokens + u.outputTokens;
+        const usd = deps.logCost(fx, u);
+        s.usd = usd === null || s.usd === null ? null : s.usd + usd;
+      };
       let result: PickResult;
       try {
-        result = await pickCoreFiles({
-          repo: fx.fullName,
-          sha: fx.sha,
-          tree: fx.tree,
-          treeTruncated: fx.treeTruncated,
-          model: deps.model,
-          limits: deps.limits,
-          readFile: deps.readFile(fx),
-          onUsage: (u) => {
-            s.modelCalls++;
-            s.usd += deps.logCost(fx, u);
-          },
-        });
+        result =
+          "claudeCode" in deps
+            ? await pickCoreFilesClaudeCode({ ...common, ...deps.claudeCode, onUsage })
+            : await pickCoreFiles({ ...common, model: deps.model, readFile: deps.readFile(fx), onUsage });
       } catch (err) {
         // A run that hit the cap and then failed still counts toward the limit-hit verdict.
-        if (err instanceof ReaderInvalidOutputError || err instanceof ReaderBudgetError) s.hitLimit = err.hitLimit;
+        if (
+          err instanceof ReaderInvalidOutputError ||
+          err instanceof ReaderBudgetError ||
+          err instanceof ReaderFailedError
+        )
+          s.hitLimit = err.hitLimit;
         throw err;
       }
+      // claude-code: one onUsage per `claude -p` run; model calls are the turns the CLI reports.
+      if ("claudeCode" in deps) s.modelCalls = result.modelCalls;
       s.hitLimit = result.hitLimit;
       return result.coreFiles.map((f) => f.path);
     },

@@ -2,6 +2,9 @@
 // carries per-repo recall/precision, mean cost, mean model calls, limit hits, the baseline and the verdict lines.
 // The paid run on all 20 repos with model A is the owner's (tasks/TASK_REVIEW_T006.md).
 import { describe, expect, test } from "bun:test";
+import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { loadFixture, loadGolden } from "../eval/src/golden.ts";
 import { renderMarkdown, runEval } from "../eval/src/harness.ts";
 import { createRepoReaderSubject, readerLimitsFromEnv, THRESHOLDS, verdicts } from "../eval/src/repo-reader-subject.ts";
@@ -106,5 +109,38 @@ describe("repo-reader eval subject (AC 7, offline with a mock model)", () => {
         "READER_MAX_STEPS must be a positive integer",
       );
     expect(() => readerLimitsFromEnv({ READER_TOKEN_BUDGET: "500001" })).toThrow("at most 500000");
+  });
+});
+
+describe("repo-reader eval subject on the claude-code back end (AC 9)", () => {
+  test("no API key or price needed; usd null; the report shows n/a (subscription) plus tokens", async () => {
+    const rec = await mkdtemp(join(tmpdir(), "il-fake-claude-"));
+    const bin = join(rec, "claude");
+    await writeFile(
+      bin,
+      `#!/bin/sh\nexec "${process.execPath}" "${join(import.meta.dir, "support", "fake-claude.ts")}" "${rec}" "$@"\n`,
+    );
+    await chmod(bin, 0o755);
+    const [entry] = repos;
+    if (!entry) throw new Error("no golden repo");
+    const blobs = loadFixture(entry.fullName)
+      .tree.filter((t) => t.type === "blob")
+      .map((t) => t.path);
+    const coreFiles = blobs.slice(0, 3).map((path) => ({ path, reason: "core" }));
+    const usage = { input_tokens: 40, output_tokens: 10, cache_read_input_tokens: 50, cache_creation_input_tokens: 0 };
+    const out = { is_error: false, num_turns: 5, session_id: "s", structured_output: { coreFiles }, usage };
+    await writeFile(join(rec, "replies.json"), JSON.stringify([{ stdout: JSON.stringify(out), toolCalls: 4 }]));
+    const subject = createRepoReaderSubject({
+      claudeCode: { claudeBin: bin },
+      limits: { maxSteps: 15, tokenBudget: 80_000 },
+      logCost: () => null,
+    });
+    const report = await runEval({ step: "core-files", subject, repos: [entry], loadFixture });
+    expect(report.rows[0]).toMatchObject({ predicted: blobs.slice(0, 3), modelCalls: 5, usd: null, tokens: 100 });
+    expect(report.mean.usd).toBeNull();
+    const md = renderMarkdown(report);
+    expect(md).toContain("n/a (subscription), 100 tokens");
+    expect(md).not.toContain("0.0000");
+    await rm(rec, { recursive: true, force: true });
   });
 });

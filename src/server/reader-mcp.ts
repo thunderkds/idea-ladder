@@ -5,7 +5,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { z } from "zod";
-import { githubRepoClient } from "./github-repo.ts";
+import { githubRepoClient, RateLimitError } from "./github-repo.ts";
 import { createReaderTools, type ReadFile, type TreeEntry } from "./repo-reader.ts";
 
 export const STEP_LIMIT_MESSAGE = "error: step limit reached: give your final answer now, using what you have seen";
@@ -58,6 +58,11 @@ export function createReaderMcp(
     } catch (err) {
       // A GitHub transport error: the model sees a tool error, the operator sees the cause on stderr.
       console.error(JSON.stringify({ event: "reader-mcp-read-failed", repo: ctx.fullName, error: String(err) }));
+      if (err instanceof RateLimitError)
+        return text(
+          "error: github-rate-limited (unauthenticated GitHub reads allow 60 requests per hour; GITHUB_TOKEN raises it): answer with what you have seen",
+          true,
+        );
       return text("error: read-failed (GitHub error; try another file)", true);
     }
   }

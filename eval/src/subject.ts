@@ -1,6 +1,7 @@
 import type { Fixture } from "./schema.ts";
 
-export interface RunStats { modelCalls: number; usd: number; hitLimit: boolean }
+/** `usd: null` = subscription run (claude-code back end): no per-call price; `tokens` then carries the size. */
+export interface RunStats { modelCalls: number; usd: number | null; hitLimit: boolean; tokens?: number }
 
 /**
  * A pipeline step candidate that the harness can score. It reads only the recorded fixture (offline) and
