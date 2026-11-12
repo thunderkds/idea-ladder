@@ -32,7 +32,14 @@ const logCost = readerCostLogger();
 // api: the Anthropic provider, explicit base URL (never an ANTHROPIC_BASE_URL from the environment).
 const reader: ReaderDeps =
   config.modelABackend === "claude-code"
-    ? { backend: "claude-code", modelId: config.modelAId, githubToken: config.githubAppToken, limits, logCost }
+    ? {
+        backend: "claude-code",
+        modelId: config.modelAId,
+        githubToken: config.githubAppToken,
+        githubApiBaseUrl: config.githubApiBaseUrl,
+        limits,
+        logCost,
+      }
     : {
         backend: "api",
         model: createAnthropic({ apiKey: config.anthropicApiKey, baseURL: "https://api.anthropic.com/v1" })(

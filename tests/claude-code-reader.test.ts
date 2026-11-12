@@ -89,7 +89,11 @@ describe("pickCoreFilesClaudeCode (fake claude)", () => {
     for (const k of SECRETS) process.env[k] = `secret-${k}-must-not-leak`;
     process.env.CLAUDE_CONFIG_DIR = "/tmp/claude-config-kept";
     await replies([{ stdout: result({ structured_output: files(["src/index.ts", "src/util.ts", "README.md"]) }) }]);
-    const { run } = pick({ modelId: "sonnet", githubToken: "gh-test-token" });
+    const { run } = pick({
+      modelId: "sonnet",
+      githubToken: "gh-test-token",
+      githubApiBaseUrl: "https://ghe.example.com",
+    });
     const out = await run;
     expect(out.coreFiles.map((f) => f.path)).toEqual(["src/index.ts", "src/util.ts", "README.md"]);
     const [c] = await calls();
@@ -135,6 +139,7 @@ describe("pickCoreFilesClaudeCode (fake claude)", () => {
     expect(server.args[0]).toMatch(/src\/server\/reader-mcp\.ts$/);
     expect(server.env.READER_MAX_STEPS).toBe("15");
     expect(server.env.GITHUB_TOKEN).toBe("gh-test-token");
+    expect(server.env.GITHUB_API_BASE_URL).toBe("https://ghe.example.com");
     expect(c.context).toEqual({ fullName: "acme/demo", sha: "a".repeat(40), tree });
     // the temp directory (context file, mcp config with the token) is gone
     expect(existsSync(c.cwd)).toBe(false);
@@ -144,6 +149,7 @@ describe("pickCoreFilesClaudeCode (fake claude)", () => {
     await replies([{ stdout: result({ structured_output: files(["src/index.ts", "src/util.ts", "README.md"]) }) }]);
     await pick().run;
     const [c] = await calls();
+    expect(c.mcp.mcpServers.reader.env.GITHUB_API_BASE_URL).toBeUndefined();
     expect(c.argv).not.toContain("--model");
     expect(c.mcp.mcpServers.reader.env.GITHUB_TOKEN).toBeUndefined();
   });

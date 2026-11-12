@@ -29,6 +29,15 @@ type Response = { jsonrpc: "2.0"; id: string | number | null } & (
   | { error: { code: number; message: string } }
 );
 
+export const GITHUB_API_DEFAULT = "https://api.github.com";
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
+/** The GitHub token is sent only to an https base, or to a local stub over http; otherwise reads are unauthenticated. */
+export function githubTokenFor(baseUrl: string, token: string): string {
+  const u = new URL(baseUrl);
+  return u.protocol === "https:" || (u.protocol === "http:" && LOCAL_HOSTS.has(u.hostname)) ? token : "";
+}
+
 /** One handler per server process: answers one JSON-RPC message, or null for a notification. */
 export function createReaderMcp(
   ctx: ReaderContext,
@@ -117,9 +126,12 @@ if (import.meta.main) {
   }
   const files = ctx.files;
   // Live mode: GitHub at the pinned SHA; GITHUB_TOKEN is optional (unauthenticated reads: 60 requests per hour).
-  const github = files
-    ? undefined
-    : githubRepoClient({ baseUrl: "https://api.github.com", token: env.GITHUB_TOKEN ?? "" });
+  // GITHUB_API_BASE_URL: the app's configured API base (default api.github.com).
+  const baseUrl = env.GITHUB_API_BASE_URL || GITHUB_API_DEFAULT;
+  const token = env.GITHUB_TOKEN ?? "";
+  if (token && !githubTokenFor(baseUrl, token))
+    console.error(JSON.stringify({ event: "reader-mcp-token-withheld", reason: "GitHub base is not https" }));
+  const github = files ? undefined : githubRepoClient({ baseUrl, token: githubTokenFor(baseUrl, token) });
   const readFile: ReadFile = files
     ? async (path) => (Object.hasOwn(files, path) ? (files[path] ?? null) : "")
     : (path) => (github as ReturnType<typeof githubRepoClient>).readFile(ctx.fullName, ctx.sha, path);

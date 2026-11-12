@@ -3,7 +3,13 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { CALLS_AFTER_CAP, EXIT_AFTER_CAP, type ReaderContext, STEP_LIMIT_MESSAGE } from "../src/server/reader-mcp.ts";
+import {
+  CALLS_AFTER_CAP,
+  EXIT_AFTER_CAP,
+  githubTokenFor,
+  type ReaderContext,
+  STEP_LIMIT_MESSAGE,
+} from "../src/server/reader-mcp.ts";
 
 const SCRIPT = join(import.meta.dir, "..", "src", "server", "reader-mcp.ts");
 const INJECTION =
@@ -32,10 +38,10 @@ afterEach(async () => {
   for (const d of dirs.splice(0)) await rm(d, { recursive: true, force: true });
 });
 
-async function start(maxSteps = 15, extraEnv: Record<string, string> = {}) {
+async function start(maxSteps = 15, extraEnv: Record<string, string> = {}, context: ReaderContext = ctx) {
   const dir = await mkdtemp(join(tmpdir(), "il-mcp-"));
   dirs.push(dir);
-  await writeFile(join(dir, "ctx.json"), JSON.stringify(ctx));
+  await writeFile(join(dir, "ctx.json"), JSON.stringify(context));
   const proc = Bun.spawn(["bun", SCRIPT], {
     stdin: "pipe",
     stdout: "pipe",
@@ -185,6 +191,39 @@ describe("reader MCP server (claude-code back end)", () => {
     expect(r.error?.code).toBe(-32603);
     expect((await s.rpc("ping")).result).toEqual({});
     s.proc.kill();
+  });
+
+  test("live mode reads GITHUB_API_BASE_URL (local stub) and sends GITHUB_TOKEN to it", async () => {
+    const seen: { path: string; auth: string | null }[] = [];
+    const stub = Bun.serve({
+      hostname: "127.0.0.1",
+      port: 0,
+      fetch(req) {
+        seen.push({ path: new URL(req.url).pathname, auth: req.headers.get("authorization") });
+        return new Response("export const fromStub = 1;\n");
+      },
+    });
+    try {
+      const live: ReaderContext = { fullName: ctx.fullName, sha: ctx.sha, tree: ctx.tree };
+      const s = await start(15, { GITHUB_API_BASE_URL: `http://127.0.0.1:${stub.port}`, GITHUB_TOKEN: "gh-tok" }, live);
+      await s.call("read", { path: "src/index.ts" });
+      expect(seen.length).toBeGreaterThan(0);
+      expect(seen[0]?.path).toContain("src/index.ts");
+      expect(seen[0]?.auth).toBe("Bearer gh-tok");
+      s.proc.kill();
+    } finally {
+      stub.stop(true);
+    }
+  });
+
+  test("the token goes only to https or a localhost base", () => {
+    expect(githubTokenFor("https://api.github.com", "t")).toBe("t");
+    expect(githubTokenFor("https://ghe.example.com", "t")).toBe("t");
+    expect(githubTokenFor("http://localhost:8080", "t")).toBe("t");
+    expect(githubTokenFor("http://127.0.0.1:8080", "t")).toBe("t");
+    expect(githubTokenFor("http://[::1]:8080", "t")).toBe("t");
+    expect(githubTokenFor("http://api.example.com", "t")).toBe("");
+    expect(githubTokenFor("http://localhost.evil.com", "t")).toBe("");
   });
 
   test("unknown method -> -32601; a malformed JSON line does not crash the server", async () => {

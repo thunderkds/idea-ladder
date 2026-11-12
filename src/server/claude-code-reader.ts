@@ -68,6 +68,8 @@ export type PickCoreFilesClaudeCodeInput = {
   limits: ReaderLimits;
   /** GitHub token for the MCP server's reads; optional (unauthenticated: 60 requests per hour). Never logged. */
   githubToken?: string;
+  /** GitHub API base for the MCP server's reads (config GITHUB_API_BASE_URL); unset = https://api.github.com. */
+  githubApiBaseUrl?: string;
   /** Called once per `claude -p` run with that run's total usage. */
   onUsage: (usage: CallUsage) => void;
   log?: (event: Record<string, unknown>) => void;
@@ -126,6 +128,7 @@ export async function pickCoreFilesClaudeCode(input: PickCoreFilesClaudeCodeInpu
                 READER_CALLS_FILE: callsFile,
                 READER_CALLS_START: String(start),
                 ...(input.githubToken ? { GITHUB_TOKEN: input.githubToken } : {}),
+                ...(input.githubApiBaseUrl ? { GITHUB_API_BASE_URL: input.githubApiBaseUrl } : {}),
               },
             },
           },

@@ -56,7 +56,13 @@ export type CostEntry = CallUsage & {
 /** Model A back end: `api` (AI SDK model) or `claude-code` (`claude -p` on the subscription, see AC 9). */
 export type ReaderDeps = { limits: ReaderLimits; logCost: (entry: CostEntry) => void } & (
   | { backend?: "api"; model: LanguageModel }
-  | { backend: "claude-code"; modelId?: string; githubToken?: string; claudeBin?: string }
+  | {
+      backend: "claude-code";
+      modelId?: string;
+      githubToken?: string;
+      githubApiBaseUrl?: string;
+      claudeBin?: string;
+    }
 );
 type Deps = { sql: SQL; github: GithubRepoClient; reader: ReaderDeps };
 
@@ -157,6 +163,7 @@ async function pickCoreFilesStep({ sql, github, reader }: Deps, { jobId }: Gener
               ...common,
               modelId: reader.modelId,
               githubToken: reader.githubToken,
+              githubApiBaseUrl: reader.githubApiBaseUrl,
               claudeBin: reader.claudeBin,
             })
           : await pickCoreFiles({ ...common, model: reader.model, readFile: cachedReadFile(sql, github, repo, sha) }));
