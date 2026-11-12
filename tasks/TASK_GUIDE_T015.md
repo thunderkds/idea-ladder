@@ -94,7 +94,7 @@ Source (`docs/REQUIREMENT_SOURCE.md`):
 
 ```bash
 # describe blocks of this task start with "T015"; Playwright runs against the production build
-pnpm install --frozen-lockfile && pnpm typecheck && pnpm lint && pnpm test -- -t "T015" && pnpm build && pnpm exec playwright test --grep T015
+bun install --frozen-lockfile && bun run typecheck && bun run lint && bun test -t "T015" && bun run build && bunx playwright test --grep T015
 ```
 
 ### Evidence (filled by reviewer at Stage 4/5)
@@ -180,7 +180,7 @@ Precache the app shell; cache the due-card payload (next 7 days of due cards) in
 | export / import handlers | new |
 | new migration (migrations folder set by T003) | push subscription table |
 | `package.json`, lockfile | `web-push` (exact pin), IndexedDB wrapper if needed |
-| tests (vitest, Playwright) | AC 1–7 |
+| tests (bun test, Playwright) | AC 1–7 |
 | `tasks/TASK_REVIEW_T015.md` | Evidence (reviewer) |
 
 ## Files Must NOT Touch
@@ -198,7 +198,7 @@ Precache the app shell; cache the due-card payload (next 7 days of due cards) in
 
 ## Test Plan
 
-Unit (vitest): queue ordering, `reviewedAt` validation, import merge rules, export schema. Integration (vitest + test Postgres + Inngest test engine, mocked `web-push`): sync, reminders, import negatives. E2E (Playwright, production build, offline context): install, offline review, reconnect sync, UI rows above. Manual on one real iPhone (iOS ≥ 16.4) after install: one push received — recorded in the review with a screenshot. Paste `pnpm test` and Playwright output into the report.
+Unit (bun test): queue ordering, `reviewedAt` validation, import merge rules, export schema. Integration (bun test + test Postgres + Inngest test engine, mocked `web-push`): sync, reminders, import negatives. E2E (Playwright, production build, offline context): install, offline review, reconnect sync, UI rows above. Manual on one real iPhone (iOS ≥ 16.4) after install: one push received — recorded in the review with a screenshot. Paste `bun test` and Playwright output into the report.
 
 ---
 
@@ -208,7 +208,7 @@ Unit (vitest): queue ordering, `reviewedAt` validation, import merge rules, expo
 - [ ] Self-review: `Skill({ skill: "code-review" })` run
 - [ ] Security review: `Skill({ skill: "security-review" })` run (Medium risk)
 - [ ] `Skill({ skill: "migration-safety" })` passed for the new migration
-- [ ] Lint passes (`pnpm lint`, `pnpm typecheck`)
+- [ ] Lint passes (`bun run lint`, `bun run typecheck`)
 - [ ] Tests written AND pass — output pasted into `tasks/TASK_REVIEW_T015.md` Evidence (Hard-Stop Gate 5)
 - [ ] UI Evidence rows (visual regression, design-system compliance, responsiveness) filled with pasted evidence (Hard-Stop Gate 6)
 - [ ] `Skill({ skill: "verify" })` run — headless auto verify

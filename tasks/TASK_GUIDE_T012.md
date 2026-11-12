@@ -89,7 +89,7 @@ Source (`docs/REQUIREMENT_SOURCE.md`):
 |---|---------------------|--------------------------|------------------|
 | 1 | Level with 12 verified + 5 unverified questions | attempt holds 10 questions, all verified; response JSON has no `key` field at any depth | integration test |
 | 2 | Answers with 8 correct; then a separate attempt with 7 correct | pass + next level unlocked + 1 evidence record; fail + 0 records + review card ids | integration test |
-| 3 | Stored evidence record with keys in another order | recomputed hash equals stored `hash`; changing `level` gives another hash | vitest (canonical JSON) |
+| 3 | Stored evidence record with keys in another order | recomputed hash equals stored `hash`; changing `level` gives another hash | bun test (canonical JSON) |
 | 4 | `UPDATE evidence_record SET level = 'L4'` | database error; row unchanged | integration test |
 | 5 | 4th attempt start within 24 h | 429 with `retryAt` | integration test with fake clock |
 | 6 | Submit at `started_at + 31 min`; second submit; answer for a foreign question id | each rejected; attempt and evidence unchanged | integration test |
@@ -99,7 +99,7 @@ Source (`docs/REQUIREMENT_SOURCE.md`):
 
 ```bash
 # describe blocks of this task start with "T012"
-pnpm install --frozen-lockfile && pnpm typecheck && pnpm lint && pnpm test -- -t "T012"
+bun install --frozen-lockfile && bun run typecheck && bun run lint && bun test -t "T012"
 ```
 
 ### Evidence (filled by reviewer at Stage 4/5)
@@ -150,7 +150,7 @@ Constants `MCQ_TEST_SIZE = 10`, `MCQ_PASS_MIN = 8` (80%, the same ratio as the d
 | evidence module with `canonicalJson`, `hashRecord`, `writeEvidenceRecord` | new; T013/T014/T019 reuse it |
 | pass-test config module | new: the 4 constants |
 | new migration (migrations folder set by T003) | attempt table, evidence table, append-only trigger, unique index |
-| tests (vitest + test Postgres) | AC 1–7 |
+| tests (bun test + test Postgres) | AC 1–7 |
 | `tasks/TASK_REVIEW_T012.md` | Evidence (reviewer) |
 
 ## Files Must NOT Touch
@@ -167,7 +167,7 @@ Constants `MCQ_TEST_SIZE = 10`, `MCQ_PASS_MIN = 8` (80%, the same ratio as the d
 
 ## Test Plan
 
-Unit (vitest): canonical JSON and hash (key order, NFC/NFD, excluded `hash`), scoring arithmetic, rate-limit window with a fake clock. Integration (vitest + test Postgres): full attempt → pass → unlock → evidence; fail path; append-only trigger; concurrency guards with two parallel submits; LLM client mocked to throw. Paste `pnpm test` output into the report.
+Unit (bun test): canonical JSON and hash (key order, NFC/NFD, excluded `hash`), scoring arithmetic, rate-limit window with a fake clock. Integration (bun test + test Postgres): full attempt → pass → unlock → evidence; fail path; append-only trigger; concurrency guards with two parallel submits; LLM client mocked to throw. Paste `bun test` output into the report.
 
 ---
 
@@ -177,7 +177,7 @@ Unit (vitest): canonical JSON and hash (key order, NFC/NFD, excluded `hash`), sc
 - [ ] Self-review: `Skill({ skill: "code-review" })` run
 - [ ] Security review: `Skill({ skill: "security-review" })` run (High risk)
 - [ ] `Skill({ skill: "migration-safety" })` passed for the new migration
-- [ ] Lint passes (`pnpm lint`, `pnpm typecheck`)
+- [ ] Lint passes (`bun run lint`, `bun run typecheck`)
 - [ ] Tests written AND pass — output pasted into `tasks/TASK_REVIEW_T012.md` Evidence (Hard-Stop Gate 5)
 - [ ] `Skill({ skill: "verify" })` run — headless auto verify
 - [ ] Supervisor notified: task ready for Stage 4 review

@@ -94,17 +94,17 @@ first half of the fixture and checked on the second half. If the second half sho
 
 | # | Given (input/state) | Expect (output/behavior) | How it's checked |
 |---|---------------------|--------------------------|------------------|
-| 1 | Stored concept `embeddings`; new concept `Embeddings` | slug match, same `ladderId` | vitest |
-| 2 | Stored `vector database`; new `vector DB` | embedding match if similarity ≥ `CONCEPT_MATCH_MIN`, else `null` | vitest (fixed embeddings fixture) |
-| 3 | Stored `Rust async`; new `Rust ownership` | `null` (no false merge) | vitest |
-| 4 | Second repo sharing 2 of 3 concepts | 2 reused, 1 drafted `unverified`; model counter shows L0 calls for 1 concept only | vitest (mocked model) |
-| 5 | Two parallel drafts of the same new concept | 1 concept ladder row | vitest (test DB) |
-| 6 | Second half of `concept-pairs.json` | 0 false merges; recall printed | `pnpm eval:concepts` |
+| 1 | Stored concept `embeddings`; new concept `Embeddings` | slug match, same `ladderId` | bun test |
+| 2 | Stored `vector database`; new `vector DB` | embedding match if similarity ≥ `CONCEPT_MATCH_MIN`, else `null` | bun test (fixed embeddings fixture) |
+| 3 | Stored `Rust async`; new `Rust ownership` | `null` (no false merge) | bun test |
+| 4 | Second repo sharing 2 of 3 concepts | 2 reused, 1 drafted `unverified`; model counter shows L0 calls for 1 concept only | bun test (mocked model) |
+| 5 | Two parallel drafts of the same new concept | 1 concept ladder row | bun test (test DB) |
+| 6 | Second half of `concept-pairs.json` | 0 false merges; recall printed | `bun run eval:concepts` |
 
 ### Verification Command (exact, runnable)
 
 ```bash
-pnpm install --frozen-lockfile && pnpm db:migrate && pnpm test -- concept-ladder && pnpm eval:concepts && pnpm lint
+bun install --frozen-lockfile && bun run db:migrate && bun test concept-ladder && bun run eval:concepts && bun run lint
 ```
 
 ### Evidence (filled by reviewer at Stage 4/5)
@@ -158,7 +158,7 @@ threshold favours precision. Run `Skill({ skill: "migration-safety" })` for the 
 | generation pipeline module from T008 (app layout set by T003, see `memory/codebase-map.md` once mapped) | concept step: lookup, reuse, draft-once |
 | new concept ladder module | `findConceptLadder`, slug rule, upsert |
 | new migration in T003's migrations folder | `concept_ladders`, `ladder_concepts`, backfill |
-| evals folder from T004 | `concept-pairs.json` fixture (labels from the Supervisor), `pnpm eval:concepts` script |
+| evals folder from T004 | `concept-pairs.json` fixture (labels from the Supervisor), `bun run eval:concepts` script |
 | tests for the concept ladder module | AC 1–7 |
 | `tasks/TASK_REVIEW_T022.md` | Evidence (reviewer) |
 
@@ -176,9 +176,9 @@ threshold favours precision. Run `Skill({ skill: "migration-safety" })` for the 
 
 ## Test Plan
 
-vitest unit tests for the slug rule and the matcher on fixed embeddings (Success 1–3). Integration tests on the
+bun test unit tests for the slug rule and the matcher on fixed embeddings (Success 1–3). Integration tests on the
 test Postgres + pgvector for reuse, draft-once and concurrency with a mocked model counter (Success 4–5). Eval run
-`pnpm eval:concepts` on the labelled pairs (Success 6). Real run: generate two golden-set repos that share a
+`bun run eval:concepts` on the labelled pairs (Success 6). Real run: generate two golden-set repos that share a
 concept and paste the DB rows showing one shared concept ladder.
 
 ---
@@ -189,7 +189,7 @@ concept and paste the DB rows showing one shared concept ladder.
 - [ ] Self-review: `Skill({ skill: "code-review" })` run
 - [ ] Security review: `Skill({ skill: "security-review" })` run (Medium risk)
 - [ ] `Skill({ skill: "migration-safety" })` run (new tables + backfill)
-- [ ] Lint passes (`pnpm lint`, `tsc --noEmit`)
+- [ ] Lint passes (`bun run lint`, `tsc --noEmit`)
 - [ ] Tests written AND pass — output pasted into `tasks/TASK_REVIEW_T022.md` Evidence (Hard-Stop Gate 5)
 - [ ] `Skill({ skill: "verify" })` run — headless auto verify
 - [ ] Supervisor notified: task ready for Stage 4 review

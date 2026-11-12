@@ -77,7 +77,7 @@ Conflict reading C2 (`docs/MAIN_FLOW.md` § 5): "v1 = plain signed JSON (T001 te
 | 1 | `issueOpenBadgeCredential` produces a credential with `@context` = the VC 2.0 context then the OB 3.0 context (exact URLs copied from the 1EdTech OB 3.0 spec, not guessed), `type` = `["VerifiableCredential", "OpenBadgeCredential"]`, `issuer` = an OB `Profile` with `id`, `credentialSubject.achievement` describing the ladder (repo + pinned SHA), and `evidence[]` with one entry per passed level whose `id` is the evidence record URL and which carries the record's SHA-256 hash. | "OB 3.0 credential ... listing the evidence URLs" |
 | 2 | The credential validates against the OB 3.0 JSON Schema for `AchievementCredential`/`OpenBadgeCredential` published by 1EdTech (schema file vendored with its source URL and retrieval date). | "Open Badges 3.0" |
 | 3 | The credential is secured with the mechanism chosen in the brainstorm (Data Integrity `eddsa-rdfc-2022` or VC-JOSE-COSE with EdDSA), signed with the T019 issuer key or a new key published in the issuer's verification document; an independent library (not the issuing code) verifies it in a test. | "signed with the issuer key"; "Portable, cryptographically verifiable proof" |
-| 4 | `credentialStatus` is a `BitstringStatusListEntry` pointing at a `BitstringStatusListCredential` the app serves and signs; revoking (`pnpm revoke-credential`) flips the bit, and the independent verifier then reports the credential revoked. | "VC status list" |
+| 4 | `credentialStatus` is a `BitstringStatusListEntry` pointing at a `BitstringStatusListCredential` the app serves and signs; revoking (`bun run revoke-credential`) flips the bit, and the independent verifier then reports the credential revoked. | "VC status list" |
 | 5 | Every tamper case from T019 AC 3 applied to an OB 3.0 credential makes verification fail. | NFR-002 |
 | 6 | The verify page (T020) accepts both formats: a v1 plain signed JSON credential still shows `Signature valid` with its v1 key; an OB 3.0 credential shows the same verdict lines; the live GitHub re-check runs for both. T020's existing e2e tests pass unchanged. | "upgrade at v2" without breaking v1 proofs |
 | 7 | With `CREDENTIAL_FORMAT` unset the app keeps issuing v1 credentials (default stays v1 until the user switches); with `ob3` it issues OB 3.0. | safe rollout |
@@ -91,18 +91,18 @@ Conflict reading C2 (`docs/MAIN_FLOW.md` § 5): "v1 = plain signed JSON (T001 te
 
 | # | Given (input/state) | Expect (output/behavior) | How it's checked |
 |---|---------------------|--------------------------|------------------|
-| 1 | Completed test ladder, `CREDENTIAL_FORMAT=ob3` | credential passes the vendored OB 3.0 JSON Schema | vitest (ajv) |
-| 2 | Same credential | independent verifier library → verified | vitest |
-| 3 | Same credential, `credentialSubject.achievement.name` changed | verifier → not verified | vitest |
-| 4 | `pnpm revoke-credential <id>` | independent verifier → status revoked | vitest + command run |
+| 1 | Completed test ladder, `CREDENTIAL_FORMAT=ob3` | credential passes the vendored OB 3.0 JSON Schema | bun test (ajv) |
+| 2 | Same credential | independent verifier library → verified | bun test |
+| 3 | Same credential, `credentialSubject.achievement.name` changed | verifier → not verified | bun test |
+| 4 | `bun run revoke-credential <id>` | independent verifier → status revoked | bun test + command run |
 | 5 | v1 credential from T019 fixtures on `/verify/:credentialId` | `Signature valid` | Playwright (T020 suite) |
-| 6 | Credential with an extra unknown `@context` URL | `unknown-context`, not verified, no network request | vitest (network blocked) |
-| 7 | `CREDENTIAL_FORMAT` unset | v1 credential issued | vitest |
+| 6 | Credential with an extra unknown `@context` URL | `unknown-context`, not verified, no network request | bun test (network blocked) |
+| 7 | `CREDENTIAL_FORMAT` unset | v1 credential issued | bun test |
 
 ### Verification Command (exact, runnable)
 
 ```bash
-pnpm install --frozen-lockfile && pnpm db:migrate && pnpm test -- credential && pnpm test -- openbadge && pnpm test:e2e -- verify-page && pnpm lint
+bun install --frozen-lockfile && bun run db:migrate && bun test credential && bun test openbadge && bun run test:e2e -- verify-page && bun run lint
 ```
 
 ### Evidence (filled by reviewer at Stage 4/5)
@@ -119,7 +119,7 @@ pnpm install --frozen-lockfile && pnpm db:migrate && pnpm test -- credential && 
 
 ## Approach
 
-**Pattern reference**: T019's credential module (issuance call site, idempotency, status list, `pnpm revoke-credential`) and its tamper-case test list; T020's verify page for the format switch.
+**Pattern reference**: T019's credential module (issuance call site, idempotency, status list, `bun run revoke-credential`) and its tamper-case test list; T020's verify page for the format switch.
 
 **Vital slice**: one schema-valid, independently verifiable OB 3.0 credential with a working status list entry, and v1 credentials still verifying.
 **Cut list**:
@@ -178,7 +178,7 @@ append-only next to v1 rows with a `format` column; run `Skill({ skill: "migrati
 
 ## Test Plan
 
-vitest: schema validation (ajv on the vendored schema), independent-library verification, tamper cases,
+bun test: schema validation (ajv on the vendored schema), independent-library verification, tamper cases,
 status list revoke, unknown context with network blocked (Success 1–4, 6, 7). Playwright: T020's verify-page
 suite plus one OB 3.0 credential (Success 5). Adversarial verify (C3): a second agent tries to forge or
 replay a credential and to make the verify page accept a revoked one. Real run: issue one OB 3.0 credential
@@ -192,7 +192,7 @@ on the dev DB, verify it with the independent library from a separate script, pa
 - [ ] Self-review: `Skill({ skill: "code-review" })` run
 - [ ] Security review: `Skill({ skill: "security-review" })` run (High risk)
 - [ ] `Skill({ skill: "migration-safety" })` run (credential format column, status list storage)
-- [ ] Lint passes (`pnpm lint`, `tsc --noEmit`)
+- [ ] Lint passes (`bun run lint`, `tsc --noEmit`)
 - [ ] Tests written AND pass — output pasted into `tasks/TASK_REVIEW_T024.md` Evidence (Hard-Stop Gate 5)
 - [ ] `Skill({ skill: "verify" })` run — headless auto verify (adversarial at C3)
 - [ ] Supervisor notified: task ready for Stage 4 review

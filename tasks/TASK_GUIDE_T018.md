@@ -91,7 +91,7 @@ Supervisor recommendation: A if T003 chose a framework the serverless host suppo
 - T016 — question flag
 - T017 — cost cap value (set in production config)
 
-**Entry point**: `pnpm metrics:gate2` (script) and `pnpm smoke:prod` (script); `Did anyone help you pass this level?` (prompt label shown after an L1 pass)
+**Entry point**: `bun run metrics:gate2` (script) and `bun run smoke:prod` (script); `Did anyone help you pass this level?` (prompt label shown after an L1 pass)
 
 ---
 
@@ -101,9 +101,9 @@ Supervisor recommendation: A if T003 chose a framework the serverless host suppo
 |---|----------------------|-----------------------|
 | 1 | The app runs on the chosen host over HTTPS. All migrations are applied to the production database after `Skill({ skill: "migration-safety" })` passes and after a database backup is taken; `pgvector` is enabled. | "v1 MVP PWA ... URL to ladder, review; pass tests, offline, push" |
 | 2 | Secrets (database URL, GitHub OAuth client secret, GitHub app token, model A and model B API keys, Inngest signing and event keys, VAPID private key, the T017 cost cap) live only in the host's secret store; `git grep` finds none of them in the repo, and the client bundle contains none except the VAPID public key and the OAuth client id. | secrets never committed (PROJECT_SPEC § Critical Constraints) |
-| 3 | `pnpm smoke:prod` against the production URL passes: health check reports database and Inngest reachable; sign-in redirects to GitHub OAuth with the production callback; `/start?url=https://github.com/lukeed/dset` answers 202 with a job id (or the cached ladder) in < 500 ms; the service worker and manifest are served; a test push reaches the owner's subscribed device. | NFR-001, NFR-003, NFR-005, FR-014 |
+| 3 | `bun run smoke:prod` against the production URL passes: health check reports database and Inngest reachable; sign-in redirects to GitHub OAuth with the production callback; `/start?url=https://github.com/lukeed/dset` answers 202 with a job id (or the cached ladder) in < 500 ms; the service worker and manifest are served; a test push reaches the owner's subscribed device. | NFR-001, NFR-003, NFR-005, FR-014 |
 | 4 | After an L1 pass, the learner sees one optional prompt `Did anyone help you pass this level?` with `No, on my own` / `Yes, I got help`; the answer is stored once per learner + ladder. Skipping stores nothing. | "Others finish L1 without your help" |
-| 5 | `pnpm metrics:gate2` uses a read-only database role and prints: learners other than the owner (by GitHub id in `OWNER_GITHUB_ID`) who started a ladder; who passed L1 (an L1 evidence record); of those, answered "No, on my own" / "Yes" / no answer; median days from ladder start to L1 pass. No learner names or logins are printed, only counts. | Gate 2 "other learners finish L1 without help" |
+| 5 | `bun run metrics:gate2` uses a read-only database role and prints: learners other than the owner (by GitHub id in `OWNER_GITHUB_ID`) who started a ladder; who passed L1 (an L1 evidence record); of those, answered "No, on my own" / "Yes" / no answer; median days from ladder start to L1 pass. No learner names or logins are printed, only counts. | Gate 2 "other learners finish L1 without help" |
 | 6 | Negative: the owner's own L1 passes are never counted; a learner with an L1 pass but no answer is counted as "no answer", never as "on my own". The script run with a write-capable role fails at start. | Gate 2 "others", "without help" |
 | 7 | Rollback is proven once: deploy a previous build and roll back to it on the host, and record the steps and time taken in the review. The app does not depend on Idea Radar at runtime (the deployed app works with Radar offline). | ship readiness; § Architecture independence test |
 
@@ -115,10 +115,10 @@ Supervisor recommendation: A if T003 chose a framework the serverless host suppo
 
 | # | Given (input/state) | Expect (output/behavior) | How it's checked |
 |---|---------------------|--------------------------|------------------|
-| 1 | Test DB seeded with owner + 4 learners: 3 passed L1 (answers: no help, help, none), 1 started only | output: started 4, passed L1 3, on my own 1, got help 1, no answer 1; owner excluded | vitest (integration, test Postgres) |
+| 1 | Test DB seeded with owner + 4 learners: 3 passed L1 (answers: no help, help, none), 1 started only | output: started 4, passed L1 3, on my own 1, got help 1, no answer 1; owner excluded | bun test (integration, test Postgres) |
 | 2 | `metrics:gate2` with a role that has INSERT rights | exits non-zero with `role-not-read-only` | integration test |
 | 3 | Help prompt answered twice for one ladder | one stored answer (the first) | integration test |
-| 4 | Production URL | `pnpm smoke:prod` all checks pass | command run against production |
+| 4 | Production URL | `bun run smoke:prod` all checks pass | command run against production |
 | 5 | Repo after deploy | `git grep` for each secret value returns nothing | command run |
 | 6 | Rollback drill | previous build live, then current build live again; steps recorded | manual, recorded in review |
 
@@ -126,9 +126,9 @@ Supervisor recommendation: A if T003 chose a framework the serverless host suppo
 
 ```bash
 # describe blocks of this task start with "T018"
-pnpm install --frozen-lockfile && pnpm typecheck && pnpm lint && pnpm test -- -t "T018" && pnpm exec playwright test --grep T018
+bun install --frozen-lockfile && bun run typecheck && bun run lint && bun test -t "T018" && bunx playwright test --grep T018
 # ci: skip — production checks: need the production URL, read-only DB role and the owner's push device
-PROD_URL="$PROD_URL" pnpm smoke:prod && DATABASE_URL="$GATE2_READONLY_DATABASE_URL" pnpm metrics:gate2
+PROD_URL="$PROD_URL" bun run smoke:prod && DATABASE_URL="$GATE2_READONLY_DATABASE_URL" bun run metrics:gate2
 ```
 
 ### Evidence (filled by reviewer at Stage 4/5)
@@ -176,14 +176,14 @@ PROD_URL="$PROD_URL" pnpm smoke:prod && DATABASE_URL="$GATE2_READONLY_DATABASE_U
 
 **Pattern reference**: T003's CI workflow and migration runner (reuse them for the production deploy, do not write a second runner); `experiments/core-spike/src/report.ts` — a script that prints counts with explicit known limits.
 
-**Vital slice**: a working production deploy + `pnpm metrics:gate2` that counts others' L1 passes with the help answer.
+**Vital slice**: a working production deploy + `bun run metrics:gate2` that counts others' L1 passes with the help answer.
 **Cut list**:
 - staging environment (one production environment; CI runs tests before deploy)
 - custom domain
 - uptime monitoring service (the host's built-in health check only)
 - a metrics dashboard page (the script output is the Gate 2 report)
 
-Order: backup → migrations (migration-safety gate) → deploy → register Inngest app with the production URL → update the GitHub OAuth app callback → `pnpm smoke:prod`. The help-prompt table is one new migration (learner id, ladder id, answer, answered_at; unique learner + ladder). `metrics:gate2` checks at start that the role cannot write (`has_table_privilege(... 'INSERT')` false on the evidence and help tables). The script's output ends with known limits: self-report can be wrong; "without help" is not observable by code. Hand the deployed facts (host, URLs, env var names, rollback steps) to the Supervisor for `Skill({ skill: "ship" })`; do not write the runbook here.
+Order: backup → migrations (migration-safety gate) → deploy → register Inngest app with the production URL → update the GitHub OAuth app callback → `bun run smoke:prod`. The help-prompt table is one new migration (learner id, ladder id, answer, answered_at; unique learner + ladder). `metrics:gate2` checks at start that the role cannot write (`has_table_privilege(... 'INSERT')` false on the evidence and help tables). The script's output ends with known limits: self-report can be wrong; "without help" is not observable by code. Hand the deployed facts (host, URLs, env var names, rollback steps) to the Supervisor for `Skill({ skill: "ship" })`; do not write the runbook here.
 
 ---
 
@@ -205,12 +205,12 @@ Order: backup → migrations (migration-safety gate) → deploy → register Inn
 |------|--------|
 | host deploy config (file depends on the chosen host, e.g. `vercel.json`, `fly.toml` or `docker-compose.prod.yml`) | new |
 | CI workflow from T003 | add deploy job after tests pass on `main` |
-| `pnpm smoke:prod` script | new |
-| `pnpm metrics:gate2` script | new |
+| `bun run smoke:prod` script | new |
+| `bun run metrics:gate2` script | new |
 | L1 help prompt component + its server handler | new |
 | new migration (migrations folder set by T003) | help-answer table; read-only role grant |
 | `.env.example` | add new env var names (no values) |
-| tests (vitest, Playwright) | AC 4–6 |
+| tests (bun test, Playwright) | AC 4–6 |
 | `tasks/TASK_REVIEW_T018.md` | Evidence (reviewer) |
 
 ## Files Must NOT Touch
@@ -228,7 +228,7 @@ Order: backup → migrations (migration-safety gate) → deploy → register Inn
 
 ## Test Plan
 
-Integration (vitest + test Postgres): `metrics:gate2` counts on seeded data, owner exclusion, "no answer" rule, read-only role check; help-answer uniqueness. E2E (Playwright, local): help prompt and the UI rows above. Production: `pnpm smoke:prod`, secret grep, rollback drill, one real push to the owner's device — outputs and timings pasted into the review. Paste `pnpm test` and Playwright output into the report.
+Integration (bun test + test Postgres): `metrics:gate2` counts on seeded data, owner exclusion, "no answer" rule, read-only role check; help-answer uniqueness. E2E (Playwright, local): help prompt and the UI rows above. Production: `bun run smoke:prod`, secret grep, rollback drill, one real push to the owner's device — outputs and timings pasted into the review. Paste `bun test` and Playwright output into the report.
 
 ---
 
@@ -238,7 +238,7 @@ Integration (vitest + test Postgres): `metrics:gate2` counts on seeded data, own
 - [ ] Self-review: `Skill({ skill: "code-review" })` run
 - [ ] Security review: `Skill({ skill: "security-review" })` run (Medium risk)
 - [ ] `Skill({ skill: "migration-safety" })` passed before the production migrations
-- [ ] Lint passes (`pnpm lint`, `pnpm typecheck`)
+- [ ] Lint passes (`bun run lint`, `bun run typecheck`)
 - [ ] Tests written AND pass — output pasted into `tasks/TASK_REVIEW_T018.md` Evidence (Hard-Stop Gate 5)
 - [ ] UI Evidence rows (visual regression, design-system compliance, responsiveness) filled with pasted evidence (Hard-Stop Gate 6)
 - [ ] `Skill({ skill: "verify" })` run — headless auto verify

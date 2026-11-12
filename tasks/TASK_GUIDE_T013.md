@@ -104,13 +104,13 @@ Supervisor recommendation: A (the only option that keeps L1 inside "GitHub-check
 | 4 | PR with `merged: false` | `pr-not-merged`; no record | integration test |
 | 5 | Mocked 403 + `x-ratelimit-remaining: 0` mid-verification | 503 with `retryAt`; no rows | integration test |
 | 6 | (Option A) gist created before the nonce, or missing the nonce | rejected; L2 still locked | integration test |
-| 7 | Branch URL `https://github.com.evil.io/...` or `http://` scheme | rejected as invalid input before any fetch | vitest |
+| 7 | Branch URL `https://github.com.evil.io/...` or `http://` scheme | rejected as invalid input before any fetch | bun test |
 
 ### Verification Command (exact, runnable)
 
 ```bash
 # describe blocks of this task start with "T013"; GitHub calls replay recorded fixtures (no network)
-pnpm install --frozen-lockfile && pnpm typecheck && pnpm lint && pnpm test -- -t "T013"
+bun install --frozen-lockfile && bun run typecheck && bun run lint && bun test -t "T013"
 ```
 
 ### Evidence (filled by reviewer at Stage 4/5)
@@ -161,7 +161,7 @@ Parse URLs with `new URL()` and an exact host check `github.com`; reject anythin
 | GitHub client from T005 | add compare, pulls, gists calls |
 | new migration (migrations folder set by T003) | artifact table; L1 nonce table |
 | recorded GitHub fixtures for tests | new |
-| tests (vitest + test Postgres) | AC 1–7 |
+| tests (bun test + test Postgres) | AC 1–7 |
 | `tasks/TASK_REVIEW_T013.md` | Evidence (reviewer) |
 
 ## Files Must NOT Touch
@@ -178,7 +178,7 @@ Parse URLs with `new URL()` and an exact host check `github.com`; reject anythin
 
 ## Test Plan
 
-Unit (vitest): URL parsing (valid, foreign host, wrong scheme, branch with `/`), 3-sentence rule. Integration (vitest + test Postgres + recorded GitHub fixtures): every AC row and every edge case above. A one-off `pnpm record-fixtures:t013` script refreshes fixtures from live GitHub; tests never call the network. Paste `pnpm test` output into the report.
+Unit (bun test): URL parsing (valid, foreign host, wrong scheme, branch with `/`), 3-sentence rule. Integration (bun test + test Postgres + recorded GitHub fixtures): every AC row and every edge case above. A one-off `bun run record-fixtures:t013` script refreshes fixtures from live GitHub; tests never call the network. Paste `bun test` output into the report.
 
 ---
 
@@ -188,7 +188,7 @@ Unit (vitest): URL parsing (valid, foreign host, wrong scheme, branch with `/`),
 - [ ] Self-review: `Skill({ skill: "code-review" })` run
 - [ ] Security review: `Skill({ skill: "security-review" })` run (High risk)
 - [ ] `Skill({ skill: "migration-safety" })` passed for the new migration
-- [ ] Lint passes (`pnpm lint`, `pnpm typecheck`)
+- [ ] Lint passes (`bun run lint`, `bun run typecheck`)
 - [ ] Tests written AND pass — output pasted into `tasks/TASK_REVIEW_T013.md` Evidence (Hard-Stop Gate 5)
 - [ ] `Skill({ skill: "verify" })` run — headless auto verify
 - [ ] Supervisor notified: task ready for Stage 4 review

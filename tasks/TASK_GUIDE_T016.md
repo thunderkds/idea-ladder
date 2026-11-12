@@ -89,7 +89,7 @@ Source (`docs/REQUIREMENT_SOURCE.md`):
 
 ```bash
 # describe blocks of this task start with "T016"
-pnpm install --frozen-lockfile && pnpm typecheck && pnpm lint && pnpm test -- -t "T016" && pnpm exec playwright test --grep T016
+bun install --frozen-lockfile && bun run typecheck && bun run lint && bun test -t "T016" && bunx playwright test --grep T016
 ```
 
 ### Evidence (filled by reviewer at Stage 4/5)
@@ -165,7 +165,7 @@ pnpm install --frozen-lockfile && pnpm typecheck && pnpm lint && pnpm test -- -t
 | review queue query (T011) and MCQ pool draw (T012) | filter flagged-by-learner and `removed` |
 | review card and MCQ components | add the flag button and confirmation |
 | new migration (migrations folder set by T003) | flag table; `removed` status |
-| tests (vitest, Playwright) | AC 1–6 |
+| tests (bun test, Playwright) | AC 1–6 |
 | `tasks/TASK_REVIEW_T016.md` | Evidence (reviewer) |
 
 ## Files Must NOT Touch
@@ -183,7 +183,7 @@ pnpm install --frozen-lockfile && pnpm typecheck && pnpm lint && pnpm test -- -t
 
 ## Test Plan
 
-Integration (vitest + test Postgres + Inngest test engine): every Success Criteria row 1–5 and the concurrency edge case (two parallel flags at count 2). E2E (Playwright): row 6 and the UI rows above. Paste `pnpm test` and Playwright output into the report.
+Integration (bun test + test Postgres + Inngest test engine): every Success Criteria row 1–5 and the concurrency edge case (two parallel flags at count 2). E2E (Playwright): row 6 and the UI rows above. Paste `bun test` and Playwright output into the report.
 
 ---
 
@@ -192,7 +192,7 @@ Integration (vitest + test Postgres + Inngest test engine): every Success Criter
 - [ ] Implementation done
 - [ ] Self-review: `Skill({ skill: "code-review" })` run
 - [ ] `Skill({ skill: "migration-safety" })` passed for the new migration
-- [ ] Lint passes (`pnpm lint`, `pnpm typecheck`)
+- [ ] Lint passes (`bun run lint`, `bun run typecheck`)
 - [ ] Tests written AND pass — output pasted into `tasks/TASK_REVIEW_T016.md` Evidence (Hard-Stop Gate 5)
 - [ ] UI Evidence rows (visual regression, design-system compliance, responsiveness) filled with pasted evidence (Hard-Stop Gate 6)
 - [ ] `Skill({ skill: "verify" })` run — headless auto verify

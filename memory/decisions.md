@@ -23,7 +23,7 @@
 ### 2026-11-12 — v1 stack: Bun, React, Postgres + pgvector; Claude subscription for lesson generation
 **Decision**: Server and tooling on Bun (runtime, package manager, `bun test`; replaces Node, pnpm and vitest in the v1 plan). Client in React, built with Vite as a PWA. Database stays Postgres + pgvector. Vercel AI SDK and Inngest stay. Model A generation goes through one `generate` interface with two back ends: `claude-code` (headless `claude -p` on the owner's Claude subscription) while only the owner starts generations, and `api` (API key) before any other learner does (T018 / Gate 2). Model B and embeddings always use API keys: the subscription is Claude only, and model B must be a different provider.
 **Why**: User choice 2026-11-12 ("Bun for BE, React base for FE, Postgres and pgvector, using the Claude subscription to generate the lesson if possible"). The subscription limit is the Supervisor's reading that subscription sign-in is for the owner's own use; check Anthropic's current terms before relying on it. Open risk: Inngest on Bun is not proven (T003 smoke check).
-**Files**: PROJECT_SPEC.md, tasks/TASK_GUIDE_T003.md, tasks/TASK_GUIDE_T008.md, tasks/TASK_GUIDE_T009.md, tasks/TASK_GUIDE_T017.md. Not yet amended: T004–T007, T010–T016, T018–T030 still say pnpm / vitest in places; each takes its commands from T003's scripts.
+**Files**: PROJECT_SPEC.md, tasks/TASK_GUIDE_T003.md, tasks/TASK_GUIDE_T008.md, tasks/TASK_GUIDE_T009.md, tasks/TASK_GUIDE_T017.md. The other open guides (T004–T007, T010–T016, T018–T030) got the same command swap on 2026-11-12 (pnpm → bun, vitest → bun test, pnpm exec → bunx); T001 and T002 are done and unchanged.
 
 ## Infrastructure
 

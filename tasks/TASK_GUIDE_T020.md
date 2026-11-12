@@ -94,12 +94,12 @@ live, so that I trust the proof without trusting the AI."
 | 4 | GitHub mock returns 403 + `x-ratelimit-remaining: 0` | rows `Could not check`, reset time shown; no `Changed` | Playwright |
 | 5 | GitHub mock: L2 branch deleted | L2 row `Changed: branch not found` | Playwright |
 | 6 | Credential field value `<script>alert(1)</script>` | text shown literally, no dialog fired | Playwright |
-| 7 | Canonical JSON + hash in browser module vs T019 server module on 20 fixture credentials | identical hashes | vitest |
+| 7 | Canonical JSON + hash in browser module vs T019 server module on 20 fixture credentials | identical hashes | bun test |
 
 ### Verification Command (exact, runnable)
 
 ```bash
-pnpm install --frozen-lockfile && pnpm test -- verify && pnpm test:e2e -- verify-page && pnpm lint
+bun install --frozen-lockfile && bun test verify && bun run test:e2e -- verify-page && bun run lint
 ```
 
 ### Evidence (filled by reviewer at Stage 4/5)
@@ -198,7 +198,7 @@ tests with Playwright `page.route`; tests never hit the network.
 
 ## Test Plan
 
-vitest: parity test of browser vs server canonical JSON/hash on fixtures (Success 7). Playwright e2e with mocked
+bun test: parity test of browser vs server canonical JSON/hash on fixtures (Success 7). Playwright e2e with mocked
 API and GitHub routes for each state (Success 1–6), screenshots at 360/768/1280 px for the UI section, LLM-vision
 verdict on each screenshot. Real run: `Skill({ skill: "run" })`, open a credential issued by T019 on the dev
 DB, paste the screenshot and the browser console (no errors).
@@ -210,7 +210,7 @@ DB, paste the screenshot and the browser console (no errors).
 - [ ] Implementation done
 - [ ] Self-review: `Skill({ skill: "code-review" })` run
 - [ ] Security review: `Skill({ skill: "security-review" })` run (High risk)
-- [ ] Lint passes (`pnpm lint`, `tsc --noEmit`)
+- [ ] Lint passes (`bun run lint`, `tsc --noEmit`)
 - [ ] Tests written AND pass — output pasted into `tasks/TASK_REVIEW_T020.md` Evidence (Hard-Stop Gate 5)
 - [ ] UI / Design Evidence rows filled with screenshots and verdicts (Hard-Stop Gate 6)
 - [ ] `Skill({ skill: "verify" })` run — headless auto verify

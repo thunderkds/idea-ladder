@@ -60,7 +60,7 @@ Gate 3: "first outside ladder PR".
 ## Dependencies & Reachability
 
 **Depends on**: T022 — the concept ladder data model (slug, title, version, L0 test, status) that each content file must map to one-to-one
-**Entry point**: `pnpm validate-ladders` (script in the content repo scaffold's `package.json`, run by its CI workflow `validate-ladders`)
+**Entry point**: `bun run validate-ladders` (script in the content repo scaffold's `package.json`, run by its CI workflow `validate-ladders`)
 
 > v3 task: planned only. Pickup waits for Gate 3 ("Proof links get shared; first outside ladder PR"). Gate 3 counts an outside ladder PR, which needs this repo: the Supervisor settles that order with the user before pickup.
 
@@ -72,7 +72,7 @@ Gate 3: "first outside ladder PR".
 |---|----------------------|-----------------------|
 | 1 | The scaffold lives in `community-ladders/` as a self-contained repo root (own `package.json`, lockfile, `README.md`, `CONTRIBUTING.md`, `LICENSE`, `.github/workflows/validate-ladders.yml`), so it can be pushed as its own GitHub repo unchanged. | "Community ladders in a Git repo" |
 | 2 | One file per concept ladder at `ladders/<slug>.yaml`, validated by a JSON Schema `schema/concept-ladder.schema.json` with `schemaVersion`; required: `slug` (equals the file name), `title`, `version` (integer), `authors` (GitHub logins), `levels` L0–L4 each with `goal`, `passTest` and `cards[]`, and `sources[]` (URLs) per card. | "CI-validated"; maps to T022's model |
-| 3 | `pnpm validate-ladders` exits 0 on the 2 example ladders and non-zero with `<file>:<path>: <message>` lines on each fixture in `test/invalid/` (missing level, slug ≠ file name, duplicate card id, card without a source, non-HTTPS source, unknown field). | "CI-validated" |
+| 3 | `bun run validate-ladders` exits 0 on the 2 example ladders and non-zero with `<file>:<path>: <message>` lines on each fixture in `test/invalid/` (missing level, slug ≠ file name, duplicate card id, card without a source, non-HTTPS source, unknown field). | "CI-validated" |
 | 4 | Content rules beyond the schema: a card text longer than 600 characters, a fenced code block longer than 5 lines, or a card that repeats ≥ 200 consecutive characters of a linked source fixture fails with rule id `original-text`. | NFR-006 / § Grill #9 "cards are original text only" |
 | 5 | A ladder whose `topics` include a sensitive field (`money`, `health`, `medical`, `legal`) must give every card a `sources[]` entry and the PR gets the label `stricter-review` from the workflow; missing sources fail. | § Grill #10 "required citations, stricter review" |
 | 6 | The CI workflow runs on `pull_request` with read-only permissions (`permissions: contents: read`, plus `pull-requests: write` only for the label step), pins every action to a commit SHA, and never runs code from the PR outside the validator (no `pull_request_target`). | safe CI for outside PRs |
@@ -86,17 +86,17 @@ Gate 3: "first outside ladder PR".
 
 | # | Given (input/state) | Expect (output/behavior) | How it's checked |
 |---|---------------------|--------------------------|------------------|
-| 1 | 2 example ladders | exit 0 | `pnpm validate-ladders` |
-| 2 | Each `test/invalid/*.yaml` fixture | non-zero, one `<file>:<path>: <message>` line naming the expected rule | vitest |
-| 3 | Card copying 250 chars of a source fixture | `original-text` failure | vitest |
-| 4 | `money` topic ladder with a card missing `sources` | failure | vitest |
-| 5 | Changed `levels` with the same `version` vs a base copy | `version-not-bumped` | vitest (two directories) |
-| 6 | Workflow file | `actionlint` passes; every `uses:` is a 40-hex SHA; no `pull_request_target` | `pnpm lint:workflow` |
+| 1 | 2 example ladders | exit 0 | `bun run validate-ladders` |
+| 2 | Each `test/invalid/*.yaml` fixture | non-zero, one `<file>:<path>: <message>` line naming the expected rule | bun test |
+| 3 | Card copying 250 chars of a source fixture | `original-text` failure | bun test |
+| 4 | `money` topic ladder with a card missing `sources` | failure | bun test |
+| 5 | Changed `levels` with the same `version` vs a base copy | `version-not-bumped` | bun test (two directories) |
+| 6 | Workflow file | `actionlint` passes; every `uses:` is a 40-hex SHA; no `pull_request_target` | `bun run lint:workflow` |
 
 ### Verification Command (exact, runnable)
 
 ```bash
-cd community-ladders && pnpm install --frozen-lockfile && pnpm test && pnpm validate-ladders && pnpm lint:workflow
+cd community-ladders && bun install --frozen-lockfile && bun test && bun run validate-ladders && bun run lint:workflow
 ```
 
 ### Evidence (filled by reviewer at Stage 4/5)
@@ -115,7 +115,7 @@ cd community-ladders && pnpm install --frozen-lockfile && pnpm test && pnpm vali
 
 **Pattern reference**: `experiments/v0-kit/` — the L0–L4 ladder structure and card style already used in v0 (read, do not import); T022's `concept_ladders` model for field names.
 
-**Vital slice**: the schema + `pnpm validate-ladders` + the CI workflow on `pull_request`.
+**Vital slice**: the schema + `bun run validate-ladders` + the CI workflow on `pull_request`.
 **Cut list**:
 - a website rendering the ladders (roadmap.sh style)
 - automated similarity check against the live web (only against linked source fixtures)
@@ -170,7 +170,7 @@ Supervisor moves it to its own board.
 
 ## Test Plan
 
-vitest unit tests per rule with valid and invalid fixtures (Success 2–5); `pnpm validate-ladders` on the
+bun test unit tests per rule with valid and invalid fixtures (Success 2–5); `bun run validate-ladders` on the
 examples (Success 1); `actionlint` on the workflow (Success 6). Real run: run the workflow locally with `act` if
 available, otherwise paste the validator output on a deliberately broken branch copy.
 
@@ -181,7 +181,7 @@ available, otherwise paste the validator output on a deliberately broken branch 
 - [ ] Implementation done
 - [ ] Self-review: `Skill({ skill: "code-review" })` run
 - [ ] Security review: `Skill({ skill: "security-review" })` run (Medium risk — CI on outside PRs)
-- [ ] Lint passes (`pnpm lint`, `tsc --noEmit`, `actionlint`)
+- [ ] Lint passes (`bun run lint`, `tsc --noEmit`, `actionlint`)
 - [ ] Tests written AND pass — output pasted into `tasks/TASK_REVIEW_T025.md` Evidence (Hard-Stop Gate 5)
 - [ ] `Skill({ skill: "verify" })` run — headless auto verify
 - [ ] Supervisor notified: task ready for Stage 4 review

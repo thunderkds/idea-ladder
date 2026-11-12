@@ -86,9 +86,9 @@ Source (`docs/REQUIREMENT_SOURCE.md`):
 
 | # | Given (input/state) | Expect (output/behavior) | How it's checked |
 |---|---------------------|--------------------------|------------------|
-| 1 | Seeded learner with 3 due cards in unlocked L0, 2 due cards in locked L1 | queue = the 3 L0 cards, oldest `due` first | integration test (vitest + test DB) |
-| 2 | New card, rating `Good` at fixed time `2026-11-01T09:00:00Z` | stored state equals `fsrs(params).next(card, t, Rating.Good).card` for the same params | vitest |
-| 3 | 10 ratings on one card, then replay of its log rows | replayed state deep-equals stored state | vitest |
+| 1 | Seeded learner with 3 due cards in unlocked L0, 2 due cards in locked L1 | queue = the 3 L0 cards, oldest `due` first | integration test (bun test + test DB) |
+| 2 | New card, rating `Good` at fixed time `2026-11-01T09:00:00Z` | stored state equals `fsrs(params).next(card, t, Rating.Good).card` for the same params | bun test |
+| 3 | 10 ratings on one card, then replay of its log rows | replayed state deep-equals stored state | bun test |
 | 4 | Fake clock at 4:59 with 1 card shown, then 5:01 | the shown card can be rated; next card is not shown; session-end screen appears | Playwright with clock control |
 | 5 | Same rating request sent twice with one idempotency key | 1 log row; `reps` advanced once | integration test |
 | 6 | Rating request with no session cookie; rating for another learner's card | 401; 404, card state unchanged | integration test |
@@ -98,7 +98,7 @@ Source (`docs/REQUIREMENT_SOURCE.md`):
 
 ```bash
 # describe blocks of this task start with "T011" so the filters below select them
-pnpm install --frozen-lockfile && pnpm typecheck && pnpm lint && pnpm test -- -t "T011" && pnpm exec playwright test --grep T011
+bun install --frozen-lockfile && bun run typecheck && bun run lint && bun test -t "T011" && bunx playwright test --grep T011
 ```
 
 ### Evidence (filled by reviewer at Stage 4/5)
@@ -180,7 +180,7 @@ Server owns the schedule: the client sends `{ cardId, rating, idempotencyKey, el
 | new migration (migrations folder set by T003) | card-state and review-log tables; append-only trigger |
 | `package.json`, lockfile | add `ts-fsrs` exactly `5.4.2` |
 | ladder view "Start review" button (T010 component) | link to the review screen only |
-| tests (vitest + Playwright, folders set by T003/T010) | AC 1–7 |
+| tests (bun test + Playwright, folders set by T003/T010) | AC 1–7 |
 | `tasks/TASK_REVIEW_T011.md` | Evidence (reviewer) |
 
 ## Files Must NOT Touch
@@ -197,7 +197,7 @@ Server owns the schedule: the client sends `{ cardId, rating, idempotencyKey, el
 
 ## Test Plan
 
-Unit (vitest): `scheduleNext` against direct ts-fsrs calls on fixed times for all 4 ratings and all card states (New, Learning, Review, Relearning); log replay. Integration (vitest + test Postgres from T003's test setup): queue query, transaction, idempotency, auth, append-only trigger. E2E (Playwright, clock control): full session, 5-minute cap, empty state, plus the UI rows above. Paste `pnpm test` and Playwright output into the report.
+Unit (bun test): `scheduleNext` against direct ts-fsrs calls on fixed times for all 4 ratings and all card states (New, Learning, Review, Relearning); log replay. Integration (bun test + test Postgres from T003's test setup): queue query, transaction, idempotency, auth, append-only trigger. E2E (Playwright, clock control): full session, 5-minute cap, empty state, plus the UI rows above. Paste `bun test` and Playwright output into the report.
 
 ---
 
@@ -207,7 +207,7 @@ Unit (vitest): `scheduleNext` against direct ts-fsrs calls on fixed times for al
 - [ ] Self-review: `Skill({ skill: "code-review" })` run
 - [ ] Security review: `Skill({ skill: "security-review" })` run (Medium risk)
 - [ ] `Skill({ skill: "migration-safety" })` passed for the new migration
-- [ ] Lint passes (`pnpm lint`, `pnpm typecheck`)
+- [ ] Lint passes (`bun run lint`, `bun run typecheck`)
 - [ ] Tests written AND pass — output pasted into `tasks/TASK_REVIEW_T011.md` Evidence (Hard-Stop Gate 5)
 - [ ] UI Evidence rows (visual regression, design-system compliance, responsiveness) filled with pasted evidence (Hard-Stop Gate 6)
 - [ ] `Skill({ skill: "verify" })` run — headless auto verify
