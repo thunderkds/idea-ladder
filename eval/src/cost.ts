@@ -28,6 +28,8 @@ export interface StepCostInput {
   inputTokens: number;
   outputTokens: number;
   cachedInputTokens?: number;
+  /** Model A back end. `claude-code` (the subscription) logs `usd: null`; anything else is priced. Default `api`. */
+  backend?: "api" | "claude-code";
 }
 
 export interface LogOptions {
@@ -56,7 +58,8 @@ const text = (v: unknown, name: string) => {
 const round = (n: number) => Math.round(n * 1e10) / 1e10;
 
 /**
- * Appends one JSON line to `<logDir>/<runId>.jsonl` and returns it. `usd` is computed from the price table.
+ * Appends one JSON line to `<logDir>/<runId>.jsonl` and returns it. `usd` is computed from the price table,
+ * or null for `backend: "claude-code"` (subscription: no per-call price, no price-table lookup).
  * Throws `UnknownModelPriceError` for a model with no price (never logs `usd: 0`) and
  * `InvalidCostEntryError` for a missing step / run / ladder, a bad runId or a bad token count. Nothing is written on error.
  */
@@ -70,11 +73,13 @@ export function logStepCost(input: StepCostInput, opts: LogOptions = {}): CostLi
   const outputTokens = token(input.outputTokens, "outputTokens");
   const cachedInputTokens = token(input.cachedInputTokens ?? 0, "cachedInputTokens");
 
-  const prices = opts.prices ?? loadPrices();
-  const price = Object.hasOwn(prices, model) ? prices[model] : undefined;
-  if (!price) throw new UnknownModelPriceError(model);
-
-  const usd = round((inputTokens * price.input + outputTokens * price.output + cachedInputTokens * price.cachedInput) / 1_000_000);
+  let usd: number | null = null;
+  if (input.backend !== "claude-code") {
+    const prices = opts.prices ?? loadPrices();
+    const price = Object.hasOwn(prices, model) ? prices[model] : undefined;
+    if (!price) throw new UnknownModelPriceError(model);
+    usd = round((inputTokens * price.input + outputTokens * price.output + cachedInputTokens * price.cachedInput) / 1_000_000);
+  }
   const line: CostLine = {
     ts: (opts.now?.() ?? new Date()).toISOString(),
     runId, ladderKey, step, model, inputTokens, outputTokens, cachedInputTokens, usd,
@@ -106,13 +111,16 @@ export interface Totals {
   inputTokens: number;
   outputTokens: number;
   cachedInputTokens: number;
-  usd: number;
+  /** null once any call in the group ran on the subscription (claude-code): the sum would understate the cost. */
+  usd: number | null;
 }
 export interface RunSummary {
   byStep: Record<string, Totals>;
   byLadder: Record<string, Totals>;
-  totalUsd: number;
+  totalUsd: number | null;
 }
+
+const addUsd = (a: number | null, b: number | null) => (a === null || b === null ? null : round(a + b));
 
 const empty = (): Totals => ({ calls: 0, inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, usd: 0 });
 function add(map: Record<string, Totals>, key: string, l: CostLine) {
@@ -121,7 +129,7 @@ function add(map: Record<string, Totals>, key: string, l: CostLine) {
   t.inputTokens += l.inputTokens;
   t.outputTokens += l.outputTokens;
   t.cachedInputTokens += l.cachedInputTokens;
-  t.usd = round(t.usd + l.usd);
+  t.usd = addUsd(t.usd, l.usd);
 }
 
 export function summarizeRun(lines: CostLine[]): RunSummary {
@@ -129,7 +137,7 @@ export function summarizeRun(lines: CostLine[]): RunSummary {
   for (const l of lines) {
     add(s.byStep, l.step, l);
     add(s.byLadder, l.ladderKey, l);
-    s.totalUsd = round(s.totalUsd + l.usd);
+    s.totalUsd = addUsd(s.totalUsd, l.usd);
   }
   return s;
 }

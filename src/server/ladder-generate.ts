@@ -3,6 +3,7 @@ import { APICallError, type LanguageModel } from "ai";
 import type { SQL } from "bun";
 import { Inngest, NonRetriableError } from "inngest";
 import { ZodError } from "zod";
+import { pickCoreFilesClaudeCode } from "./claude-code-reader.ts";
 import { confidenceScore } from "./confidence.ts";
 import { GitHubError, type GithubRepoClient, RateLimitError, RepoNotFoundError } from "./github-repo.ts";
 import {
@@ -45,8 +46,18 @@ async function failJob(sql: SQL, jobId: string, reason: string, resetAt?: Date) 
     WHERE id = ${jobId} AND status IN ('queued', 'running', 'fetched', 'picking')`;
 }
 
-export type CostEntry = CallUsage & { jobId: string; repo: string; sha: string; step: string };
-export type ReaderDeps = { model: LanguageModel; limits: ReaderLimits; logCost: (entry: CostEntry) => void };
+export type CostEntry = CallUsage & {
+  jobId: string;
+  repo: string;
+  sha: string;
+  step: string;
+  backend: "api" | "claude-code";
+};
+/** Model A back end: `api` (AI SDK model) or `claude-code` (`claude -p` on the subscription, see AC 9). */
+export type ReaderDeps = { limits: ReaderLimits; logCost: (entry: CostEntry) => void } & (
+  | { backend?: "api"; model: LanguageModel }
+  | { backend: "claude-code"; modelId?: string; githubToken?: string; claudeBin?: string }
+);
 type Deps = { sql: SQL; github: GithubRepoClient; reader: ReaderDeps };
 
 /** Reads the repo at the pinned SHA, scores confidence, stores both; all-or-nothing. Throws only to be retried. */
@@ -128,17 +139,27 @@ async function pickCoreFilesStep({ sql, github, reader }: Deps, { jobId }: Gener
     const [snap] = await sql`
       SELECT tree, tree_truncated FROM repo_snapshots WHERE repo_full_name = ${repo} AND commit_sha = ${sha}`;
     if (!snap) throw new NonRetriableError(`no snapshot for ${repo}@${sha}`);
+    const backend = reader.backend ?? "api";
+    const onUsage = (u: CallUsage) => reader.logCost({ ...u, jobId, repo, sha, step: PICK_CORE_FILES_STEP, backend });
+    const common = {
+      repo,
+      sha,
+      tree: snap.tree as TreeEntry[],
+      treeTruncated: snap.tree_truncated as boolean,
+      limits: reader.limits,
+      onUsage,
+    };
     try {
-      ({ coreFiles } = await pickCoreFiles({
-        repo,
-        sha,
-        tree: snap.tree as TreeEntry[],
-        treeTruncated: snap.tree_truncated as boolean,
-        model: reader.model,
-        limits: reader.limits,
-        readFile: cachedReadFile(sql, github, repo, sha),
-        onUsage: (u) => reader.logCost({ ...u, jobId, repo, sha, step: PICK_CORE_FILES_STEP }),
-      }));
+      // A ReaderFailedError (claude-code: timeout, exit, is_error) falls through to the retry below.
+      ({ coreFiles } =
+        reader.backend === "claude-code"
+          ? await pickCoreFilesClaudeCode({
+              ...common,
+              modelId: reader.modelId,
+              githubToken: reader.githubToken,
+              claudeBin: reader.claudeBin,
+            })
+          : await pickCoreFiles({ ...common, model: reader.model, readFile: cachedReadFile(sql, github, repo, sha) }));
     } catch (err) {
       if (err instanceof ReaderInvalidOutputError || err instanceof ReaderBudgetError) {
         await failJob(sql, jobId, err.code);

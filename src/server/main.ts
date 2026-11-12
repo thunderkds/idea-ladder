@@ -25,23 +25,41 @@ if (config.modelABackend === "api" && !Object.hasOwn(loadPrices(), config.modelA
 }
 
 const sql = new SQL(config.databaseUrl);
-const reader: ReaderDeps = {
-  // The API back end, explicit: never an ANTHROPIC_BASE_URL from the environment.
-  model: createAnthropic({ apiKey: config.anthropicApiKey, baseURL: "https://api.anthropic.com/v1" })(
-    config.modelAId as string,
-  ),
-  limits: { maxSteps: config.readerMaxSteps, tokenBudget: config.readerTokenBudget },
-  logCost: ({ jobId, repo, sha, step, model, inputTokens, outputTokens, cachedInputTokens }) =>
-    logStepCost({
-      runId: `job-${jobId}`,
-      ladderKey: `${repo}@${sha}`,
-      step,
-      model,
-      inputTokens,
-      outputTokens,
-      cachedInputTokens,
-    }),
-};
+const limits = { maxSteps: config.readerMaxSteps, tokenBudget: config.readerTokenBudget };
+const logCost: ReaderDeps["logCost"] = ({
+  jobId,
+  repo,
+  sha,
+  step,
+  model,
+  inputTokens,
+  outputTokens,
+  cachedInputTokens,
+  backend,
+}) =>
+  logStepCost({
+    runId: `job-${jobId}`,
+    ladderKey: `${repo}@${sha}`,
+    step,
+    model,
+    inputTokens,
+    outputTokens,
+    cachedInputTokens,
+    backend,
+  });
+// claude-code (default): `claude -p` on the subscription; its MCP server reads GitHub with the app token.
+// api: the Anthropic provider, explicit base URL (never an ANTHROPIC_BASE_URL from the environment).
+const reader: ReaderDeps =
+  config.modelABackend === "claude-code"
+    ? { backend: "claude-code", modelId: config.modelAId, githubToken: config.githubAppToken, limits, logCost }
+    : {
+        backend: "api",
+        model: createAnthropic({ apiKey: config.anthropicApiKey, baseURL: "https://api.anthropic.com/v1" })(
+          config.modelAId as string,
+        ),
+        limits,
+        logCost,
+      };
 const github = githubRepoClient({ baseUrl: config.githubApiBaseUrl, token: config.githubAppToken });
 const inngest = createInngest();
 // T015: reminders are off (the tick does nothing) unless all three VAPID variables are set.

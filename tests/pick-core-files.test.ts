@@ -1,4 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { InngestTestEngine } from "@inngest/test";
 import { APICallError } from "ai";
 import { type GithubRepoClient, githubRepoClient } from "../src/server/github-repo.ts";
@@ -103,6 +106,7 @@ describe("Inngest step pick-core-files (AC 5, AC 6)", () => {
         repo: DSET.repo,
         sha: DSET.sha,
         step: "pick-core-files",
+        backend: "api",
         model: "test-model",
         inputTokens: 100,
         outputTokens: 10,
@@ -230,5 +234,58 @@ describe("pick-core-files failure paths (fix batch)", () => {
     const { result } = await t.execute();
     expect(result).toMatchObject({ status: "picked", coreFiles: other });
     expect(await coreRows()).toEqual(other.map((p, i) => ({ rank: i + 1, ...p })));
+  });
+});
+
+describe("Inngest step pick-core-files on the claude-code back end (AC 9)", () => {
+  test("runs claude -p (fake), stores the picks, logs cost with backend claude-code and the app token for reads", async () => {
+    const rec = await mkdtemp(join(tmpdir(), "il-fake-claude-"));
+    const bin = join(rec, "claude");
+    const fake = join(import.meta.dir, "support", "fake-claude.ts");
+    await writeFile(bin, `#!/bin/sh\nexec "${process.execPath}" "${fake}" "${rec}" "$@"\n`);
+    await chmod(bin, 0o755);
+    const out = { is_error: false, num_turns: 3, session_id: "s", structured_output: { coreFiles: PICKS } };
+    const usage = { input_tokens: 10, output_tokens: 5, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 };
+    await writeFile(join(rec, "replies.json"), JSON.stringify([{ stdout: JSON.stringify({ ...out, usage }) }]));
+    const jobId = await newJob();
+    const gh = fixtureFetch(fixtures, () => undefined);
+    const costs: CostEntry[] = [];
+    const fn = ladderGenerateFunction(createInngest(), {
+      sql: db.sql,
+      github: githubRepoClient({ baseUrl: "https://api.github.com", token: "t", fetch: gh.impl }),
+      reader: {
+        backend: "claude-code",
+        githubToken: "app-token",
+        claudeBin: bin,
+        limits: { maxSteps: 15, tokenBudget: 80_000 },
+        logCost: (e) => costs.push(e),
+      },
+    });
+    const t = new InngestTestEngine({
+      function: fn,
+      events: [{ name: LADDER_GENERATE_EVENT, data: { ...DSET, jobId } }],
+    });
+    const { result } = await t.execute();
+    expect(result).toMatchObject({ status: "picked", coreFiles: PICKS });
+    expect(await coreRows()).toEqual(PICKS.map((p, i) => ({ rank: i + 1, ...p })));
+    expect(costs).toEqual([
+      {
+        jobId,
+        repo: DSET.repo,
+        sha: DSET.sha,
+        step: "pick-core-files",
+        backend: "claude-code",
+        model: "claude-code",
+        inputTokens: 10,
+        outputTokens: 5,
+        cachedInputTokens: 0,
+      },
+    ]);
+    const [call] = (await Bun.file(join(rec, "calls.jsonl")).text())
+      .trim()
+      .split("\n")
+      .map((l) => JSON.parse(l));
+    expect(call.mcp.mcpServers.reader.env.GITHUB_TOKEN).toBe("app-token");
+    await rm(rec, { recursive: true, force: true });
   });
 });

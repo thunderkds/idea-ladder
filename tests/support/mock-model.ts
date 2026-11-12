@@ -61,7 +61,7 @@ export const answer = (files: { path: string; reason?: string }[]) =>
  * Reader deps for workflow tests that are not about the reader: list("") once, then answer with the first three
  * root files from that listing. No GitHub call, no cost log.
  */
-export function testReader(): ReaderDeps {
+export function testReader(): Extract<ReaderDeps, { model: unknown }> {
   const model = scriptedModel((call, options) => {
     if (call % 2 === 0) return { tools: [{ name: "list", input: { path: "" } }] };
     const listing = JSON.parse(toolResults(options).at(-1) ?? '""') as { value?: string };
