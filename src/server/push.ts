@@ -18,6 +18,7 @@ const isKey = (v: unknown) => typeof v === "string" && v.length <= MAX_KEY && BA
  */
 export const PUSH_SERVICE_HOSTS = [
   "fcm.googleapis.com",
+  "jmt17.google.com", // the FCM host that Chromium builds without Google API keys use (found by QA 2026-11-12)
   "updates.push.services.mozilla.com",
   "push.services.mozilla.com",
   "web.push.apple.com",

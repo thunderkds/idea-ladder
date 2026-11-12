@@ -213,7 +213,13 @@ describe("T015 push subscribe / unsubscribe (AC 4)", () => {
       expect([host, accepted(`https://edge-1.${host}/send/abc`)]).toEqual([host, true]);
     }
     expect(accepted("https://FCM.googleapis.com:443/fcm/send/abc")).toBe(true); // URL lowercases; 443 is the default
+    // FCM host of Chromium builds without Google API keys (found by QA 2026-11-12)
+    expect(accepted("https://jmt17.google.com/fcm/send/abc")).toBe(true);
+    expect(accepted("https://edge-1.jmt17.google.com/fcm/send/abc")).toBe(true);
     for (const bad of [
+      "https://google.com/x",
+      "https://evil.google.com/x",
+      "https://jmt17.google.com.evil.example/x",
       "https://evil.example/",
       "https://fcm.googleapis.com.evil.example/",
       "https://notfcm.googleapis.com@evil.example/",

@@ -38,7 +38,9 @@ Rules:
   subscribe answers `503 push-not-configured`).
 - **Endpoint host restriction.** The server POSTs to the endpoint a learner subscribes, so subscribe accepts only
   `https` on port 443, no userinfo, a DNS name (no IP literal, not `localhost`) equal to or under one of
-  `PUSH_SERVICE_HOSTS` in `src/server/push.ts` (Google FCM, Mozilla, Apple, Microsoft WNS). Anything else is
+  `PUSH_SERVICE_HOSTS` in `src/server/push.ts` (Google FCM, Mozilla, Apple, Microsoft WNS; also
+  `jmt17.google.com`, the FCM host that Chromium builds without Google API keys use, found by QA 2026-11-12, only
+  that host and its subdomains, not the rest of `google.com`). Anything else is
   `400 invalid-request`. Unsubscribe accepts any https URL, since it only deletes the caller's own row.
 - **Manual check for the owner.** No test sends a real push. After deploy with VAPID keys set: install the PWA on
   one real iPhone (iOS ≥ 16.4, Add to Home Screen), turn on reminders at the next hour, keep one card due, and
