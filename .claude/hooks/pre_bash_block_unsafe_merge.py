@@ -188,7 +188,7 @@ TEST_INVOCATION_PATTERN = re.compile(
     r"|pytest\b"
     r"|jest\b"
     r"|tox\b"
-    r"|(?:npm|yarn|pnpm)\s+(?:run\s+)?test\b"
+    r"|(?:npm|yarn|pnpm|bun)\s+(?:run\s+)?test\b"
     r"|go\s+test\b"
     r"|cargo\s+test\b"
     r"|(?:bash|sh|zsh)\s+\S*(?:test|verify|smoke)\S*"
