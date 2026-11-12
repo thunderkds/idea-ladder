@@ -86,7 +86,7 @@ sequenceDiagram
   I-->>P: signed badge + public verify URL
 ```
 
-## 5. Conflicts inside the source (to settle before v1)
+## 5. Conflicts inside the source (settled 2026-11-12: user agreed to all four suggested readings)
 
 | # | Conflict | Where | Suggested reading |
 |---|---|---|---|

@@ -15,6 +15,11 @@
 **Why**: user answers 2026-11-01; roadmap gates (docs/REQUIREMENT_SOURCE.md § Diagram text).
 **Files**: tasks/TASK_GUIDE_T003.md … tasks/TASK_GUIDE_T030.md, PROJECT_KANBAN.md, docs/PLAN_LOG.md, PRD.md
 
+### 2026-11-12 — Four source conflicts settled (user)
+**Decision**: User agreed to all four suggested readings in `docs/MAIN_FLOW.md` § 5. C1: FSRS wins over the fixed 1/3/7/21-day intervals. C2: v1 uses plain signed JSON; Open Badges 3.0 waits for v2. C3: "5 minutes" means review only; a level's learn step is 20 to 30 min. C4: T025 may start once Gate 3's "proof links get shared" part passes; the outside-PR part is checked after T025.
+**Why**: These were self-contradictions in the requirement source; v1 tasks T011, T019 and T025 depend on them.
+**Files**: docs/MAIN_FLOW.md, tasks/TASK_GUIDE_T011.md, tasks/TASK_GUIDE_T019.md, tasks/TASK_GUIDE_T025.md
+
 ## Infrastructure
 
 ### 2026-11-01 — Idea Ladder uses board mode local
