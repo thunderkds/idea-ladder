@@ -1,5 +1,5 @@
 # PROJECT_KANBAN.md
-**Last updated**: 2026-11-12 (Gate 1 waived; T003, T004, T005, T010 Done; T011 In Progress; T006 Blocked on the owner's paid run)
+**Last updated**: 2026-11-12 (Gate 1 waived; T003, T004, T005, T010 Done; T011 Ready for Review; T006 Blocked on the owner's paid run)
 
 > Idea Ladder board (board mode `local`). Full context lives in `PROJECT_SPEC.md`.
 > The previous file was another project's Linear cache; it is archived at `docs/archive/easy-personal-board/`.
@@ -35,9 +35,9 @@
 - [ ] **T029** — "Learn what's trending" weekly pick | backend-developer | C1 | Risk: Low | P2 | Phase: v3 (after Gate 3)
 
 ### In Progress
-- [ ] **T011** — Daily 5-minute review with FSRS (ts-fsrs 5.4.2), review log stored | frontend-developer | C2 | Risk: Medium | P0 | Phase: v1 (Gate 1 waived by user 2026-11-12) | Started 2026-11-12: branch `T011-daily-review`
 
 ### Ready for Review
+- [ ] **T011** — Daily 5-minute review with FSRS (ts-fsrs 5.4.2), review log stored | frontend-developer | C2 | Risk: Medium | P0 | Phase: v1 (Gate 1 waived by user 2026-11-12) | Started 2026-11-12: branch `T011-daily-review` | Ready for Review 2026-11-12 at 42909c3: code-review 0 P0/P1, security 0 findings, QA PASS, migration-safety GO (dry-run N/A accepted); waits for the user's /verify and merge
 
 ### Blocked
 - [ ] **T006** — Repo reader agent (3 read-only tools: list, read, search; step cap; token budget) picks core files; scored on golden set | backend-developer | C2 | Risk: Medium | P0 | Phase: v1 (Gate 1 waived by user 2026-11-12) | Started 2026-11-12: branch `T006-reader` | Verify FAIL 2026-11-12 (paid golden-set run AC 7 / SC 6 not done); fix batch committed, waiting on the owner's run | Moved to Blocked 2026-11-12 on the user's instruction so T010 can merge; branch `T006-reader` and `wt-t006` untouched; returns to In Progress when the owner runs the paid golden-set run or waives AC 7 / SC 6
