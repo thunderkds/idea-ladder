@@ -13,5 +13,6 @@
 - 2026-11-12 — The same pattern has no `bun test` / `bun run test`, so with the Bun stack decision (decisions.md) the Gate 5 hook would not see v1 test runs as verification and could block merges. Fixed 2026-11-12 on branch fix/gate5-bun-test: `bun` added to TEST_INVOCATION_PATTERN (`bun test`, `bun run test`); `bun run typecheck`, `bunx vitest` and `echo bun test` still do not count.
 - 2026-11-01 — Built-in `security-review` diffs against `origin/HEAD`; with no remote it fails. Work-around used: a temporary local `refs/remotes/origin/HEAD`, deleted after. (T001)
 - 2026-11-01 — Kit `__pycache__/*.pyc` files are tracked, and hooks rewrite them, so worktrees show them modified. Restore with `git checkout -- <pyc>` before committing; never commit them. (.gitignore)
+- 2026-11-12 — Bun gotcha for the v1 guides: `bun test` is Bun's own runner and ignores the `test` script in package.json; Playwright e2e runs through `bun run test:e2e` / `bunx playwright`, never `bun test`. All open guides now use these commands (decisions.md 2026-11-12 v1 stack).
 
 ## Gotchas
