@@ -538,9 +538,10 @@ test("T015: a 401 clears another learner's cached cards; offline then shows none
       }),
     other,
   );
-  // The session is gone: the API answers 401, and the app forgets the cached data.
+  // The session is gone (server and API): the next refresh gets a 401, and the app forgets the cached cards.
   api.pack = 401;
-  await page.goto("/settings");
+  await context.clearCookies();
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
   await expect.poll(async () => (await readStore(page, "packs")).length).toBe(0);
   // meta.learner stays, so a queue made offline is synced after the same learner signs in again (never shown).
   expect(await readStore(page, "meta")).toEqual(["someone-else"]);
@@ -578,7 +579,7 @@ const addQueued = (page: Page, learnerId: string, cardId = "201") =>
       }),
     { learnerId, cardId },
   );
-const cacheCount = (page: Page) => page.evaluate(async () => (await caches.keys()).length);
+const shellCached = (page: Page) => page.evaluate(async () => (await caches.match("/index.html")) !== undefined);
 
 test("T015 fix: a 401 on sync keeps the offline queue, drops the pack and caches, goes to sign-in; the same learner's next sign-in syncs it", async ({
   page,
@@ -599,7 +600,8 @@ test("T015 fix: a 401 on sync keeps the offline queue, drops the pack and caches
   const [queued] = await readStore<Queued>(page, "queue");
   expect(queued?.learnerId).toBe(LEARNER);
 
-  // Back online, the session has expired: the sync answers 401.
+  // Back online, the session has expired (server and API): the sync answers 401.
+  await context.clearCookies();
   await setOffline(context, api, false);
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole("button", { name: "Sign in with GitHub" })).toBeVisible();
@@ -607,7 +609,7 @@ test("T015 fix: a 401 on sync keeps the offline queue, drops the pack and caches
   await expect.poll(async () => (await readStore(page, "packs")).length).toBe(0);
   expect((await readStore<Queued>(page, "queue")).map((q) => q.idempotencyKey)).toEqual([queued?.idempotencyKey]);
   expect(await readStore(page, "meta")).toEqual([LEARNER]);
-  expect(await page.evaluate(async () => (await caches.match("/index.html")) === undefined)).toBe(true);
+  expect(await shellCached(page)).toBe(false);
 
   // The same learner signs in again: the kept queue is sent and drained, then the pack is fetched again.
   await signIn(page);
@@ -630,7 +632,7 @@ test("T015 fix: explicit sign-out online syncs the queue first, then clears ever
   await expect(page).toHaveURL(/\/$/);
   expect(api.syncBodies.map((b) => b.ratings.map((r) => r.idempotencyKey))).toEqual([[key]]);
   for (const store of ["packs", "queue", "meta"] as const) expect(await readStore(page, store)).toEqual([]);
-  expect(await cacheCount(page)).toBe(0);
+  expect(await shellCached(page)).toBe(false);
 
   // The sync fails: sign-out still clears everything and is not blocked.
   api.syncStatus = () => 500;

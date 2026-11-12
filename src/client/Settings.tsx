@@ -4,7 +4,7 @@
 import { type ChangeEvent, type ReactNode, useEffect, useState } from "react";
 import type { ImportResult, PushStatus, PushSubscribeRequest } from "../shared/offline.ts";
 import { OFFLINE_TEXT, requireOnline } from "./offline.tsx";
-import { signedOut } from "./offline-store.ts";
+import { expireSession } from "./offline-store.ts";
 
 const IMPORT_MAX_BYTES = 5 * 1024 * 1024;
 const IOS_HINT = "Add to Home Screen to install and get reminders";
@@ -54,7 +54,7 @@ function Reminders() {
     if (!supported) return;
     fetch("/api/push/status")
       .then(async (res) => {
-        if (res.status === 401) return signedOut();
+        if (res.status === 401) return expireSession();
         if (!res.ok) throw new Error(`push status failed: ${res.status}`);
         const body = (await res.json()) as PushStatus;
         setStatus(body);
@@ -88,7 +88,7 @@ function Reminders() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
       });
-      if (res.status === 401) return signedOut();
+      if (res.status === 401) return expireSession();
       if (!res.ok) throw new Error(`subscribe failed: ${res.status}`);
       setStatus((s) => (s ? { ...s, subscribed: true, hour, timezone } : s));
       setFeedback({ kind: "ok", text: `Reminders are on for ${hourText(hour)}.` });
@@ -110,7 +110,7 @@ function Reminders() {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ endpoint: sub.endpoint }),
         });
-        if (res.status === 401) return signedOut();
+        if (res.status === 401) return expireSession();
         if (!res.ok) throw new Error(`unsubscribe failed: ${res.status}`);
         await sub.unsubscribe();
       }
@@ -203,7 +203,7 @@ function ExportProgress() {
     setBusy(true);
     try {
       const res = await fetch("/api/progress/export");
-      if (res.status === 401) return signedOut();
+      if (res.status === 401) return expireSession();
       if (!res.ok) throw new Error(`export failed: ${res.status}`);
       const given = /filename="?([\w.-]+)"?/.exec(res.headers.get("content-disposition") ?? "")?.[1];
       const name = given ?? "idea-ladder-progress.json";
@@ -265,7 +265,7 @@ function ImportProgress() {
         headers: { "content-type": "application/json" },
         body: await file.text(),
       });
-      if (res.status === 401) return signedOut();
+      if (res.status === 401) return expireSession();
       if (res.ok) return setFeedback({ kind: "ok", text: importSummary((await res.json()) as ImportResult) });
       const problem = (await res.json().catch(() => ({}))) as { detail?: unknown };
       const known = [400, 403, 413].includes(res.status) && typeof problem.detail === "string";

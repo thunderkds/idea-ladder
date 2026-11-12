@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { LadderPage } from "./LadderView.tsx";
 import { OfflineNotice, requireOnline } from "./offline.tsx";
-import { clearOfflineData, signedOut } from "./offline-store.ts";
+import { expireSession, signOut } from "./offline-store.ts";
 import { ReviewPage } from "./Review.tsx";
 import { SettingsPage } from "./Settings.tsx";
 
@@ -30,7 +30,7 @@ function Ladders() {
       .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
       .then((me: { login: string }) => setLogin(me.login))
       .catch((reason) => {
-        if (reason === 401) return void signedOut();
+        if (reason === 401) return void expireSession();
         if (!requireOnline()) return setOffline(true);
         window.location.assign("/");
       });
@@ -47,14 +47,15 @@ function Ladders() {
           <a className="back-link" href="/settings">
             Settings
           </a>
-          {/* Sign-out first forgets this learner's offline review data and cached pages (T015). */}
+          {/* Sign-out first syncs queued ratings (online, at most 2 s), then forgets this learner's offline review
+              data and cached pages (T015). */}
           <form
             action="/auth/sign-out"
             method="post"
             onSubmit={(e) => {
               e.preventDefault();
               const form = e.currentTarget;
-              void clearOfflineData().then(() => form.submit());
+              void signOut().then(() => form.submit());
             }}
           >
             <span className="muted">{login ? `@${login} ` : ""}</span>
@@ -147,7 +148,7 @@ function JobStatus({ jobId }: { jobId: string }) {
     const poll = async () => {
       try {
         const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}`);
-        if (res.status === 401) return signedOut();
+        if (res.status === 401) return expireSession();
         if (res.status === 404) return setMissing(true);
         if (res.ok) {
           const next = (await res.json()) as Job;

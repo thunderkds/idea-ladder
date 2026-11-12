@@ -2,7 +2,7 @@
 // repo README and DeepWiki. The app writes no explanation of the repo (requirement: link out only).
 import { useEffect, useState } from "react";
 import type { LadderView as Ladder, LevelView } from "../server/ladder-view.ts";
-import { signedOut } from "./offline-store.ts";
+import { expireSession } from "./offline-store.ts";
 
 const UNVERIFIED_DESCRIPTION = "AI-drafted, not yet reviewed by people";
 const levelNumber = (level: LevelView) => Number(level.id.slice(1));
@@ -56,7 +56,7 @@ export function LadderPage({ ladderId }: { ladderId: string }) {
     let stopped = false;
     fetch(`/api/ladders/${encodeURIComponent(ladderId)}`)
       .then(async (res) => {
-        if (res.status === 401) return signedOut();
+        if (res.status === 401) return expireSession();
         if (res.status === 404) return stopped ? undefined : setMissing(true);
         if (!res.ok) throw new Error(`ladder request failed: ${res.status}`);
         const body = (await res.json()) as Ladder;

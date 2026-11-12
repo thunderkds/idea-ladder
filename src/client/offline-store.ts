@@ -2,7 +2,8 @@
 // - `packs`: the last offline pack per learner id (cards due within 7 days + New cards, each with its stored state).
 // - `meta.learner`: the learner the cached pack belongs to; only that learner's pack is ever shown offline.
 // - `queue`: ratings made offline, in order, each with an idempotency key made once and reused on every retry.
-// Sign-out and any 401 clear all of it (and the service worker caches), so no other learner's cards are ever shown.
+// Sign-out clears all of it (and the service worker caches). A 401 clears the packs and caches but keeps the queue
+// and `meta.learner`, so ratings made offline still sync after the same learner signs in again; no card is shown.
 import { type DBSchema, type IDBPDatabase, openDB } from "idb";
 import { type Card, newCard, scheduleNext } from "../server/scheduler.ts";
 import {
@@ -136,15 +137,11 @@ async function applySync(learnerId: string, sent: QueuedRating[], body: SyncResp
   await tx.done;
 }
 
-/** Empties the offline data and the service worker caches (sign-out, 401). Never throws. */
-export async function clearOfflineData() {
+/** Empties the given stores and every service worker cache. Never throws. */
+async function clearStores(stores: ("packs" | "queue" | "meta")[]) {
   try {
-    const tx = (await db()).transaction(["packs", "queue", "meta"], "readwrite");
-    await Promise.all([
-      tx.objectStore("packs").clear(),
-      tx.objectStore("queue").clear(),
-      tx.objectStore("meta").clear(),
-    ]);
+    const tx = (await db()).transaction(stores, "readwrite");
+    await Promise.all(stores.map((s) => tx.objectStore(s).clear()));
     await tx.done;
   } catch {
     // IndexedDB unavailable: nothing was stored
@@ -156,20 +153,32 @@ export async function clearOfflineData() {
   }
 }
 
-/** A 401 from any API call: forget the cached data, then go to the sign-in page. */
-export async function signedOut() {
-  await clearOfflineData();
+/** Explicit sign-out: empties all offline data, the queue included, and the service worker caches. */
+export const clearOfflineData = () => clearStores(["packs", "queue", "meta"]);
+
+/**
+ * A 401 from any API call (the session expired or ended elsewhere): no card text stays readable (packs and caches
+ * go), but the queue and `meta.learner` stay, so the same learner's next sign-in still syncs the ratings made
+ * offline. Then the home page, which has the sign-in button.
+ */
+export async function expireSession() {
+  await clearStores(["packs"]);
   window.location.assign("/");
 }
 
-/** Sends the queue in order, at most MAX_SYNC_BATCH per request. False when something stays queued for later. */
-async function syncQueue(): Promise<boolean> {
+/**
+ * Sends the queue in order, at most MAX_SYNC_BATCH per request, named with the learner it belongs to (the server
+ * answers 409 wrong-learner, writing nothing, when that is not the signed-in account). "kept" when something stays
+ * queued for the next app open or `online` event (5xx, 409, anything else); "expired" on a 401.
+ */
+async function syncQueue(): Promise<"done" | "kept" | "expired"> {
   const learnerId = await (await db()).get("meta", "learner");
-  if (!learnerId) return true;
+  if (!learnerId) return "done";
   const queued = await queuedRatings(learnerId);
   for (let i = 0; i < queued.length; i += MAX_SYNC_BATCH) {
     const sent = queued.slice(i, i + MAX_SYNC_BATCH);
     const body: SyncRequest = {
+      learnerId,
       ratings: sent.map(({ cardId, rating, idempotencyKey, elapsedMs, reviewedAt }) => ({
         cardId,
         rating,
@@ -177,28 +186,27 @@ async function syncQueue(): Promise<boolean> {
         elapsedMs,
         reviewedAt,
       })),
-    };
+    } as SyncRequest; // until the backend's `learnerId?: string` lands in src/shared/offline.ts
     const res = await fetch("/api/review/sync", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
     });
-    if (res.status === 401) {
-      await clearOfflineData();
-      return false;
-    }
-    if (!res.ok) return false; // 5xx and anything else: keep the queue for the next try
+    if (res.status === 401) return "expired";
+    if (!res.ok) return "kept";
     await applySync(learnerId, sent, (await res.json()) as SyncResponse);
   }
-  return true;
+  return "done";
 }
 
 /** Sync the queue, then store a fresh pack. A network error leaves everything for the next try. */
 async function runRefresh() {
   try {
-    if (!(await syncQueue())) return;
+    const synced = await syncQueue();
+    if (synced === "expired") return await expireSession();
+    if (synced === "kept") return;
     const res = await fetch("/api/review/offline-pack");
-    if (res.status === 401) return await clearOfflineData();
+    if (res.status === 401) return await expireSession();
     if (!res.ok) return;
     await savePack((await res.json()) as OfflinePack);
   } catch {
@@ -211,6 +219,21 @@ let chain: Promise<void> = Promise.resolve();
 export function refresh(): Promise<void> {
   chain = chain.then(runRefresh);
   return chain;
+}
+
+const SIGN_OUT_SYNC_MS = 2_000;
+const noop = () => undefined;
+/**
+ * Explicit sign-out: when online, first try to send the queue (at most 2 s, after any refresh already running), so
+ * ratings made offline are not thrown away needlessly; then clear everything whatever the sync did. Never throws.
+ */
+export async function signOut() {
+  if (navigator.onLine) {
+    // A 401 or any failure here changes nothing: everything is cleared below anyway.
+    chain = chain.then(() => syncQueue().then(noop, noop));
+    await Promise.race([chain, new Promise((resolve) => setTimeout(resolve, SIGN_OUT_SYNC_MS))]);
+  }
+  await clearOfflineData();
 }
 
 /** App open: sync and refresh the pack on signed-in pages, and again whenever the network comes back. */
