@@ -49,6 +49,15 @@ export class ReaderFailedError extends Error {
   }
 }
 
+/** `claude` cannot be spawned (not installed / not on PATH): a retry cannot help, the step fails at once. */
+export class ReaderNotInstalledError extends Error {
+  readonly code = "reader-not-installed";
+  constructor(bin: string) {
+    super(`reader-not-installed: cannot run ${JSON.stringify(bin)} (is Claude Code installed and on PATH?)`);
+    this.name = "ReaderNotInstalledError";
+  }
+}
+
 export type PickCoreFilesClaudeCodeInput = {
   repo: string;
   sha: string;
@@ -133,6 +142,7 @@ export async function pickCoreFilesClaudeCode(input: PickCoreFilesClaudeCodeInpu
 
     const run = async (prompt: string, resume?: string) => {
       const out = await runClaude(input, dir, mcpConfig, prompt, resume).catch(async (err: unknown) => {
+        if (err instanceof ReaderNotInstalledError) throw err;
         throw new ReaderFailedError(err instanceof Error ? err.message : String(err), await hitLimit());
       });
       const u = out.usage ?? {};
@@ -263,7 +273,13 @@ async function runClaude(
   const env = childEnv(process.env);
   const timeoutMs = input.timeoutMs ?? CLAUDE_CODE_TIMEOUT_MS;
   // Its own process group, so the timeout kills claude and its MCP server child together.
-  const proc = Bun.spawn(argv, { cwd, env, stdin: "ignore", stdout: "pipe", stderr: "pipe", detached: true });
+  let proc: Bun.Subprocess<"ignore", "pipe", "pipe">;
+  try {
+    proc = Bun.spawn(argv, { cwd, env, stdin: "ignore", stdout: "pipe", stderr: "pipe", detached: true });
+  } catch (err) {
+    if ((err as { code?: string }).code === "ENOENT") throw new ReaderNotInstalledError(argv[0] as string);
+    throw err;
+  }
   let timedOut = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let grace: ReturnType<typeof setTimeout> | undefined;

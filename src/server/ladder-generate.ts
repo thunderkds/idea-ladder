@@ -3,7 +3,7 @@ import { APICallError, type LanguageModel } from "ai";
 import type { SQL } from "bun";
 import { Inngest, NonRetriableError } from "inngest";
 import { ZodError } from "zod";
-import { pickCoreFilesClaudeCode } from "./claude-code-reader.ts";
+import { pickCoreFilesClaudeCode, ReaderNotInstalledError } from "./claude-code-reader.ts";
 import { confidenceScore } from "./confidence.ts";
 import { GitHubError, type GithubRepoClient, RateLimitError, RepoNotFoundError } from "./github-repo.ts";
 import {
@@ -161,7 +161,11 @@ async function pickCoreFilesStep({ sql, github, reader }: Deps, { jobId }: Gener
             })
           : await pickCoreFiles({ ...common, model: reader.model, readFile: cachedReadFile(sql, github, repo, sha) }));
     } catch (err) {
-      if (err instanceof ReaderInvalidOutputError || err instanceof ReaderBudgetError) {
+      if (
+        err instanceof ReaderInvalidOutputError ||
+        err instanceof ReaderBudgetError ||
+        err instanceof ReaderNotInstalledError
+      ) {
         await failJob(sql, jobId, err.code);
         return { status: "failed", reason: err.code } as const;
       }

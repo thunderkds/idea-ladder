@@ -4,7 +4,11 @@ import { existsSync } from "node:fs";
 import { chmod, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { pickCoreFilesClaudeCode, ReaderFailedError } from "../src/server/claude-code-reader.ts";
+import {
+  pickCoreFilesClaudeCode,
+  ReaderFailedError,
+  ReaderNotInstalledError,
+} from "../src/server/claude-code-reader.ts";
 import { type CallUsage, ReaderInvalidOutputError, type TreeEntry } from "../src/server/repo-reader.ts";
 
 const FAKE = join(import.meta.dir, "support", "fake-claude.ts");
@@ -235,6 +239,13 @@ describe("pickCoreFilesClaudeCode (fake claude)", () => {
     expect(err.message).toMatch(/timed out after 300 ms/);
     expect(Date.now() - started).toBeLessThan(4_000);
   }, 15_000);
+
+  test("claude not installed (ENOENT) -> ReaderNotInstalledError, not the retryable reader-failed", async () => {
+    const err = await pick({ claudeBin: join(rec, "no-such-claude") }).run.catch((e) => e);
+    expect(err).toBeInstanceOf(ReaderNotInstalledError);
+    expect(err).not.toBeInstanceOf(ReaderFailedError);
+    expect(err.code).toBe("reader-not-installed");
+  });
 
   test("non-zero exit and unparsable output -> reader-failed", async () => {
     await replies([{ stdout: "boom", exit: 2 }]);

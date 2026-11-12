@@ -238,6 +238,28 @@ describe("pick-core-files failure paths (fix batch)", () => {
 });
 
 describe("Inngest step pick-core-files on the claude-code back end (AC 9)", () => {
+  test("claude not installed: the job fails at once with reader-not-installed (no retry)", async () => {
+    const jobId = await newJob();
+    const gh = fixtureFetch(fixtures, () => undefined);
+    const fn = ladderGenerateFunction(createInngest(), {
+      sql: db.sql,
+      github: githubRepoClient({ baseUrl: "https://api.github.com", token: "t", fetch: gh.impl }),
+      reader: {
+        backend: "claude-code",
+        claudeBin: join(tmpdir(), "il-no-such-dir", "claude"),
+        limits: { maxSteps: 15, tokenBudget: 80_000 },
+        logCost: () => {},
+      },
+    });
+    const t = new InngestTestEngine({
+      function: fn,
+      events: [{ name: LADDER_GENERATE_EVENT, data: { ...DSET, jobId } }],
+    });
+    const { result } = await t.execute();
+    expect(result).toMatchObject({ status: "failed", reason: "reader-not-installed" });
+    expect(await jobStatus(jobId)).toEqual({ status: "failed", reason: "reader-not-installed" });
+  });
+
   test("runs claude -p (fake), stores the picks, logs cost with backend claude-code and the app token for reads", async () => {
     const rec = await mkdtemp(join(tmpdir(), "il-fake-claude-"));
     const bin = join(rec, "claude");
