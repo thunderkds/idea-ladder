@@ -53,6 +53,11 @@
 **Known gaps**: locked text always says "pass L(n−1) first", which misleads after an out-of-order pass (unreachable until T012); `__pycache__` is tracked in git, so hooks re-dirty it in every worktree (separate chore: untrack and gitignore).
 **Files**: src/shared/levels.ts, src/server/ladder-view.ts, src/server/app.ts, src/client/LadderView.tsx, src/client/App.tsx, src/client/styles.css, migrations/0004_ladder_levels.up.sql, migrations/0004_ladder_levels.down.sql, e2e/ladder-view.e2e.ts, e2e/serve.ts, docs/decisions/0002-ladder-levels-table.md, tasks/TASK_REVIEW_T010.md
 
+### 2026-11-12 — T011 in progress: two user decisions (migration dry-run N/A, per-queue new-card cap)
+**Decision**: (1) The migration-safety box "dry run on a production-like data copy" is accepted as N/A for `0005_review` (and was for 0001–0004): no production database exists (deployment target "none yet"); evidence is the up/down/up test with rows present on test databases. Re-open it for the first migration after T018 deploys. (2) New cards are capped at 10 per queue response, not per learner per day (the guide's Approach says per day): a learner who rates 10 New cards gets 10 more on the next load, and the 5-minute session is the only brake. Kept for v1 on the user's instruction; a daily cap needs a rule for when the day starts.
+**Why**: user answers 2026-11-12 after the migration-safety verdict (GO, one box open) and the backend agent's departure list. T011 migration 0005 (`review_cards`, `card_states`, append-only `review_log`) takes number 0005 because T006's unmerged `0003_core_files` owns 0003; the runner applies pending migrations in name order, so 0003 still applies later.
+**Files**: migrations/0005_review.up.sql, migrations/0005_review.down.sql, src/server/review.ts, tasks/TASK_GUIDE_T011.md, tasks/TASK_REVIEW_T011.md
+
 ## Infrastructure
 
 ### 2026-11-01 — Idea Ladder uses board mode local
