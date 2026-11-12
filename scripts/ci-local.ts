@@ -31,6 +31,7 @@ const steps: [name: string, cmd: string[], env?: Record<string, string>][] = [
   ["migrate down", ["bun", "run", "db:migrate:down"], { DATABASE_URL: ciDb.toString(), MIGRATE_ALLOW_DOWN: "1" }],
   ["migrate up again", ["bun", "run", "db:migrate"], { DATABASE_URL: ciDb.toString() }],
   ["e2e sign-in", ["bun", "run", "test:e2e", "--", "sign-in"]],
+  ["e2e start-flow", ["bun", "run", "test:e2e", "--", "start-flow"]],
 ];
 
 await resetCiDatabase(false);

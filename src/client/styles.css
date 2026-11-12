@@ -71,6 +71,15 @@ form {
 .empty p {
   margin: 0;
 }
+a {
+  color: var(--color-accent);
+}
+.long-text {
+  overflow-wrap: anywhere;
+}
+.status-detail {
+  color: var(--color-text-muted);
+}
 @media (max-width: 480px) {
   .home .button {
     width: 100%;

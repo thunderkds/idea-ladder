@@ -1,9 +1,15 @@
 // e2e web server: fresh database, migrated; GitHub OAuth stub; the app serving the built client.
+// T005: the repo API replays recorded fixtures, and the Inngest function runs in-process through @inngest/test
+// (no Inngest dev server, no network). The real dev-server run is a manual check for the owner.
+import { InngestTestEngine } from "@inngest/test";
 import { SQL } from "bun";
 import { createApp } from "../src/server/app.ts";
 import { loadConfig } from "../src/server/config.ts";
+import { type GithubRepoClient, githubRepoClient } from "../src/server/github-repo.ts";
+import { createInngest, LADDER_GENERATE_EVENT, ladderGenerateFunction } from "../src/server/ladder-generate.ts";
 import { migrateUp } from "../src/server/migrate.ts";
 import { adminUrl } from "../tests/support/db.ts";
+import { fixtureFetch, loadFixture, rateLimited, V0_REPOS, type V0Repo } from "../tests/support/github-fixtures.ts";
 import { startGithubStub } from "../tests/support/github-stub.ts";
 
 export const APP_PORT = 54401;
@@ -37,5 +43,43 @@ const config = loadConfig({
   NODE_ENV: "test",
   PORT: String(APP_PORT),
 });
-Bun.serve({ port: APP_PORT, fetch: createApp({ config, sql, clientDir: "dist/client" }).fetch });
+
+// Repo behaviour per e2e scenario (e2e/start-flow.e2e.ts).
+const QUEUE_DELAY_MS = 2_500; // the job shows "Queued" first
+const STEP_DELAY_MS = 6_000; // then "Reading the repo", long enough to screenshot
+const HELD_REPO = "the-pocket/pocketflow"; // never picked up: stays "Queued"
+const RATE_LIMITED_REPO = "developit/mitt"; // fetch-repo hits the rate limit
+const RESET_EPOCH_S = Date.UTC(2030, 0, 1, 12) / 1000;
+
+const fixtures = await Promise.all(Object.keys(V0_REPOS).map((r) => loadFixture(r as V0Repo)));
+const gh = fixtureFetch(fixtures, (path) =>
+  path.startsWith(`/repos/${RATE_LIMITED_REPO}`) && !path.endsWith("/commits?per_page=1")
+    ? rateLimited(RESET_EPOCH_S)
+    : undefined,
+);
+const fixtureClient = githubRepoClient({ baseUrl: stub.url, token: "e2e-app-token", fetch: gh.impl });
+const github: GithubRepoClient = {
+  ...fixtureClient,
+  fetchSnapshot: async (repo, sha) => {
+    await Bun.sleep(STEP_DELAY_MS);
+    return fixtureClient.fetchSnapshot(repo, sha);
+  },
+};
+const fn = ladderGenerateFunction(createInngest(), { sql, github });
+
+const app = createApp({
+  config,
+  sql,
+  clientDir: "dist/client",
+  github,
+  enqueue: async (data) => {
+    if (data.repo === HELD_REPO) return;
+    setTimeout(() => {
+      new InngestTestEngine({ function: fn, events: [{ name: LADDER_GENERATE_EVENT, data }] })
+        .execute()
+        .catch((err) => console.error("e2e: in-process Inngest run failed:", err));
+    }, QUEUE_DELAY_MS);
+  },
+});
+Bun.serve({ port: APP_PORT, fetch: app.fetch });
 console.log(`e2e server on http://localhost:${APP_PORT} (stub GitHub ${stub.url})`);
