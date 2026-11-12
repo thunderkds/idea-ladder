@@ -22,14 +22,21 @@ const tables = async (sql: SQL) =>
     (r: { table_name: string }) => r.table_name,
   );
 const T0001 = ["schema_migrations", "sessions", "users"];
+const T0005 = ["card_states", "review_cards", "review_log"];
+const T0006 = ["push_subscriptions"];
 const ALL = [
+  "card_states",
   "core_files",
   "generation_job_waiters",
   "generation_jobs",
+  "ladder_levels",
   "ladders",
+  "push_subscriptions",
   "repo_confidence",
   "repo_file_cache",
   "repo_snapshots",
+  "review_cards",
+  "review_log",
   "schema_migrations",
   "sessions",
   "users",
@@ -67,16 +74,29 @@ describe("migrations (AC 1)", () => {
 
   test("down reverts to an empty schema, with rows present; up again succeeds", async () => {
     await db.sql`INSERT INTO users (github_id, github_login) VALUES (7, 'has-data')`;
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0006_push_subscriptions");
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0005_review");
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0004_ladder_levels");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0003_core_files");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0002_start_jobs");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0001_init");
     expect(await tables(db.sql)).toEqual([]);
     expect(await extensions(db.sql)).not.toContain("vector");
-    expect(await migrateUp(db.sql)).toEqual(["0001_init", "0002_start_jobs", "0003_core_files"]);
+    expect(await migrateUp(db.sql)).toEqual([
+      "0001_init",
+      "0002_start_jobs",
+      "0003_core_files",
+      "0004_ladder_levels",
+      "0005_review",
+      "0006_push_subscriptions",
+    ]);
     expect(await tables(db.sql)).toEqual(ALL);
   });
 
   test("down on an empty schema is a no-op", async () => {
+    await migrateDown(db.sql, undefined, ALLOW_DOWN);
+    await migrateDown(db.sql, undefined, ALLOW_DOWN);
+    await migrateDown(db.sql, undefined, ALLOW_DOWN);
     await migrateDown(db.sql, undefined, ALLOW_DOWN);
     await migrateDown(db.sql, undefined, ALLOW_DOWN);
     await migrateDown(db.sql, undefined, ALLOW_DOWN);
@@ -129,9 +149,9 @@ describe("down migration guard (destructive)", () => {
 
   test("allowed with MIGRATE_ALLOW_DOWN=1", async () => {
     await migrateUp(db.sql);
-    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0003_core_files");
-    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0002_start_jobs");
-    expect(await tables(db.sql)).toEqual(T0001);
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0006_push_subscriptions");
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0005_review");
+    expect(await tables(db.sql)).toEqual(ALL.filter((t) => !T0005.includes(t) && !T0006.includes(t)));
   });
 
   test("CLI `bun run db:migrate:down` without the opt-in exits 1 and names the variable", async () => {
@@ -153,10 +173,19 @@ describe("0002_start_jobs (T005)", () => {
     await migrateUp(db.sql);
     await db.sql`INSERT INTO ladders (repo_full_name, commit_sha, status) VALUES ('developit/mitt', ${SHA}, 'unverified')`;
     await openJob("developit/mitt");
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0006_push_subscriptions");
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0005_review");
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0004_ladder_levels");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0003_core_files");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0002_start_jobs");
     expect(await tables(db.sql)).toEqual(T0001);
-    expect(await migrateUp(db.sql)).toEqual(["0002_start_jobs", "0003_core_files"]);
+    expect(await migrateUp(db.sql)).toEqual([
+      "0002_start_jobs",
+      "0003_core_files",
+      "0004_ladder_levels",
+      "0005_review",
+      "0006_push_subscriptions",
+    ]);
     expect(await tables(db.sql)).toEqual(ALL);
   });
 
@@ -199,12 +228,29 @@ describe("0003_core_files (T006)", () => {
     await pick(1, "src/index.ts");
     await db.sql`INSERT INTO repo_file_cache (repo_full_name, commit_sha, path, content) VALUES ('a/b', ${SHA}, 'src/index.ts', 'x')`;
     await db.sql`INSERT INTO generation_jobs (repo_full_name, commit_sha, status) VALUES ('a/b', ${SHA}, 'picked')`;
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0006_push_subscriptions");
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0005_review");
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0004_ladder_levels");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0003_core_files");
-    expect(await tables(db.sql)).toEqual(ALL.filter((t) => t !== "core_files" && t !== "repo_file_cache"));
+    expect(await tables(db.sql)).toEqual(
+      ALL.filter(
+        (t) =>
+          t !== "core_files" &&
+          t !== "repo_file_cache" &&
+          t !== "ladder_levels" &&
+          !T0005.includes(t) &&
+          !T0006.includes(t),
+      ),
+    );
     expect((await db.sql`SELECT status FROM generation_jobs`).map((r: { status: string }) => r.status)).toEqual([
       "fetched",
     ]);
-    expect(await migrateUp(db.sql)).toEqual(["0003_core_files"]);
+    expect(await migrateUp(db.sql)).toEqual([
+      "0003_core_files",
+      "0004_ladder_levels",
+      "0005_review",
+      "0006_push_subscriptions",
+    ]);
     expect(await tables(db.sql)).toEqual(ALL);
   });
 
@@ -246,5 +292,129 @@ describe("0003_core_files (T006)", () => {
       /check/i,
     );
     await db.sql`INSERT INTO generation_jobs (repo_full_name, commit_sha, status) VALUES ('a/b', ${SHA}, 'picking')`;
+  });
+});
+
+describe("0004_ladder_levels (T010)", () => {
+  const SHA = "6b41670516ed8e8b738612f60491995470aa63b3";
+  const level = (id: number, l: string) =>
+    db.sql`INSERT INTO ladder_levels (ladder_id, level, title, goal, pass_test_kind, pass_test_description) VALUES (${id}, ${l}, 't', 'g', 'k', 'd')`;
+
+  test("up / down / up with rows present; down drops only ladder_levels", async () => {
+    await migrateUp(db.sql);
+    const [ladder] =
+      await db.sql`INSERT INTO ladders (repo_full_name, commit_sha, status) VALUES ('developit/mitt', ${SHA}, 'unverified') RETURNING id`;
+    await level(ladder.id, "L0");
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0006_push_subscriptions");
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0005_review");
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0004_ladder_levels");
+    expect(await tables(db.sql)).toEqual(
+      ALL.filter((t) => t !== "ladder_levels" && !T0005.includes(t) && !T0006.includes(t)),
+    );
+    expect(await migrateUp(db.sql)).toEqual(["0004_ladder_levels", "0005_review", "0006_push_subscriptions"]);
+    expect(await tables(db.sql)).toEqual(ALL);
+  });
+
+  test("level is L0..L4 and unique per ladder; the ladder must exist", async () => {
+    await migrateUp(db.sql);
+    const [ladder] =
+      await db.sql`INSERT INTO ladders (repo_full_name, commit_sha, status) VALUES ('lukeed/dset', ${SHA}, 'unverified') RETURNING id`;
+    await level(ladder.id, "L1");
+    await expect((async () => await level(ladder.id, "L1"))()).rejects.toThrow(/unique|duplicate/i);
+    await expect((async () => await level(ladder.id, "L5"))()).rejects.toThrow(/check/i);
+    await expect((async () => await level(987654, "L0"))()).rejects.toThrow(/foreign key/i);
+  });
+});
+
+describe("T011 0005_review", () => {
+  const SHA = "6b41670516ed8e8b738612f60491995470aa63b3";
+  const seed = async () => {
+    const [ladder] =
+      await db.sql`INSERT INTO ladders (repo_full_name, commit_sha, status) VALUES ('owner/review-mig', ${SHA}, 'unverified') RETURNING id`;
+    const [card] =
+      await db.sql`INSERT INTO review_cards (ladder_id, level, front, back) VALUES (${ladder.id}, 'L0', 'q', 'a') RETURNING id`;
+    const [user] = await db.sql`INSERT INTO users (github_id, github_login) VALUES (5005, 'rev') RETURNING id`;
+    return { ladder: ladder.id, card: card.id, user: user.id };
+  };
+  const log = (user: string, card: string, key: string, rating = "good") =>
+    db.sql`INSERT INTO review_log (learner_id, card_id, rating, state_before, state_after, reviewed_at, elapsed_ms, idempotency_key)
+      VALUES (${user}, ${card}, ${rating}, '{}'::jsonb, '{}'::jsonb, now(), 10, ${key})`;
+
+  test("up / down / up with rows present; down drops only the three review tables", async () => {
+    await migrateUp(db.sql);
+    const { user, card } = await seed();
+    await log(user, card, "k1");
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0006_push_subscriptions");
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0005_review");
+    expect(await tables(db.sql)).toEqual(ALL.filter((t) => !T0005.includes(t) && !T0006.includes(t)));
+    expect(await db.sql`SELECT to_regproc('review_log_append_only') AS f`).toEqual([{ f: null }]);
+    expect(await migrateUp(db.sql)).toEqual(["0005_review", "0006_push_subscriptions"]);
+    expect(await tables(db.sql)).toEqual(ALL);
+    await db.sql`TRUNCATE ladders, users CASCADE`;
+  });
+
+  test("level and rating are checked; a key is unique per learner; the log is append-only", async () => {
+    await migrateUp(db.sql);
+    const { ladder, user, card } = await seed();
+    await expect(
+      (async () =>
+        await db.sql`INSERT INTO review_cards (ladder_id, level, front, back) VALUES (${ladder}, 'L5', 'q', 'a')`)(),
+    ).rejects.toThrow(/check/i);
+    await expect((async () => await log(user, card, "k", "manual"))()).rejects.toThrow(/check/i);
+    await log(user, card, "k");
+    await expect((async () => await log(user, card, "k"))()).rejects.toThrow(/unique|duplicate/i);
+    await expect((async () => await db.sql`UPDATE review_log SET elapsed_ms = 0`)()).rejects.toThrow(/append-only/);
+    await expect((async () => await db.sql`DELETE FROM review_log`)()).rejects.toThrow(/append-only/);
+    await expect((async () => await db.sql`DELETE FROM review_cards WHERE id = ${card}`)()).rejects.toThrow(
+      /foreign key|append-only/i,
+    );
+    await db.sql`TRUNCATE ladders, users CASCADE`;
+  });
+});
+
+describe("T015 0006_push_subscriptions", () => {
+  const sub = (user: string, endpoint: string, hour = 9, timezone = "Europe/Berlin") =>
+    db.sql`INSERT INTO push_subscriptions (learner_id, endpoint, p256dh, auth, reminder_hour, timezone)
+      VALUES (${user}, ${endpoint}, 'p', 'a', ${hour}, ${timezone})`;
+  const user = async (githubId: number) =>
+    (await db.sql`INSERT INTO users (github_id, github_login) VALUES (${githubId}, 'push') RETURNING id`)[0]
+      .id as string;
+
+  test("up / down / up with rows present; down drops only push_subscriptions", async () => {
+    await migrateUp(db.sql);
+    await sub(await user(6006), "https://fcm.googleapis.com/fcm/send/a");
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0006_push_subscriptions");
+    expect(await tables(db.sql)).toEqual(ALL.filter((t) => !T0006.includes(t)));
+    expect(await migrateUp(db.sql)).toEqual(["0006_push_subscriptions"]);
+    expect(await tables(db.sql)).toEqual(ALL);
+    await db.sql`TRUNCATE users CASCADE`;
+  });
+
+  test("columns; endpoint unique; hour 0-23; rows go with their learner", async () => {
+    await migrateUp(db.sql);
+    const cols =
+      await db.sql`SELECT column_name, is_nullable FROM information_schema.columns WHERE table_name = 'push_subscriptions' ORDER BY ordinal_position`;
+    expect(cols.map((c: { column_name: string; is_nullable: string }) => `${c.column_name}:${c.is_nullable}`)).toEqual([
+      "id:NO",
+      "learner_id:NO",
+      "endpoint:NO",
+      "p256dh:NO",
+      "auth:NO",
+      "reminder_hour:NO",
+      "timezone:NO",
+      "created_at:NO",
+      "last_sent_at:YES",
+    ]);
+    const a = await user(6007);
+    await sub(a, "https://fcm.googleapis.com/fcm/send/one");
+    await expect((async () => await sub(a, "https://fcm.googleapis.com/fcm/send/one"))()).rejects.toThrow(
+      /unique|duplicate/i,
+    );
+    await expect((async () => await sub(a, "https://fcm.googleapis.com/fcm/send/h24", 24))()).rejects.toThrow(/check/i);
+    await expect((async () => await sub(a, "https://fcm.googleapis.com/fcm/send/h-1", -1))()).rejects.toThrow(/check/i);
+    await sub(a, "https://fcm.googleapis.com/fcm/send/h0", 0);
+    await sub(a, "https://fcm.googleapis.com/fcm/send/h23", 23);
+    await db.sql`DELETE FROM users WHERE id = ${a}`;
+    expect(await db.sql`SELECT count(*)::int AS n FROM push_subscriptions`).toEqual([{ n: 0 }]);
   });
 });

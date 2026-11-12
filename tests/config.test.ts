@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import webpush from "web-push";
 import { ConfigError, loadConfig } from "../src/server/config.ts";
 
 const valid = {
@@ -76,6 +77,53 @@ describe("loadConfig", () => {
     // dev and test: none of them needed, INNGEST_DEV allowed
     expect(() => loadConfig({ ...valid, NODE_ENV: "development", INNGEST_DEV: "1" })).not.toThrow();
     expect(() => loadConfig({ ...valid, NODE_ENV: "test" })).not.toThrow();
+  });
+
+  describe("T015 VAPID keys (push reminders)", () => {
+    const keys = webpush.generateVAPIDKeys(); // a fresh pair per run: no key is ever committed
+    const vapid = {
+      VAPID_PUBLIC_KEY: keys.publicKey,
+      VAPID_PRIVATE_KEY: keys.privateKey,
+      VAPID_SUBJECT: "mailto:owner@example.com",
+    };
+
+    test("none set: push is off; all three set: push is on", () => {
+      expect(loadConfig(valid).vapid).toBeUndefined();
+      expect(loadConfig({ ...valid, ...vapid }).vapid).toEqual({
+        publicKey: keys.publicKey,
+        privateKey: keys.privateKey,
+        subject: "mailto:owner@example.com",
+      });
+      expect(loadConfig({ ...valid, ...vapid, VAPID_SUBJECT: "https://ladder.example/contact" }).vapid?.subject).toBe(
+        "https://ladder.example/contact",
+      );
+    });
+
+    test("one or two set: ConfigError names the missing ones", () => {
+      for (const name of Object.keys(vapid) as (keyof typeof vapid)[]) {
+        const { [name]: _drop, ...partial } = vapid;
+        expect(() => loadConfig({ ...valid, ...partial })).toThrow(ConfigError);
+        expect(() => loadConfig({ ...valid, ...partial })).toThrow(new RegExp(`set all three or none.*${name}`));
+        expect(() => loadConfig({ ...valid, [name]: vapid[name] })).toThrow(/set all three or none/);
+      }
+    });
+
+    test("bad subject or key shape is rejected by name; the private key never appears in the message", () => {
+      for (const bad of ["owner@example.com", "http://ladder.example", "ftp://x", "mailto:"]) {
+        expect(() => loadConfig({ ...valid, ...vapid, VAPID_SUBJECT: bad })).toThrow(/VAPID_SUBJECT/);
+      }
+      expect(() => loadConfig({ ...valid, ...vapid, VAPID_PUBLIC_KEY: "short" })).toThrow(/VAPID_PUBLIC_KEY/);
+      const badPrivate = `${keys.privateKey}x!`;
+      let message = "";
+      try {
+        loadConfig({ ...valid, ...vapid, VAPID_PRIVATE_KEY: badPrivate });
+      } catch (err) {
+        message = (err as Error).message;
+      }
+      expect(message).toMatch(/VAPID_PRIVATE_KEY/);
+      expect(message).not.toContain(badPrivate);
+      expect(message).not.toContain(keys.privateKey);
+    });
   });
 
   test("INNGEST_SERVE_ORIGIN is an origin, not taken from the request Host", () => {

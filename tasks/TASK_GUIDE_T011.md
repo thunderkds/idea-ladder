@@ -49,10 +49,10 @@ Source (`docs/REQUIREMENT_SOURCE.md`):
 
 ### Requirement Fidelity Gate (sign off BEFORE implementation)
 
-- [ ] Restated intent confirmed to match the user's request (by Supervisor / user — not the implementing agent)
-- [ ] Domain terms align with `PROJECT_SPEC.md` glossary (`grill-with-docs` run if terminology was fuzzy)
-- [ ] Every Acceptance Criterion below traces to a line in the Requirement
-- [ ] All Requirement Refs exist in `PRD.md` and are fully covered by the Acceptance Criteria above
+- [x] Restated intent confirmed to match the user's request (by Supervisor / user — not the implementing agent)
+- [x] Domain terms align with `PROJECT_SPEC.md` glossary (`grill-with-docs` run if terminology was fuzzy)
+- [x] Every Acceptance Criterion below traces to a line in the Requirement
+- [x] All Requirement Refs exist in `PRD.md` and are fully covered by the Acceptance Criteria above
 
 > An agent must NOT start implementing until this gate is checked. If anything here is unclear,
 > STOP and ask the Supervisor (Karpathy: Think Before Coding).
@@ -62,7 +62,7 @@ Source (`docs/REQUIREMENT_SOURCE.md`):
 ## Dependencies & Reachability
 
 **Depends on**: T010 — the ladder view, its level lock state and its link target for "Start review"; T010 in turn reads the ladder and card tables that T003/T005 created.
-**Entry point**: `Start review` (button label on the ladder view and on "My ladders"), handled by `submitReviewRating`
+**Entry point**: `Start review` (button label on the ladder view and on "My ladders"), handled by `rateCard` (`POST /api/review/rate`, `src/server/review.ts`); the guide first named it `submitReviewRating`
 
 ---
 

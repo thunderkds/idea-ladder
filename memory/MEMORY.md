@@ -32,3 +32,7 @@
 - [T003 merged](decisions.md#2026-11-12--t003-merged-v1-app-scaffold) — Hono on Bun, own SQL migrations (down guarded), hand-written GitHub OAuth, React/Vite; T018 hardening list
 - [Codebase Map](codebase-map.md) — structural snapshot: directory tree, entry points, blast-radius hotspots. Refresh via /map-codebase.
 - [T005 merged](decisions.md#2026-11-12--t005-merged-start-repo--sha-cache-inngest-job-status-page) — /start + job + status page; per-learner limit; known gaps list (token drain, stuck queued job) for T018
+- [T010 merged](decisions.md#2026-11-12--t010-merged-ladder-view-l0l4-lock-state-my-ladders-rows) — ladder view + `ladder_levels`; one unlock rule, passes via T012 seam; merge-gate gotchas in learnings
+- [T011 merged](decisions.md#2026-11-12--t011-merged-daily-5-minute-review-fsrs-ts-fsrs-542-append-only-review-log) — /review + FSRS server schedule + append-only log (migration 0005); per-queue new-card cap; known gaps for T018
+- [T015 merged](decisions.md#2026-11-12--t015-merged-offline-pwa-ordered-sync-push-reminders-progress-export-and-import) — offline PWA + ordered sync + push cron + export/import (migration 0006); decided-for-you list and known gaps; gotchas in learnings
+- [T006 claude-code back end](decisions.md#2026-11-12--t006-reader-gets-a-claude-code-back-end-user-correction-subscription-default-api-key-optional) — user correction: subscription default, API key optional; T006 restarted with AC 9; the audit's API-only note reversed

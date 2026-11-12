@@ -21,6 +21,7 @@ describe("CI workflow (.github/workflows/ci.yml, AC 7)", async () => {
       "bun run db:migrate && bun run db:migrate:down && bun run db:migrate",
       "bun run test:e2e -- sign-in",
       "bun run test:e2e -- start-flow",
+      "bun run test:e2e -- ladder-view",
     ];
     const positions = expected.map((cmd) => runs.indexOf(cmd));
     expect(positions.every((p) => p >= 0)).toBe(true);
@@ -44,7 +45,7 @@ describe("CI workflow (.github/workflows/ci.yml, AC 7)", async () => {
 });
 
 describe("env files and secrets (AC 8)", () => {
-  test(".env.example lists exactly the variable names (T003's four, T005's five, T006's four), all empty", async () => {
+  test(".env.example lists exactly the variable names (T003's four, T005's five, T006's four, T015's three VAPID), all empty", async () => {
     const assignments = (await Bun.file(`${root}/.env.example`).text())
       .split("\n")
       .map((line) => line.trim())
@@ -63,6 +64,9 @@ describe("env files and secrets (AC 8)", () => {
       "MODEL_A_ID=",
       "READER_MAX_STEPS=",
       "READER_TOKEN_BUDGET=",
+      "VAPID_PUBLIC_KEY=",
+      "VAPID_PRIVATE_KEY=",
+      "VAPID_SUBJECT=",
     ]);
   });
 

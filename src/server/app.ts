@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import type { SQL } from "bun";
 import { type Context, Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { serveStatic } from "hono/bun";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { secureHeaders } from "hono/secure-headers";
@@ -25,6 +26,11 @@ import {
   RepoEmptyError,
   RepoNotFoundError,
 } from "./github-repo.ts";
+import { getLadderView, ladderExists, listLadders, noPasses, type PassedLevels } from "./ladder-view.ts";
+import { offlinePack, syncRatings } from "./offline.ts";
+import { exportProgress, importProgress, MAX_IMPORT_BYTES, parseProgressFile } from "./progress.ts";
+import { checkSubscribe, isEndpoint, pushStatus, subscribe, unsubscribe } from "./push.ts";
+import { checkRateRequest, rateCard, reviewQueue } from "./review.ts";
 import {
   checkUrl,
   type Enqueue,
@@ -41,7 +47,7 @@ const FAILED_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <body><main><h1>Sign-in failed</h1><p>GitHub sign-in did not complete. No account was changed.</p>
 <p><a href="/">Try again</a></p></main></body></html>`;
 
-/** Return target kept across GitHub sign-in: only a same-origin `/start?...` path is ever stored or followed. */
+/** Return target kept across GitHub sign-in: only a same-origin `/start?...`, `/ladders/<id>`, `/review` or `/settings` path is ever stored or followed. */
 const RETURN_COOKIE = "il_return_to";
 // biome-ignore lint/suspicious/noControlCharactersInRegex: matching control characters is the point
 const CONTROL_CHARS = /[\x00-\x1f\x7f]/;
@@ -52,7 +58,11 @@ const safeDecode = (value: string) => {
     return "\x00"; // malformed escapes: treat as hostile
   }
 };
-function startPath(value: string | undefined): string | undefined {
+const LADDER_PATH = /^\/ladders\/[1-9][0-9]{0,17}$/;
+const REVIEW_PATH = "/review";
+const SETTINGS_PATH = "/settings";
+function returnPath(value: string | undefined): string | undefined {
+  if (value && (LADDER_PATH.test(value) || value === REVIEW_PATH || value === SETTINGS_PATH)) return value;
   if (!value || value.length > MAX_URL_LENGTH * 4 || !value.startsWith("/start?")) return undefined;
   if (CONTROL_CHARS.test(value) || CONTROL_CHARS.test(safeDecode(value))) return undefined;
   const url = new URL(value, "http://idea-ladder.invalid");
@@ -86,6 +96,8 @@ export function createApp(opts: {
   github?: GithubRepoClient;
   /** Sends ladder/generate.requested. Default: none configured, so /start answers queue-unavailable. */
   enqueue?: Enqueue;
+  /** Levels a learner has passed on a ladder. Default: none (T012 supplies the real one). */
+  passedLevels?: PassedLevels;
   /** Inngest serve handler, mounted at /api/inngest. */
   inngestHandler?: (c: Context) => Promise<Response>;
 }) {
@@ -96,6 +108,7 @@ export function createApp(opts: {
     (async () => {
       throw new Error("no Inngest client configured");
     });
+  const passedLevels = opts.passedLevels ?? noPasses;
   const now = opts.now ?? Date.now;
   const secret = config.sessionSecret;
   const cookieBase = { httpOnly: true, sameSite: "Lax", secure: config.secureCookies, path: "/" } as const;
@@ -105,7 +118,23 @@ export function createApp(opts: {
   const app = new Hono();
   app.use(secureHeaders());
   // Per-user and auth responses must never be stored by browsers or shared caches.
-  for (const path of ["/ladders", "/api/me", "/auth/*", "/start", "/api/start", "/api/jobs/*", "/jobs/*"]) {
+  for (const path of [
+    "/ladders",
+    "/ladders/*",
+    "/api/ladders",
+    "/api/ladders/*",
+    "/api/me",
+    "/auth/*",
+    "/start",
+    "/api/start",
+    "/api/jobs/*",
+    "/jobs/*",
+    REVIEW_PATH,
+    "/api/review/*",
+    "/api/push/*",
+    "/api/progress/*",
+    SETTINGS_PATH,
+  ]) {
     app.use(path, async (c, next) => {
       await next();
       c.res.headers.set("Cache-Control", "no-store");
@@ -116,6 +145,31 @@ export function createApp(opts: {
 
   app.get("/ladders", async (c) => ((await currentUser(c)) ? c.html(await indexHtml()) : c.redirect("/", 302)));
 
+  app.get("/api/ladders", async (c) => {
+    const user = await currentUser(c);
+    return user ? c.json(await listLadders(sql, user.userId)) : c.json({ error: "unauthorized" }, 401);
+  });
+
+  app.get("/api/ladders/:ladderId", async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const view = await getLadderView(sql, c.req.param("ladderId"), user.userId, passedLevels);
+    return view ? c.json(view) : c.json({ error: "not-found" }, 404);
+  });
+
+  // The client page; an unknown id still gets the client (it draws the 404 page) with status 404.
+  app.get("/ladders/:ladderId", async (c) => {
+    const ladderId = c.req.param("ladderId");
+    const user = await currentUser(c);
+    if (!user) {
+      const next = LADDER_PATH.test(`/ladders/${ladderId}`)
+        ? `?next=${encodeURIComponent(`/ladders/${ladderId}`)}`
+        : "";
+      return c.redirect(`/auth/github${next}`, 302);
+    }
+    return c.html(await indexHtml(), (await ladderExists(sql, ladderId)) ? 200 : 404);
+  });
+
   app.get("/api/me", async (c) => {
     const user = await currentUser(c);
     return user ? c.json({ login: user.githubLogin }) : c.json({ error: "unauthorized" }, 401);
@@ -124,7 +178,7 @@ export function createApp(opts: {
   app.get("/auth/github", (c) => {
     const { state, cookie } = newState(secret, now());
     setCookie(c, STATE_COOKIE, cookie, { ...cookieBase, maxAge: STATE_MAX_AGE_S });
-    const next = startPath(c.req.query("next"));
+    const next = returnPath(c.req.query("next"));
     if (next) setCookie(c, RETURN_COOKIE, next, { ...cookieBase, maxAge: STATE_MAX_AGE_S });
     return c.redirect(authorizeUrl(config, state), 302);
   });
@@ -132,7 +186,7 @@ export function createApp(opts: {
   app.get("/auth/github/callback", async (c) => {
     const stateCookie = getCookie(c, STATE_COOKIE);
     deleteCookie(c, STATE_COOKIE, cookieBase); // one use only, success or not
-    const returnTo = startPath(getCookie(c, RETURN_COOKIE));
+    const returnTo = returnPath(getCookie(c, RETURN_COOKIE));
     deleteCookie(c, RETURN_COOKIE, cookieBase);
     const fail = () => c.html(FAILED_PAGE, 400);
     const code = c.req.query("code");
@@ -209,6 +263,101 @@ export function createApp(opts: {
   });
 
   app.get("/jobs/:jobId", async (c) => ((await currentUser(c)) ? c.html(await indexHtml()) : c.redirect("/", 302)));
+
+  app.get(REVIEW_PATH, async (c) =>
+    (await currentUser(c))
+      ? c.html(await indexHtml())
+      : c.redirect(`/auth/github?next=${encodeURIComponent(REVIEW_PATH)}`, 302),
+  );
+
+  // T011: the server owns the schedule; `now()` is the only review time.
+  app.get("/api/review/queue", async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    return c.json(await reviewQueue(sql, user.userId, new Date(now()), passedLevels));
+  });
+
+  app.post("/api/review/rate", async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const req = checkRateRequest(await c.req.json().catch(() => undefined));
+    if (!req) return c.json({ error: "invalid-request" }, 400);
+    const result = await rateCard(sql, user.userId, req, new Date(now()), passedLevels);
+    return result ? c.json(result) : c.json({ error: "not-found" }, 404);
+  });
+
+  // T015: the cards to review offline, and the ratings queued while offline (each applied through rateCard).
+  app.get("/api/review/offline-pack", async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    return c.json(await offlinePack(sql, user.userId, new Date(now()), passedLevels));
+  });
+
+  app.post("/api/review/sync", async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const body = await c.req.json().catch(() => undefined);
+    const result = await syncRatings(sql, user.userId, body, new Date(now()), passedLevels);
+    if (typeof result !== "string") return c.json(result);
+    return c.json({ error: result }, result === "wrong-learner" ? 409 : 400);
+  });
+
+  app.get(SETTINGS_PATH, async (c) =>
+    (await currentUser(c))
+      ? c.html(await indexHtml())
+      : c.redirect(`/auth/github?next=${encodeURIComponent(SETTINGS_PATH)}`, 302),
+  );
+
+  // T015: the progress file. Import is size-checked before it is read or parsed, then validated whole before any write.
+  app.get("/api/progress/export", async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const at = new Date(now());
+    c.header(
+      "Content-Disposition",
+      `attachment; filename="idea-ladder-progress-${at.toISOString().slice(0, 10)}.json"`,
+    );
+    return c.json(await exportProgress(sql, user.userId, at, passedLevels));
+  });
+
+  const tooLarge = (c: Context) => c.json({ error: "file-too-large", detail: "The file is larger than 5 MB." }, 413);
+  app.post("/api/progress/import", bodyLimit({ maxSize: MAX_IMPORT_BYTES, onError: tooLarge }), async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const text = await c.req.text();
+    if (Buffer.byteLength(text) > MAX_IMPORT_BYTES) return tooLarge(c);
+    const [me] = await sql`SELECT github_id::int AS github_id FROM users WHERE id = ${user.userId}`;
+    const file = parseProgressFile(text, me.github_id);
+    if ("status" in file) return c.json(file.body, file.status);
+    return c.json(await importProgress(sql, user.userId, file, new Date(now()), passedLevels));
+  });
+
+  // T015: push reminders. Only the VAPID public key ever reaches a client.
+  app.get("/api/push/status", async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    return c.json(await pushStatus(sql, user.userId, config.vapid?.publicKey));
+  });
+
+  app.post("/api/push/subscribe", async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    if (!config.vapid) return c.json({ error: "push-not-configured", configured: false }, 503);
+    const req = checkSubscribe(await c.req.json().catch(() => undefined));
+    if (!req) return c.json({ error: "invalid-request" }, 400);
+    await subscribe(sql, user.userId, req);
+    return c.json({ ok: true });
+  });
+
+  app.post("/api/push/unsubscribe", async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const body = (await c.req.json().catch(() => undefined)) as { endpoint?: unknown } | undefined;
+    if (!body || typeof body !== "object" || !isEndpoint(body.endpoint))
+      return c.json({ error: "invalid-request" }, 400);
+    await unsubscribe(sql, user.userId, body.endpoint);
+    return c.json({ ok: true });
+  });
 
   if (opts.inngestHandler) app.on(["GET", "POST", "PUT"], "/api/inngest", opts.inngestHandler);
 
