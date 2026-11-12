@@ -68,8 +68,37 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 > **before any implementation commit exists**; if it does not (docs, templates, skill-instruction
 > text), BEFORE is the **verbatim prior content** of what changed — a quoted excerpt, not a command.
 
-**BEFORE**: [pasted timestamped command output showing the thing absent/failing, captured before the
-first implementation commit] OR [verbatim excerpt of the prior content, for non-executable changes]
+**BEFORE**: captured by backend-developer in `/home/thunderkds/workspace/pets/wt-t011`, branch `T011-daily-review` at
+`ba14a6d`, before any T011 implementation commit.
+
+```
+$ date -u; bun test -t "T011"
+2026-11-12T10:57:04Z
+bun test v1.4.3 (c6da4a4d3)
+
+error: regex "T011" matched 0 tests. Searched 11 files (skipping 143 tests) [129.00ms]
+(exit code 1)
+
+$ date -u; grep -n "ts-fsrs" package.json
+2026-11-12T10:57:04Z
+(no output, grep exit=1)
+
+$ bun run build && bun e2e/serve.ts   # BEFORE state
+$ curl -si http://localhost:54401/api/review/queue   # signed out
+2026-11-12T10:57:41Z
+HTTP/1.1 404 Not Found
+$ curl -s -c jar -b jar -L -o /dev/null -w '%{http_code} %{url_effective}' http://localhost:54401/auth/github   # sign in as octo via the stub
+2026-11-12T10:57:41Z
+200 http://localhost:54401/ladders
+$ curl -s -b jar http://localhost:54401/api/me   # signed in
+{"login":"octo"}
+$ curl -si -b jar http://localhost:54401/api/review/queue   # signed in
+2026-11-12T10:57:41Z
+HTTP/1.1 404 Not Found
+$ curl -si -b jar http://localhost:54401/review   # signed in
+2026-11-12T10:57:41Z
+HTTP/1.1 404 Not Found
+```
 
 **AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
 
