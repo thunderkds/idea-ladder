@@ -268,6 +268,9 @@ async function runClaude(
     "--setting-sources",
     "",
     "--disable-slash-commands",
+    // Ignores user/project/local settings files and code-running tools (probe 2026-11-12, claude 2.1.322: the 3 MCP
+    // tools and the subscription login still work).
+    "--restricted",
     ...(input.modelId ? ["--model", input.modelId] : []),
     ...(resume ? ["--resume", resume] : []),
     "--allowedTools",

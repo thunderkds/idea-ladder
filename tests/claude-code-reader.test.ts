@@ -118,6 +118,7 @@ describe("pickCoreFilesClaudeCode (fake claude)", () => {
       "--setting-sources",
       "",
       "--disable-slash-commands",
+      "--restricted",
       "--model",
       "sonnet",
       "--allowedTools",
