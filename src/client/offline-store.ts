@@ -236,8 +236,14 @@ export async function signOut() {
   await clearOfflineData();
 }
 
+/** Pages a signed-out visitor sees: a 401 there is expected and must not send them to the home page. */
+const PUBLIC_PATHS = ["/", "/start"];
+
 /** App open: sync and refresh the pack on signed-in pages, and again whenever the network comes back. */
 export function startOfflineSync() {
-  window.addEventListener("online", () => void refresh());
-  if (window.location.pathname !== "/" && navigator.onLine) void refresh();
+  const signedInPage = () => !PUBLIC_PATHS.includes(window.location.pathname);
+  window.addEventListener("online", () => {
+    if (signedInPage()) void refresh();
+  });
+  if (signedInPage() && navigator.onLine) void refresh();
 }
