@@ -703,6 +703,117 @@ test("T015 fix: a session started online survives the network dropping; the rati
   await expect.poll(async () => (await readStore(page, "queue")).length).toBe(0);
 });
 
+/**
+ * The queue answered like the real server: a card leaves it once a sync has applied its rating. Each queue request
+ * records how many sync requests the server had seen before it, so the request order can be asserted.
+ */
+async function mockQueueOrder(context: BrowserContext, api: Api) {
+  const syncsBeforeQueue: number[] = [];
+  await context.route("**/api/review/queue", (route) => {
+    if (api.offline) return route.abort("internetdisconnected");
+    syncsBeforeQueue.push(api.syncBodies.length);
+    const queue = onlineQueue(api.pack as OfflinePack);
+    return route.fulfill({ json: { ...queue, cards: queue.cards.filter((c) => !api.serverStates.has(c.cardId)) } });
+  });
+  return syncsBeforeQueue;
+}
+
+/** Rates the first `n` cards offline (Good), goes to /start (a page that never syncs), and reconnects there. */
+async function rateOfflineThenReconnectOnStart(page: Page, context: BrowserContext, api: Api, n: number) {
+  await signIn(page);
+  await page.goto("/review"); // the one online visit
+  await expect(question(page)).toBeVisible();
+  await swReady(page);
+  await expect.poll(async () => (await readStore(page, "packs")).length).toBe(1);
+  await setOffline(context, api, true);
+  await page.reload();
+  await expect(page.locator(".offline-banner")).toBeVisible();
+  for (let i = 0; i < n; i++) {
+    await page.getByRole("button", { name: "Show answer" }).click();
+    await page.getByRole("button", { name: "Good" }).click();
+  }
+  await expect.poll(async () => (await readStore(page, "queue")).length).toBe(n);
+  await page.goto("/start");
+  await setOffline(context, api, false);
+  await page.waitForTimeout(500);
+  expect(api.syncBodies).toHaveLength(0); // /start does not sync
+  return readStore<Queued>(page, "queue");
+}
+
+test("T015 fix: a fresh /review load online syncs the offline queue BEFORE asking for the review queue; rated cards never show again", async ({
+  page,
+  context,
+}) => {
+  const api = await mockApi(context);
+  const syncsBeforeQueue = await mockQueueOrder(context, api);
+  const rated: string[] = [];
+  page.on("request", (req) => {
+    if (new URL(req.url()).pathname === "/api/review/rate") rated.push(req.postDataJSON().cardId);
+  });
+  const queued = await rateOfflineThenReconnectOnStart(page, context, api, 2);
+  const ratedIds = queued.map((q) => q.cardId);
+  expect(ratedIds).toEqual(["203", "201"]);
+
+  syncsBeforeQueue.length = 0;
+  await page.goto("/review");
+  await expect(page.getByText("Card 1 of 1")).toBeVisible();
+  await expect(question(page)).toHaveText(PACK.cards[1]?.front ?? "");
+  expect(syncsBeforeQueue).toEqual([1]); // one queue request, after the sync
+  expect(api.syncBodies[0]?.ratings.map((r) => r.cardId)).toEqual(ratedIds);
+  for (const id of ratedIds) {
+    await expect(page.getByText(PACK.cards.find((c) => c.cardId === id)?.front ?? "")).toHaveCount(0);
+  }
+  await page.getByRole("button", { name: "Show answer" }).click();
+  await page.getByRole("button", { name: "Good" }).click();
+  await expect(heading(page)).toHaveText("Session done");
+  expect(rated).toEqual(["202"]); // never a second rating for a card already rated offline
+});
+
+test("T015 fix: a failed sync on a fresh /review load keeps the queue and still hides the cards it holds", async ({
+  page,
+  context,
+}) => {
+  const pack: OfflinePack = { ...PACK, cards: [PACK.cards[0], PACK.cards[2]].filter((c) => c !== undefined) };
+  const api = await mockApi(context, { pack, syncStatus: () => 500 });
+  const syncsBeforeQueue = await mockQueueOrder(context, api);
+  const rated: string[] = [];
+  page.on("request", (req) => {
+    if (new URL(req.url()).pathname === "/api/review/rate") rated.push(req.postDataJSON().cardId);
+  });
+  const queued = await rateOfflineThenReconnectOnStart(page, context, api, 2);
+
+  syncsBeforeQueue.length = 0;
+  await page.goto("/review");
+  // The server still lists both cards (the sync answered 500), but both are rated on this device.
+  await expect(heading(page)).toHaveText("Nothing due");
+  expect(syncsBeforeQueue).toEqual([1]);
+  await page.waitForTimeout(500);
+  expect(api.syncBodies).toHaveLength(1); // the app-open sync only, no second attempt
+  for (const c of pack.cards) await expect(page.getByText(c.front)).toHaveCount(0);
+  expect(rated).toEqual([]);
+  expect((await readStore<Queued>(page, "queue")).map((q) => q.idempotencyKey)).toEqual(
+    queued.map((q) => q.idempotencyKey),
+  );
+});
+
+test("T015 fix: with an empty offline queue a fresh /review load sends one queue request and no sync", async ({
+  page,
+  context,
+}) => {
+  const api = await mockApi(context);
+  const syncsBeforeQueue = await mockQueueOrder(context, api);
+  await signIn(page);
+  await swReady(page);
+  await expect.poll(async () => (await readStore(page, "packs")).length).toBe(1);
+  syncsBeforeQueue.length = 0;
+  await page.goto("/review");
+  await expect(page.getByText("Card 1 of 3")).toBeVisible();
+  await expect(question(page)).toHaveText(PACK.cards[0]?.front ?? "");
+  await page.waitForTimeout(500);
+  expect(syncsBeforeQueue).toEqual([0]);
+  expect(api.syncBodies).toHaveLength(0);
+});
+
 test("T015 AC 7: ladder generation offline shows the notice and sends no request", async ({ page, context }) => {
   const api = await mockApi(context);
   await signIn(page);
