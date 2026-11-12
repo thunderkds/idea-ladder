@@ -31,7 +31,16 @@ const result = (over: Record<string, unknown> = {}) =>
 
 let rec: string;
 let bin: string;
-const savedKey = process.env.ANTHROPIC_API_KEY;
+const SECRETS = [
+  "DATABASE_URL",
+  "SESSION_SECRET",
+  "GITHUB_CLIENT_SECRET",
+  "GITHUB_APP_TOKEN",
+  "VAPID_PRIVATE_KEY",
+  "INNGEST_SIGNING_KEY",
+  "ANTHROPIC_API_KEY",
+];
+const saved = Object.fromEntries([...SECRETS, "CLAUDE_CONFIG_DIR"].map((k) => [k, process.env[k]]));
 beforeEach(async () => {
   rec = await mkdtemp(join(tmpdir(), "il-fake-claude-"));
   bin = join(rec, "claude");
@@ -42,8 +51,10 @@ afterEach(async () => {
   await rm(rec, { recursive: true, force: true });
 });
 afterAll(() => {
-  if (savedKey === undefined) delete process.env.ANTHROPIC_API_KEY;
-  else process.env.ANTHROPIC_API_KEY = savedKey;
+  for (const [k, v] of Object.entries(saved)) {
+    if (v === undefined) delete process.env[k];
+    else process.env[k] = v;
+  }
 });
 
 const replies = (r: { stdout: string; exit?: number; sleepMs?: number; toolCalls?: number }[]) =>
@@ -71,8 +82,8 @@ const pick = (over: Partial<Parameters<typeof pickCoreFilesClaudeCode>[0]> = {})
 
 describe("pickCoreFilesClaudeCode (fake claude)", () => {
   test("exact argv: only the reader MCP server, no built-in tool, no settings; no API key reaches the child", async () => {
-    process.env.ANTHROPIC_API_KEY = "sk-ant-must-not-leak";
-    process.env.FAKE_MARK = "inherited";
+    for (const k of SECRETS) process.env[k] = `secret-${k}-must-not-leak`;
+    process.env.CLAUDE_CONFIG_DIR = "/tmp/claude-config-kept";
     await replies([{ stdout: result({ structured_output: files(["src/index.ts", "src/util.ts", "README.md"]) }) }]);
     const { run } = pick({ modelId: "sonnet", githubToken: "gh-test-token" });
     const out = await run;
@@ -103,7 +114,13 @@ describe("pickCoreFilesClaudeCode (fake claude)", () => {
       "mcp__reader__search",
     ]);
     expect(JSON.parse(a[5] as string).$schema).toBeUndefined();
-    expect(c.env).toEqual({ ANTHROPIC_API_KEY: null, FAKE_MARK: "inherited" });
+    // The child env is an allowlist: none of the app's secrets, but what the CLI needs (PATH, HOME, CLAUDE_*).
+    for (const k of SECRETS) expect(c.env[k]).toBeUndefined();
+    expect(JSON.stringify(c.env)).not.toContain("must-not-leak");
+    expect(c.env.PATH).toBe(process.env.PATH);
+    expect(c.env.HOME).toBe(process.env.HOME);
+    expect(c.env.CLAUDE_CONFIG_DIR).toBe("/tmp/claude-config-kept");
+    expect(c.env.GITHUB_TOKEN).toBeUndefined();
     expect(c.cwd).toMatch(/il-reader-/);
     expect(Object.keys(c.mcp.mcpServers)).toEqual(["reader"]);
     const server = c.mcp.mcpServers.reader;

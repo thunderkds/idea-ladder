@@ -1,5 +1,5 @@
 // A fake `claude` executable for the claude-code reader tests. Invoked as `bun fake-claude.ts <recordDir> ...argv`.
-// Records argv, cwd, selected env and the mcp-config it was given to <recordDir>/calls.jsonl, then plays the next
+// Records argv, cwd, its full env and the mcp-config it was given to <recordDir>/calls.jsonl, then plays the next
 // reply from <recordDir>/replies.json: { stdout, exit?, sleepMs?, toolCalls? } (toolCalls is written to the
 // READER_CALLS_FILE named in the mcp-config, as the MCP server would).
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -16,7 +16,7 @@ appendFileSync(
   `${JSON.stringify({
     argv,
     cwd: process.cwd(),
-    env: { ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ?? null, FAKE_MARK: process.env.FAKE_MARK ?? null },
+    env: process.env,
     mcp,
     context: JSON.parse(readFileSync(mcp.mcpServers.reader.env.READER_CONTEXT_FILE, "utf8")),
   })}\n`,

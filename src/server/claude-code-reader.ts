@@ -180,6 +180,36 @@ export async function pickCoreFilesClaudeCode(input: PickCoreFilesClaudeCodeInpu
   }
 }
 
+const ENV_NAMES = new Set([
+  "PATH",
+  "HOME",
+  "USER",
+  "LOGNAME",
+  "SHELL",
+  "TMPDIR",
+  "LANG",
+  "TERM",
+  "HTTP_PROXY",
+  "HTTPS_PROXY",
+  "NO_PROXY",
+  "http_proxy",
+  "https_proxy",
+  "no_proxy",
+  "NODE_EXTRA_CA_CERTS",
+]);
+const ENV_PREFIXES = ["LC_", "XDG_", "CLAUDE_", "ANTHROPIC_"];
+
+/** The child env is an allowlist: what the CLI needs (the subscription login lives in HOME), none of the app's
+ *  secrets. ANTHROPIC_API_KEY never reaches the child; GITHUB_TOKEN goes only to the MCP server's own env. */
+export function childEnv(parent: Record<string, string | undefined>): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const [k, v] of Object.entries(parent)) {
+    if (v === undefined || k === "ANTHROPIC_API_KEY") continue;
+    if (ENV_NAMES.has(k) || ENV_PREFIXES.some((p) => k.startsWith(p))) env[k] = v;
+  }
+  return env;
+}
+
 /** One `claude -p` run; resolves the parsed JSON result, rejects on timeout, non-zero exit or unparsable output. */
 async function runClaude(
   input: PickCoreFilesClaudeCodeInput,
@@ -209,8 +239,7 @@ async function runClaude(
     "--allowedTools",
     ...ALLOWED_TOOLS,
   ];
-  // The subscription back end: an API key in the parent environment must never reach the child.
-  const { ANTHROPIC_API_KEY: _key, ...env } = process.env;
+  const env = childEnv(process.env);
   const proc = Bun.spawn(argv, { cwd, env, stdin: "ignore", stdout: "pipe", stderr: "pipe" });
   let timedOut = false;
   const timer = setTimeout(() => {
