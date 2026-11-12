@@ -14,5 +14,7 @@
 - 2026-11-01 — Built-in `security-review` diffs against `origin/HEAD`; with no remote it fails. Work-around used: a temporary local `refs/remotes/origin/HEAD`, deleted after. (T001)
 - 2026-11-01 — Kit `__pycache__/*.pyc` files are tracked, and hooks rewrite them, so worktrees show them modified. Restore with `git checkout -- <pyc>` before committing; never commit them. (.gitignore)
 - 2026-11-12 — Bun gotcha for the v1 guides: `bun test` is Bun's own runner and ignores the `test` script in package.json; Playwright e2e runs through `bun run test:e2e` / `bunx playwright`, never `bun test`. All open guides now use these commands (decisions.md 2026-11-12 v1 stack).
+- 2026-11-12 — Bun test gotchas from T003: a Bun `SQL` tagged query is lazy, so `expect(sql`...`).rejects` hangs (wrap it in an async function); `bun test` also picks up `*.spec.ts`, so Playwright files are named `*.e2e.ts` and `bunfig.toml` sets the test root. First Playwright run after idle on WSL took 2.3 min (cold browser).
+- 2026-11-12 — T004: GitHub search sorted by update returns mostly star-farming spam, so the golden repo list was curated by hand. A sub-agent's `security-review` skill run built its diff from the wrong base (planning docs, not the task): pass `base=` explicitly and check the diff header.
 
 ## Gotchas

@@ -28,3 +28,4 @@
 - [Source conflicts settled](decisions.md#2026-11-12--four-source-conflicts-settled-user) — user agreed to all 4 readings in docs/MAIN_FLOW.md § 5
 - [Phase plan T003–T030](decisions.md#2026-11-01--phase-plan-t003t030) — v1 19 tasks, v2 6, v3 5; each phase waits for its gate
 - [v1 stack](decisions.md#2026-11-12--v1-stack-bun-react-postgres--pgvector-claude-subscription-for-lesson-generation) — Bun + React/Vite + Postgres/pgvector; model A via Claude subscription until other learners, then API; model B always API
+- [T004 merged](decisions.md#2026-11-12--t004-merged-golden-set-and-eval-harness) — 20 repos + eval/ harness; baseline recall 0.06; `usd: null` for claude-code is T008's job

@@ -31,6 +31,11 @@
 **Why**: Explicit user instruction. Risk the user accepted: v1 may be built on a v0 result (usable ladders, daily review habit) that has not been measured.
 **Files**: PROJECT_SPEC.md, PRD.md, PROJECT_KANBAN.md, tasks/TASK_GUIDE_T003.md, tasks/TASK_GUIDE_T004.md
 
+### 2026-11-12 — T004 merged: golden set and eval harness
+**Decision**: 20 golden repos (7 trending, 7 medium, 6 lowkey; 5 score `low` confidence), offline replay fixtures, scorers and a cost logger live under `eval/` as their own Bun package. Tier is set by stars in the fixture (trending ≥ 5,000; medium 500–4,999; lowkey < 500). Concept overlap = Jaccard on normalised slugs. Baseline T006 must beat: mean recall 0.06, precision 0.19 on core files; concept overlap 0.01. Open: `logStepCost` has no `usd: null` for the `claude-code` back end (T008 adds it); labels for 15 of 20 repos rest on README + file list + declarations, not full source; owner spot check not done.
+**Why**: T004 acceptance criteria; auto verify pass 2026-11-12 (commit 082092d); Stage 4 code-review 0 P0/P1.
+**Files**: eval/, tasks/TASK_GUIDE_T004.md, tasks/TASK_REVIEW_T004.md
+
 ## Infrastructure
 
 ### 2026-11-01 — Idea Ladder uses board mode local
