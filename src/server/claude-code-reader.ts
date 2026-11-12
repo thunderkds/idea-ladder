@@ -99,25 +99,29 @@ export async function pickCoreFilesClaudeCode(input: PickCoreFilesClaudeCodeInpu
     const callsFile = join(dir, "calls");
     const mcpConfig = join(dir, "mcp.json");
     await writeFile(contextFile, JSON.stringify(context), { mode: 0o600 });
-    await writeFile(
-      mcpConfig,
-      JSON.stringify({
-        mcpServers: {
-          reader: {
-            type: "stdio",
-            command: process.execPath,
-            args: [MCP_SCRIPT],
-            env: {
-              READER_CONTEXT_FILE: contextFile,
-              READER_MAX_STEPS: String(input.limits.maxSteps),
-              READER_CALLS_FILE: callsFile,
-              ...(input.githubToken ? { GITHUB_TOKEN: input.githubToken } : {}),
+    // READER_CALLS_START: the repair run's server continues the first run's count (one cap per invocation).
+    const writeMcpConfig = (start: number) =>
+      writeFile(
+        mcpConfig,
+        JSON.stringify({
+          mcpServers: {
+            reader: {
+              type: "stdio",
+              command: process.execPath,
+              args: [MCP_SCRIPT],
+              env: {
+                READER_CONTEXT_FILE: contextFile,
+                READER_MAX_STEPS: String(input.limits.maxSteps),
+                READER_CALLS_FILE: callsFile,
+                READER_CALLS_START: String(start),
+                ...(input.githubToken ? { GITHUB_TOKEN: input.githubToken } : {}),
+              },
             },
           },
-        },
-      }),
-      { mode: 0o600 },
-    );
+        }),
+        { mode: 0o600 },
+      );
+    await writeMcpConfig(0);
 
     let totalTokens = 0;
     const tokens: TokenCounts = { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 };
@@ -162,6 +166,7 @@ export async function pickCoreFilesClaudeCode(input: PickCoreFilesClaudeCodeInpu
       ]
         .filter(Boolean)
         .join("; ");
+      await writeMcpConfig(await toolCalls());
       ({ answer } = await run(
         `Your answer was not usable: ${problems}. Reply again with the JSON answer only, using exact paths from the tree.`,
         first.sessionId,

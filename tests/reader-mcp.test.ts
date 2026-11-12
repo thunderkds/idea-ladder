@@ -1,6 +1,6 @@
 // T006 AC 9: the stdio MCP server `claude -p` uses on the claude-code back end, spoken to over real pipes.
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CALLS_AFTER_CAP, EXIT_AFTER_CAP, type ReaderContext, STEP_LIMIT_MESSAGE } from "../src/server/reader-mcp.ts";
@@ -32,7 +32,7 @@ afterEach(async () => {
   for (const d of dirs.splice(0)) await rm(d, { recursive: true, force: true });
 });
 
-async function start(maxSteps = 15) {
+async function start(maxSteps = 15, extraEnv: Record<string, string> = {}) {
   const dir = await mkdtemp(join(tmpdir(), "il-mcp-"));
   dirs.push(dir);
   await writeFile(join(dir, "ctx.json"), JSON.stringify(ctx));
@@ -40,7 +40,12 @@ async function start(maxSteps = 15) {
     stdin: "pipe",
     stdout: "pipe",
     stderr: "pipe",
-    env: { PATH: process.env.PATH, READER_CONTEXT_FILE: join(dir, "ctx.json"), READER_MAX_STEPS: String(maxSteps) },
+    env: {
+      PATH: process.env.PATH,
+      READER_CONTEXT_FILE: join(dir, "ctx.json"),
+      READER_MAX_STEPS: String(maxSteps),
+      ...extraEnv,
+    },
   });
   const reader = proc.stdout.getReader();
   let buf = "";
@@ -71,7 +76,7 @@ async function start(maxSteps = 15) {
     const result = r.result as { content: { type: string; text: string }[]; isError: boolean };
     return { text: result.content.map((c) => c.text).join(""), isError: result.isError };
   };
-  return { proc, rpc, raw, call, next };
+  return { proc, rpc, raw, call, next, dir };
 }
 
 describe("reader MCP server (claude-code back end)", () => {
@@ -159,6 +164,18 @@ describe("reader MCP server (claude-code back end)", () => {
     }
     expect(await s.proc.exited).toBe(EXIT_AFTER_CAP);
     expect(EXIT_AFTER_CAP).not.toBe(0);
+  });
+
+  test("READER_CALLS_START: a repair run continues the count; the cap applies to the total", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "il-mcp-calls-"));
+    dirs.push(dir);
+    const callsFile = join(dir, "calls");
+    const s = await start(3, { READER_CALLS_START: "2", READER_CALLS_FILE: callsFile });
+    expect((await s.call("list", { path: "" })).isError).toBe(false);
+    expect(await readFile(callsFile, "utf8")).toBe("3");
+    expect(await s.call("list", { path: "src" })).toEqual({ text: STEP_LIMIT_MESSAGE, isError: true });
+    expect(await readFile(callsFile, "utf8")).toBe("4");
+    s.proc.kill();
   });
 
   test("unknown method -> -32601; a malformed JSON line does not crash the server", async () => {

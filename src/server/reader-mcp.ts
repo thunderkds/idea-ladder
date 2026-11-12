@@ -1,7 +1,8 @@
 // T006 claude-code back end: the reader's three tools (list, read, search) as a stdio MCP server for `claude -p`.
 // Hand-written newline-delimited JSON-RPC 2.0 (no MCP SDK dependency). The tools are the SAME `createReaderTools`
 // as the API back end, so path checks, read bounds and injection hygiene are identical. The step cap lives here:
-// this Claude Code build has no --max-turns, so after READER_MAX_STEPS tool calls every call is refused.
+// this Claude Code build has no --max-turns, so after READER_MAX_STEPS tool calls every call is refused. The repair
+// run starts a new server with READER_CALLS_START (the first run's count): the cap is per reader invocation.
 import { readFileSync, writeFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { z } from "zod";
@@ -34,10 +35,11 @@ export function createReaderMcp(
   readFile: ReadFile,
   maxSteps: number,
   onCall: (calls: number) => void = () => {},
+  start = 0,
 ) {
   const tools = createReaderTools(ctx.tree, readFile, { treeTruncated: ctx.treeTruncated });
   const names = Object.keys(tools) as (keyof typeof tools)[];
-  let calls = 0;
+  let calls = start;
   const text = (t: string, isError: boolean) => ({ content: [{ type: "text", text: t }], isError });
 
   async function callTool(params: Record<string, unknown>) {
@@ -108,6 +110,11 @@ if (import.meta.main) {
     console.error("reader-mcp: READER_MAX_STEPS must be a positive integer");
     process.exit(2);
   }
+  const start = Number(env.READER_CALLS_START ?? 0);
+  if (!Number.isInteger(start) || start < 0) {
+    console.error("reader-mcp: READER_CALLS_START must be a non-negative integer");
+    process.exit(2);
+  }
   const files = ctx.files;
   // Live mode: GitHub at the pinned SHA; GITHUB_TOKEN is optional (unauthenticated reads: 60 requests per hour).
   const github = files
@@ -118,7 +125,13 @@ if (import.meta.main) {
     : (path) => (github as ReturnType<typeof githubRepoClient>).readFile(ctx.fullName, ctx.sha, path);
   // READER_CALLS_FILE: the tool-call count, for the parent reader (steps used, cap hit).
   const callsFile = env.READER_CALLS_FILE;
-  const server = createReaderMcp(ctx, readFile, maxSteps, (n) => callsFile && writeFileSync(callsFile, String(n)));
+  const server = createReaderMcp(
+    ctx,
+    readFile,
+    maxSteps,
+    (n) => callsFile && writeFileSync(callsFile, String(n)),
+    start,
+  );
   const send = (r: Response, then?: () => void) => process.stdout.write(`${JSON.stringify(r)}\n`, then);
 
   // Lines are answered in order: a tool call is counted against the cap in the order the client sent it.

@@ -193,6 +193,18 @@ describe("pickCoreFilesClaudeCode (fake claude)", () => {
     expect(await calls()).toHaveLength(2);
   });
 
+  test("step cap across the repair run: the repair MCP server starts from the first run's count", async () => {
+    await replies([
+      { stdout: result({ result: "I could not decide." }), toolCalls: 4 },
+      { stdout: result({ structured_output: files(["src/index.ts", "src/util.ts", "README.md"]) }), toolCalls: 6 },
+    ]);
+    const out = await pick().run;
+    const cs = await calls();
+    expect(cs[0].mcp.mcpServers.reader.env.READER_CALLS_START).toBe("0");
+    expect(cs[1].mcp.mcpServers.reader.env.READER_CALLS_START).toBe("4");
+    expect(out.toolCalls).toBe(6);
+  });
+
   test("a successful repair returns the repaired answer", async () => {
     await replies([
       { stdout: result({ result: "I could not decide." }) },
