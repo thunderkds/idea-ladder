@@ -10,7 +10,7 @@
 ## Patterns
 
 - 2026-11-01 — Gate 5 trace check (`.claude/hooks/pre_bash_block_unsafe_merge.py` TEST_INVOCATION_PATTERN) counts `npm test` / `pnpm test` / pytest, not `node --test`; and the trace summary is truncated, so a long command line can hide the runner. Give every package a `test` script and run it as a short `cd <dir> && pnpm test`. (T001, T002; experiments/v0-kit/package.json)
-- 2026-11-12 — The same pattern has no `bun test` / `bun run test`, so with the Bun stack decision (decisions.md) the Gate 5 hook would not see v1 test runs as verification and could block merges. Open: add `bun` to TEST_INVOCATION_PATTERN (needs the user's OK; guardrail hook) before the first v1 task reaches Stage 5.
+- 2026-11-12 — The same pattern has no `bun test` / `bun run test`, so with the Bun stack decision (decisions.md) the Gate 5 hook would not see v1 test runs as verification and could block merges. Fixed 2026-11-12 on branch fix/gate5-bun-test: `bun` added to TEST_INVOCATION_PATTERN (`bun test`, `bun run test`); `bun run typecheck`, `bunx vitest` and `echo bun test` still do not count.
 - 2026-11-01 — Built-in `security-review` diffs against `origin/HEAD`; with no remote it fails. Work-around used: a temporary local `refs/remotes/origin/HEAD`, deleted after. (T001)
 - 2026-11-01 — Kit `__pycache__/*.pyc` files are tracked, and hooks rewrite them, so worktrees show them modified. Restore with `git checkout -- <pyc>` before committing; never commit them. (.gitignore)
 
