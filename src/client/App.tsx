@@ -41,7 +41,7 @@ function Ladders() {
   }, []);
   return (
     <main className="page">
-      <header className="bar">
+      <header className="bar bar-wrap">
         <span className="brand">Idea Ladder</span>
         <span className="bar-links">
           <a className="back-link" href="/settings">

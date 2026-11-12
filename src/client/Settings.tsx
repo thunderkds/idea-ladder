@@ -32,7 +32,7 @@ function Message({ feedback }: { feedback?: Feedback }) {
   if (!feedback) return null;
   return (
     <p
-      className={feedback.kind === "error" ? "settings-error" : "settings-ok"}
+      className={`settings-feedback ${feedback.kind === "error" ? "settings-error" : "settings-ok"}`}
       role={feedback.kind === "error" ? "alert" : "status"}
     >
       {feedback.text}

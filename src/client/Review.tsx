@@ -39,12 +39,13 @@ type Session = {
   ended: boolean;
 };
 
-/** The offline pack as a review queue: cards whose local state is due (or New), soonest first. */
+/** The offline pack as a review queue, in the server's order: due cards by due time, then New cards in pack order. */
 function offlineQueue(pack: OfflinePack, now: number): ReviewQueue {
-  const dueKey = (c: OfflinePack["cards"][number]) => c.cardState?.due ?? c.dueAt;
+  const order = (c: OfflinePack["cards"][number]) =>
+    c.cardState ? Date.parse(c.cardState.due) : Number.POSITIVE_INFINITY;
   const cards = pack.cards
     .filter((c) => c.cardState === null || Date.parse(c.cardState.due) <= now)
-    .sort((a, b) => Date.parse(dueKey(a)) - Date.parse(dueKey(b)));
+    .sort((a, b) => order(a) - order(b) || 0); // stable: equal keys (New cards) keep the pack's order
   const later = pack.cards
     .map((c) => c.cardState?.due)
     .filter((due): due is string => due !== undefined && Date.parse(due) > now)
@@ -76,7 +77,7 @@ function InstallOffer() {
       <h2 id="install-title">Install app</h2>
       <p>Install Idea Ladder to review offline and get a daily reminder.</p>
       <p className="install-actions">
-        <button className="button" type="button" onClick={() => void promptInstall()}>
+        <button className="button button-quiet" type="button" onClick={() => void promptInstall()}>
           Install
         </button>
         <button className="button button-quiet" type="button" onClick={() => setDismissed(true)}>

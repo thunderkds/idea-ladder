@@ -310,6 +310,14 @@ a.button {
   min-height: var(--tap-min);
   min-width: var(--tap-min);
 }
+/* My ladders: on a phone the links and Sign out move under the brand as one row. */
+.bar-wrap {
+  flex-wrap: wrap;
+  row-gap: var(--space-2);
+}
+.bar-wrap .brand {
+  white-space: nowrap;
+}
 .offline-banner {
   padding: var(--space-3) var(--space-4);
   margin-bottom: var(--space-6);
@@ -391,14 +399,13 @@ a.button {
   font-weight: var(--font-weight-strong);
   cursor: pointer;
 }
-.settings-section .settings-error,
-.settings-section .settings-ok {
-  margin: var(--space-3) 0 0;
+.settings-error,
+.settings-ok {
   font-weight: var(--font-weight-strong);
   overflow-wrap: anywhere;
 }
-.settings-section .settings-error:first-of-type {
-  margin-top: 0;
+.settings-section .settings-feedback {
+  margin: var(--space-3) 0 0;
 }
 .button:disabled {
   cursor: default;
