@@ -67,7 +67,9 @@ export function testReader(): ReaderDeps {
     const listing = JSON.parse(toolResults(options).at(-1) ?? '""') as { value?: string };
     const files = String(listing.value ?? "")
       .split("\n")
-      .filter((l) => l && !l.endsWith("/") && !l.startsWith("("));
+      .filter((l) => l.startsWith('"'))
+      .map((l) => JSON.parse(l) as string)
+      .filter((p) => !p.endsWith("/"));
     return { text: answer(files.slice(0, 3).map((path) => ({ path }))) };
   });
   return { model, limits: { maxSteps: 15, tokenBudget: 80_000 }, logCost: () => {} };

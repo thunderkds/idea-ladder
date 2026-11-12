@@ -24,7 +24,8 @@ if (!Object.hasOwn(loadPrices(), config.modelAId)) {
 
 const sql = new SQL(config.databaseUrl);
 const reader: ReaderDeps = {
-  model: createAnthropic({ apiKey: config.anthropicApiKey })(config.modelAId),
+  // The API back end, explicit: never an ANTHROPIC_BASE_URL from the environment.
+  model: createAnthropic({ apiKey: config.anthropicApiKey, baseURL: "https://api.anthropic.com/v1" })(config.modelAId),
   limits: { maxSteps: config.readerMaxSteps, tokenBudget: config.readerTokenBudget },
   logCost: ({ jobId, repo, sha, step, model, inputTokens, outputTokens, cachedInputTokens }) =>
     logStepCost({

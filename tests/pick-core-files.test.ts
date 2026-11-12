@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { InngestTestEngine } from "@inngest/test";
-import { githubRepoClient } from "../src/server/github-repo.ts";
+import { APICallError } from "ai";
+import { type GithubRepoClient, githubRepoClient } from "../src/server/github-repo.ts";
 import {
   type CostEntry,
   createInngest,
@@ -46,13 +47,17 @@ const jobStatus = async (id: string) =>
     reason: string | null;
   };
 
-function engine(jobId: string, script: (call: number) => Reply) {
+function engine(
+  jobId: string,
+  script: (call: number) => Reply,
+  wrap: (g: GithubRepoClient) => GithubRepoClient = (g) => g,
+) {
   const gh = fixtureFetch(fixtures, (path) =>
     path.startsWith("/repos/lukeed/dset/contents/src/index.js?ref=")
       ? new Response(INDEX_JS, { headers: { "x-ratelimit-remaining": "4999" } })
       : undefined,
   );
-  const github = githubRepoClient({ baseUrl: "https://api.github.com", token: "t", fetch: gh.impl });
+  const github = wrap(githubRepoClient({ baseUrl: "https://api.github.com", token: "t", fetch: gh.impl }));
   const model = scriptedModel(script);
   const costs: CostEntry[] = [];
   const statuses: string[] = [];
@@ -72,7 +77,7 @@ function engine(jobId: string, script: (call: number) => Reply) {
     function: fn,
     events: [{ name: LADDER_GENERATE_EVENT, data: { ...DSET, jobId } }],
   });
-  return { t, gh, model, costs, statuses };
+  return { t, gh, model, costs, statuses, fn };
 }
 
 const happy = (call: number): Reply =>
@@ -157,5 +162,73 @@ describe("Inngest step pick-core-files (AC 5, AC 6)", () => {
     const { t, model } = engine(second, happy);
     expect((await t.execute()).result).toMatchObject({ status: "picked", coreFiles: PICKS });
     expect(model.doGenerateCalls.length).toBe(0);
+  });
+});
+
+describe("pick-core-files failure paths (fix batch)", () => {
+  test("a cache write that fails (text with a NUL) does not fail or re-run the paid loop", async () => {
+    const jobId = await newJob();
+    const { t, model } = engine(jobId, happy, (g) => ({ ...g, readFile: async () => "a\u0000b" }));
+    const { result } = await t.execute();
+    expect(result).toMatchObject({ status: "picked", coreFiles: PICKS });
+    expect(model.doGenerateCalls.length).toBe(2);
+    expect((await db.sql`SELECT count(*)::int AS n FROM repo_file_cache`)[0].n).toBe(0);
+  });
+
+  test("a non-retryable model error (400 prompt too long) fails the job at once: reader-error, one call", async () => {
+    const jobId = await newJob();
+    const error = new APICallError({
+      message: "prompt is too long",
+      url: "https://api.anthropic.com/v1/messages",
+      requestBodyValues: {},
+      statusCode: 400,
+    });
+    const { t, model } = engine(jobId, () => ({ error }));
+    const { result } = await t.execute();
+    expect(result).toMatchObject({ status: "failed", reason: "reader-error" });
+    expect(await jobStatus(jobId)).toEqual({ status: "failed", reason: "reader-error" });
+    expect(model.doGenerateCalls.length).toBe(1);
+  });
+
+  test("pick-core-files throws on every attempt: the job stays picking, then onFailure marks it failed / reader-error", async () => {
+    const jobId = await newJob();
+    const overloaded = Object.assign(new Error("Overloaded"), { statusCode: 529 });
+    const { t, fn } = engine(jobId, () => ({ error: overloaded }));
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const run = await t.execute();
+      expect((run as { error?: Error }).error?.message).toMatch(/Overloaded/);
+      expect((await jobStatus(jobId)).status).toBe("picking");
+    }
+    const onFailure = fn.opts.onFailure as unknown as (ctx: { event: unknown; error: Error }) => Promise<unknown>;
+    await onFailure({
+      event: {
+        name: "inngest/function.failed",
+        data: { event: { name: LADDER_GENERATE_EVENT, data: { ...DSET, jobId } } },
+      },
+      error: overloaded,
+    });
+    expect(await jobStatus(jobId)).toEqual({ status: "failed", reason: "reader-error" });
+    expect((await coreRows()).length).toBe(0);
+  });
+
+  test("another job stores picks for the repo + SHA while this one runs: its rows are kept, never mixed", async () => {
+    // (generation_jobs_open_key allows one open job per repo + SHA; this covers a failed job's step still running.)
+    const other = [
+      { path: "package.json", reason: "B: manifest" },
+      { path: "src/index.js", reason: "B: entry" },
+    ];
+    const jobId = await newJob();
+    const { t } = engine(jobId, happy, (g) => ({
+      ...g,
+      readFile: async (repo, sha, path) => {
+        for (const [i, f] of other.entries())
+          await db.sql`INSERT INTO core_files (repo_full_name, commit_sha, rank, path, reason)
+            VALUES (${repo}, ${sha}, ${i + 1}, ${f.path}, ${f.reason})`;
+        return g.readFile(repo, sha, path);
+      },
+    }));
+    const { result } = await t.execute();
+    expect(result).toMatchObject({ status: "picked", coreFiles: other });
+    expect(await coreRows()).toEqual(other.map((p, i) => ({ rank: i + 1, ...p })));
   });
 });

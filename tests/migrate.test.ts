@@ -234,6 +234,13 @@ describe("0003_core_files (T006)", () => {
         /check/i,
       );
     }
+    // cache content: at most 1,048,576 characters (readFile keeps at most 1 MB)
+    await db.sql`INSERT INTO repo_file_cache (repo_full_name, commit_sha, path, content) VALUES ('a/b', ${SHA}, 'max.txt', ${"x".repeat(1048576)})`;
+    await rejects(
+      () =>
+        db.sql`INSERT INTO repo_file_cache (repo_full_name, commit_sha, path, content) VALUES ('a/b', ${SHA}, 'over.txt', ${"x".repeat(1048577)})`,
+      /check/i,
+    );
     await rejects(
       () => db.sql`INSERT INTO generation_jobs (repo_full_name, commit_sha, status) VALUES ('a/b', ${SHA}, 'done')`,
       /check/i,

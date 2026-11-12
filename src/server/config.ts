@@ -23,6 +23,16 @@ export type Config = {
 
 export class ConfigError extends Error {}
 
+/** Upper bounds of the reader limits: a typo must not turn the step cap or the token budget into no limit. */
+export const READER_LIMIT_MAX = { steps: 50, tokens: 500_000 } as const;
+
+/** A positive integer up to `max`, or null. Shared with the eval subject (eval/src/repo-reader-subject.ts). */
+export function parsePositiveInt(raw: string, max: number): number | null {
+  if (!/^[1-9][0-9]*$/.test(raw)) return null;
+  const n = Number(raw);
+  return n <= max ? n : null;
+}
+
 const REQUIRED = [
   "DATABASE_URL",
   "GITHUB_CLIENT_ID",
@@ -58,14 +68,14 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
   const limitRaw = env.START_MAX_NEW_JOBS_PER_HOUR || "20";
   const startMaxNewJobsPerHour = /^[1-9][0-9]*$/.test(limitRaw) ? Number(limitRaw) : 0;
   if (!startMaxNewJobsPerHour) problems.push("START_MAX_NEW_JOBS_PER_HOUR must be a positive integer");
-  const positive = (name: string, fallback: string) => {
-    const raw = env[name] || fallback;
-    if (/^[1-9][0-9]*$/.test(raw)) return Number(raw);
-    problems.push(`${name} must be a positive integer`);
+  const positive = (name: string, fallback: string, max: number) => {
+    const n = parsePositiveInt(env[name] || fallback, max);
+    if (n !== null) return n;
+    problems.push(`${name} must be a positive integer at most ${max}`);
     return 0;
   };
-  const readerMaxSteps = positive("READER_MAX_STEPS", "15");
-  const readerTokenBudget = positive("READER_TOKEN_BUDGET", "80000");
+  const readerMaxSteps = positive("READER_MAX_STEPS", "15", READER_LIMIT_MAX.steps);
+  const readerTokenBudget = positive("READER_TOKEN_BUDGET", "80000", READER_LIMIT_MAX.tokens);
 
   if (env.NODE_ENV === "production") {
     if (env.INNGEST_DEV) problems.push("INNGEST_DEV must not be set in production");

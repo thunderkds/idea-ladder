@@ -6,11 +6,12 @@ ALTER TABLE generation_jobs ADD CONSTRAINT generation_jobs_status_check
   CHECK (status IN ('queued', 'running', 'fetched', 'picking', 'picked', 'failed'));
 
 -- File text at the pinned SHA, so a retried step re-reads nothing from GitHub. content is NULL for a binary file.
+-- readFile keeps at most 1 MB (1,048,576 bytes), which decodes to at most as many characters.
 CREATE TABLE repo_file_cache (
   repo_full_name text NOT NULL,
   commit_sha text NOT NULL,
   path text NOT NULL CHECK (path <> '' AND path !~ '(^/|(^|/)\.\.?(/|$))'),
-  content text,
+  content text CHECK (char_length(content) <= 1048576),
   fetched_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (repo_full_name, commit_sha, path),
   FOREIGN KEY (repo_full_name, commit_sha) REFERENCES repo_snapshots (repo_full_name, commit_sha) ON DELETE CASCADE

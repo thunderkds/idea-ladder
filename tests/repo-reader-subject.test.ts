@@ -4,7 +4,7 @@
 import { describe, expect, test } from "bun:test";
 import { loadFixture, loadGolden } from "../eval/src/golden.ts";
 import { renderMarkdown, runEval } from "../eval/src/harness.ts";
-import { createRepoReaderSubject, THRESHOLDS, verdicts } from "../eval/src/repo-reader-subject.ts";
+import { createRepoReaderSubject, readerLimitsFromEnv, THRESHOLDS, verdicts } from "../eval/src/repo-reader-subject.ts";
 import baselineReadme from "../eval/src/subjects/baseline-readme.ts";
 import { answer, scriptedModel } from "./support/mock-model.ts";
 
@@ -75,7 +75,36 @@ describe("repo-reader eval subject (AC 7, offline with a mock model)", () => {
       logCost: () => 0.001,
     });
     const report = await runEval({ step: "core-files", subject, repos: repos.slice(0, 1), loadFixture });
-    expect(report.rows[0]).toMatchObject({ recall: 0, modelCalls: 2, usd: 0.002 });
+    expect(report.rows[0]).toMatchObject({ recall: 0, modelCalls: 2, usd: 0.002, hitLimit: false });
     expect(report.rows[0]?.error).toContain("reader-invalid-output");
+  });
+
+  test("a run that hits the step cap and then fails with reader-invalid-output counts as a limit hit", async () => {
+    const model = scriptedModel((_, o) =>
+      o.toolChoice?.type === "none" ? { text: "no idea" } : { tools: [{ name: "list", input: { path: "" } }] },
+    );
+    const subject = createRepoReaderSubject({
+      model,
+      limits: { maxSteps: 2, tokenBudget: 80_000 },
+      readFile: () => async () => "",
+      logCost: () => 0.001,
+    });
+    const report = await runEval({ step: "core-files", subject, repos: repos.slice(0, 1), loadFixture });
+    expect(report.rows[0]?.error).toContain("reader-invalid-output");
+    expect(report.rows[0]).toMatchObject({ recall: 0, modelCalls: 4, hitLimit: true }); // 2 steps + final + repair
+    expect(report.hitLimitRuns).toBe(1);
+  });
+
+  test("READER_MAX_STEPS / READER_TOKEN_BUDGET: defaults, and NaN, 0 or too large is refused", () => {
+    expect(readerLimitsFromEnv({})).toEqual({ maxSteps: 15, tokenBudget: 80_000 });
+    expect(readerLimitsFromEnv({ READER_MAX_STEPS: "20", READER_TOKEN_BUDGET: "100000" })).toEqual({
+      maxSteps: 20,
+      tokenBudget: 100_000,
+    });
+    for (const bad of ["abc", "0", "-1", "1.5", "51"])
+      expect(() => readerLimitsFromEnv({ READER_MAX_STEPS: bad })).toThrow(
+        "READER_MAX_STEPS must be a positive integer",
+      );
+    expect(() => readerLimitsFromEnv({ READER_TOKEN_BUDGET: "500001" })).toThrow("at most 500000");
   });
 });

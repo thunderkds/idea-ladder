@@ -1,7 +1,8 @@
 // Background ladder generation (Inngest). Steps: fetch-repo (T005), pick-core-files (T006); later tasks append more.
-import type { LanguageModel } from "ai";
+import { APICallError, type LanguageModel } from "ai";
 import type { SQL } from "bun";
 import { Inngest, NonRetriableError } from "inngest";
+import { ZodError } from "zod";
 import { confidenceScore } from "./confidence.ts";
 import { GitHubError, type GithubRepoClient, RateLimitError, RepoNotFoundError } from "./github-repo.ts";
 import {
@@ -9,6 +10,7 @@ import {
   type CoreFile,
   PICK_CORE_FILES_STEP,
   pickCoreFiles,
+  ReaderBudgetError,
   ReaderInvalidOutputError,
   type ReaderLimits,
   type ReadFile,
@@ -98,9 +100,14 @@ function cachedReadFile(sql: SQL, github: GithubRepoClient, repo: string, sha: s
       SELECT content FROM repo_file_cache WHERE repo_full_name = ${repo} AND commit_sha = ${sha} AND path = ${path}`;
     if (hit) return hit.content as string | null;
     const content = await github.readFile(repo, sha, path);
-    await sql`
-      INSERT INTO repo_file_cache (repo_full_name, commit_sha, path, content) VALUES (${repo}, ${sha}, ${path}, ${content})
-      ON CONFLICT DO NOTHING`;
+    try {
+      await sql`
+        INSERT INTO repo_file_cache (repo_full_name, commit_sha, path, content) VALUES (${repo}, ${sha}, ${path}, ${content})
+        ON CONFLICT DO NOTHING`;
+    } catch (err) {
+      // The cache only saves GitHub calls on a retry: a failed write must not fail (and so re-run) the paid loop.
+      console.warn(JSON.stringify({ event: "repo-file-cache-write-failed", repo, sha, path, error: String(err) }));
+    }
     return content;
   };
 }
@@ -133,16 +140,28 @@ async function pickCoreFilesStep({ sql, github, reader }: Deps, { jobId }: Gener
         onUsage: (u) => reader.logCost({ ...u, jobId, repo, sha, step: PICK_CORE_FILES_STEP }),
       }));
     } catch (err) {
-      if (!(err instanceof ReaderInvalidOutputError)) throw err; // model 429/529, GitHub 5xx: Inngest retries this step
-      await failJob(sql, jobId, err.code);
-      return { status: "failed", reason: err.code } as const;
+      if (err instanceof ReaderInvalidOutputError || err instanceof ReaderBudgetError) {
+        await failJob(sql, jobId, err.code);
+        return { status: "failed", reason: err.code } as const;
+      }
+      // A retry cannot help these (400 prompt too long, 401 bad key, a schema bug): fail now, no paid re-run.
+      if ((APICallError.isInstance(err) && !err.isRetryable) || err instanceof ZodError) {
+        console.warn(JSON.stringify({ event: "reader-error", jobId, repo, sha, error: String(err) }));
+        await failJob(sql, jobId, "reader-error");
+        return { status: "failed", reason: "reader-error" } as const;
+      }
+      throw err; // model 429/529, GitHub 5xx: Inngest retries this step
     }
+    // One writer per repo + SHA: a concurrent job waits here, then sees the rows and keeps them (no mixed picks).
     await sql.begin(async (tx) => {
+      await tx`SELECT 1 AS locked FROM pg_advisory_xact_lock(hashtextextended(${`core_files:${repo}@${sha}`}, 0))`;
+      const [existing] = await tx`
+        SELECT count(*)::int AS n FROM core_files WHERE repo_full_name = ${repo} AND commit_sha = ${sha}`;
+      if (existing?.n > 0) return;
       for (const [i, f] of coreFiles.entries()) {
         await tx`
           INSERT INTO core_files (repo_full_name, commit_sha, rank, path, reason)
-          VALUES (${repo}, ${sha}, ${i + 1}, ${f.path}, ${f.reason})
-          ON CONFLICT DO NOTHING`;
+          VALUES (${repo}, ${sha}, ${i + 1}, ${f.path}, ${f.reason})`;
       }
     });
     coreFiles = await stored(); // another job for the same repo + SHA may have stored its picks first
@@ -161,7 +180,9 @@ export function ladderGenerateFunction(inngest: Inngest, deps: Deps) {
       // After the last retry of a transient error: the job must not stay "running" forever.
       onFailure: async ({ event }) => {
         const data = eventData(event.data.event.data);
-        await failJob(deps.sql, data.jobId, "github-error");
+        const [job] = await deps.sql`SELECT status FROM generation_jobs WHERE id = ${data.jobId}`;
+        const inReader = job?.status === "fetched" || job?.status === "picking";
+        await failJob(deps.sql, data.jobId, inReader ? "reader-error" : "github-error");
       },
     },
     async ({ event, step }) => {
