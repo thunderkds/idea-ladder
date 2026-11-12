@@ -67,8 +67,21 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 > **before any implementation commit exists**; if it does not (docs, templates, skill-instruction
 > text), BEFORE is the **verbatim prior content** of what changed — a quoted excerpt, not a command.
 
-**BEFORE**: [pasted timestamped command output showing the thing absent/failing, captured before the
-first implementation commit] OR [verbatim excerpt of the prior content, for non-executable changes]
+**BEFORE**: captured 2026-11-12T09:28:06Z in the T010 worktree, before any implementation commit (`bun install --frozen-lockfile` done):
+
+```
+$ bun test ladder-view level-lock-state
+bun test v1.4.3 (c6da4a4d3)
+The following filters did not match any test files in --cwd="/home/thunderkds/workspace/pets/wt-t010":
+ ladder-view level-lock-state
+21 files were searched [2.00ms]
+$ bun run test:e2e -- ladder-view --list
+Listing tests:
+Total: 0 tests in 0 files
+error: script "test:e2e" exited with code 1
+```
+
+At this commit `GET /ladders/:ladderId` has no route (T005 redirects a cache hit there and it 404s), there is no `levelLockState`, no `getLadderView`, and `My ladders` renders only `No ladders yet`.
 
 **AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
 
