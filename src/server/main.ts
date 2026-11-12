@@ -1,9 +1,10 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { SQL } from "bun";
 import { serve } from "inngest/hono";
-import { loadPrices, logStepCost } from "../../eval/src/cost.ts";
+import { loadPrices } from "../../eval/src/cost.ts";
 import { createApp } from "./app.ts";
 import { ConfigError, loadConfig } from "./config.ts";
+import { readerCostLogger } from "./cost-wiring.ts";
 import { githubRepoClient } from "./github-repo.ts";
 import { createInngest, LADDER_GENERATE_EVENT, ladderGenerateFunction, type ReaderDeps } from "./ladder-generate.ts";
 import { noPasses } from "./ladder-view.ts";
@@ -26,27 +27,7 @@ if (config.modelABackend === "api" && !Object.hasOwn(loadPrices(), config.modelA
 
 const sql = new SQL(config.databaseUrl);
 const limits = { maxSteps: config.readerMaxSteps, tokenBudget: config.readerTokenBudget };
-const logCost: ReaderDeps["logCost"] = ({
-  jobId,
-  repo,
-  sha,
-  step,
-  model,
-  inputTokens,
-  outputTokens,
-  cachedInputTokens,
-  backend,
-}) =>
-  logStepCost({
-    runId: `job-${jobId}`,
-    ladderKey: `${repo}@${sha}`,
-    step,
-    model,
-    inputTokens,
-    outputTokens,
-    cachedInputTokens,
-    backend,
-  });
+const logCost = readerCostLogger();
 // claude-code (default): `claude -p` on the subscription; its MCP server reads GitHub with the app token.
 // api: the Anthropic provider, explicit base URL (never an ANTHROPIC_BASE_URL from the environment).
 const reader: ReaderDeps =
