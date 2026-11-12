@@ -3,11 +3,12 @@
 // can be rated, and no new card is shown after that. The server alone schedules the next review (ts-fsrs).
 // T015: when the queue request cannot reach the network, the session runs from the offline pack cached in IndexedDB:
 // each rating gets its next state locally from the same `scheduleNext` and is queued for sync (offline-store.ts).
+// A session started online switches to the cached pack when a rating hits a network error (not an HTTP status).
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { OfflinePack } from "../shared/offline.ts";
 import { RATINGS, type RateRequest, type Rating, type ReviewCard, type ReviewQueue } from "../shared/review.ts";
 import { useOnline } from "./offline.tsx";
-import { currentPack, rateOffline, refresh, signedOut } from "./offline-store.ts";
+import { currentPack, expireSession, rateOffline, refresh } from "./offline-store.ts";
 import { installAvailable, onInstallChange, promptInstall } from "./pwa.ts";
 
 const LABELS: Record<Rating, string> = { again: "Again", hard: "Hard", good: "Good", easy: "Easy" };
@@ -133,7 +134,7 @@ export function ReviewPage() {
     fetch("/api/review/queue")
       .then(
         async (res) => {
-          if (res.status === 401) return signedOut();
+          if (res.status === 401) return expireSession();
           if (!res.ok) throw new Error(`review queue request failed: ${res.status}`);
           const body = (await res.json()) as ReviewQueue;
           if (stopped) return;
@@ -189,11 +190,19 @@ export function ReviewPage() {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify(body),
+        }).catch(async (error: unknown) => {
+          // The network dropped mid-session: go on from the cached pack when it has this card. The same idempotency
+          // key is queued, so if the request did reach the server the sync answers `duplicate`, never a second row.
+          const pack = error instanceof TypeError ? await currentPack() : undefined;
+          if (!pack?.cards.some((c) => c.cardId === card.cardId)) throw error;
+          await rateOffline(pack.learnerId, body, new Date());
+          setOfflineLearner(pack.learnerId);
+          return undefined;
         });
-        if (res.status === 401) return signedOut();
+        if (res?.status === 401) return expireSession();
         // 404: the card is no longer reviewable for this learner (for example its level is locked); move on.
-        if (!res.ok && res.status !== 404) throw new Error(`rating failed: ${res.status}`);
-        saved = res.ok;
+        if (res && !res.ok && res.status !== 404) throw new Error(`rating failed: ${res.status}`);
+        saved = res ? res.ok : true;
       }
       // Online: send any queued ratings and keep the offline pack current.
       if (navigator.onLine) void refresh();
