@@ -1,5 +1,5 @@
 # PROJECT_KANBAN.md
-**Last updated**: 2026-11-12 (Gate 1 waived; T003, T004, T005, T010, T011, T015 Done; T006 Blocked on the owner's paid run)
+**Last updated**: 2026-11-12 (Gate 1 waived; T003, T004, T005, T010, T011, T015 Done; T006 In Progress (claude-code back end); T006 Blocked on the owner's paid run)
 
 > Idea Ladder board (board mode `local`). Full context lives in `PROJECT_SPEC.md`.
 > The previous file was another project's Linear cache; it is archived at `docs/archive/easy-personal-board/`.
@@ -34,11 +34,11 @@
 - [ ] **T029** — "Learn what's trending" weekly pick | backend-developer | C1 | Risk: Low | P2 | Phase: v3 (after Gate 3)
 
 ### In Progress
+- [ ] **T006** — Repo reader agent (3 read-only tools: list, read, search; step cap; token budget) picks core files; scored on golden set | backend-developer | C2 | Risk: Medium | P0 | Phase: v1 (Gate 1 waived by user 2026-11-12) | Started 2026-11-12: branch `T006-reader` | Verify FAIL 2026-11-12 (paid golden-set run AC 7 / SC 6 not done); fix batch committed, waiting on the owner's run | Restarted 2026-11-12: user decision (the Claude subscription is the default model A back end, the API key is optional) adds AC 9, the `claude-code` back end for the reader; branch `T006-reader` first merges main
 
 ### Ready for Review
 
 ### Blocked
-- [ ] **T006** — Repo reader agent (3 read-only tools: list, read, search; step cap; token budget) picks core files; scored on golden set | backend-developer | C2 | Risk: Medium | P0 | Phase: v1 (Gate 1 waived by user 2026-11-12) | Started 2026-11-12: branch `T006-reader` | Verify FAIL 2026-11-12 (paid golden-set run AC 7 / SC 6 not done); fix batch committed, waiting on the owner's run | Moved to Blocked 2026-11-12 on the user's instruction so T010 can merge; branch `T006-reader` and `wt-t006` untouched; returns to In Progress when the owner runs the paid golden-set run or waives AC 7 / SC 6
 
 ### Done
 - [x] **T015** — Offline PWA (service worker cache), push reminders, export/import of progress | frontend-developer | C2 | Risk: Medium | P1 | Phase: v1 (Gate 1 waived by user 2026-11-12) | Started 2026-11-12: branch `T015-offline-pwa` | Done 2026-11-12: auto verify pass (session 64196178-692e-404e-8935-d32d82ea8c1b, commit 8220d62; the first run on 734baeb failed on a real stale-queue bug, fixed in 8220d62); code-review 0 P0/P1 open; security 0 findings; independent QA found and the fixes closed 1 P1 + 2 P2; migration-safety GO (dry-run N/A); real push delivery is the owner's manual check; merged 3f64cb8
@@ -59,7 +59,7 @@
 | v1 tasks T005–T018, T030 | Gate 1 waived by user 2026-11-12; each waits only for its own dependencies | T003 scaffold (and T004 where noted) |
 | v2 tasks T019–T024 | Gate 2: others finish L1 without your help | v1 deployed (T018) + real learners |
 | v3 tasks T025–T029 | Gate 3: proof links get shared; first outside ladder PR | v2 live |
-| T006 → T007, T008, T009 | T006 AC 7 / SC 6: the paid golden-set run needs `ANTHROPIC_API_KEY`, a read-only GitHub token and the real model price in `eval/prices.json`; or a user waiver | User |
+| T006 → T007, T008, T009 | T006 is being finished on the `claude-code` back end (subscription, no API key); T007–T009 wait for it | T006 |
 | T013, T017, T018, T023 | Each stops for one user decision (L1 proof; cost cap; hosting; Radar button) | User |
 
 ---
