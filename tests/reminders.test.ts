@@ -24,7 +24,12 @@ beforeEach(async () => {
 
 let n = 0;
 /** A learner with `due` due cards (New cards) and one card due far in the future, subscribed at `hour` in `tz`. */
-async function subscriber(hour: number, timezone: string, due: number, endpoint = `https://fcm.googleapis.com/fcm/send/${n}`) {
+async function subscriber(
+  hour: number,
+  timezone: string,
+  due: number,
+  endpoint = `https://fcm.googleapis.com/fcm/send/${n}`,
+) {
   const i = n++;
   const [u] =
     await db.sql`INSERT INTO users (github_id, github_login) VALUES (${9000 + i}, ${`r${i}`}) RETURNING id::text AS id`;

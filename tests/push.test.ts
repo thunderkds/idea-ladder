@@ -146,8 +146,18 @@ describe("T015 push subscribe / unsubscribe (AC 4)", () => {
     const me = await learner();
     const other = await learner();
     await post(h, "/api/push/subscribe", subscribeBody("https://fcm.googleapis.com/fcm/send/mine"), me.cookie);
-    await post(h, "/api/push/subscribe", subscribeBody("https://fcm.googleapis.com/fcm/send/theirs", 7, "UTC"), other.cookie);
-    const theirTry = await post(h, "/api/push/unsubscribe", { endpoint: "https://fcm.googleapis.com/fcm/send/mine" }, other.cookie);
+    await post(
+      h,
+      "/api/push/subscribe",
+      subscribeBody("https://fcm.googleapis.com/fcm/send/theirs", 7, "UTC"),
+      other.cookie,
+    );
+    const theirTry = await post(
+      h,
+      "/api/push/unsubscribe",
+      { endpoint: "https://fcm.googleapis.com/fcm/send/mine" },
+      other.cookie,
+    );
     expect(theirTry.status).toBe(200);
     expect((await rows()).map((r: { endpoint: string }) => r.endpoint)).toEqual([
       "https://fcm.googleapis.com/fcm/send/mine",
@@ -156,11 +166,18 @@ describe("T015 push subscribe / unsubscribe (AC 4)", () => {
     const status = (await (await h.get("/api/push/status", other.cookie)).json()) as PushStatus;
     expect(status).toMatchObject({ subscribed: true, hour: 7, timezone: "UTC" });
     for (let i = 0; i < 2; i++) {
-      const res = await post(h, "/api/push/unsubscribe", { endpoint: "https://fcm.googleapis.com/fcm/send/mine" }, me.cookie);
+      const res = await post(
+        h,
+        "/api/push/unsubscribe",
+        { endpoint: "https://fcm.googleapis.com/fcm/send/mine" },
+        me.cookie,
+      );
       expect(res.status).toBe(200);
       expect(await res.json()).toEqual({ ok: true });
     }
-    expect((await rows()).map((r: { endpoint: string }) => r.endpoint)).toEqual(["https://fcm.googleapis.com/fcm/send/theirs"]);
+    expect((await rows()).map((r: { endpoint: string }) => r.endpoint)).toEqual([
+      "https://fcm.googleapis.com/fcm/send/theirs",
+    ]);
     expect(((await (await h.get("/api/push/status", me.cookie)).json()) as PushStatus).subscribed).toBe(false);
     for (const bad of [{}, { endpoint: 5 }, { endpoint: "x".repeat(2049) }, null]) {
       expect((await post(h, "/api/push/unsubscribe", bad, me.cookie)).status).toBe(400);
@@ -172,7 +189,12 @@ describe("T015 push subscribe / unsubscribe (AC 4)", () => {
     const second = await learner();
     await post(h, "/api/push/subscribe", subscribeBody("https://fcm.googleapis.com/fcm/send/shared"), first.cookie);
     await h.db.sql`UPDATE push_subscriptions SET last_sent_at = now()`;
-    await post(h, "/api/push/subscribe", subscribeBody("https://fcm.googleapis.com/fcm/send/shared", 6, "UTC"), second.cookie);
+    await post(
+      h,
+      "/api/push/subscribe",
+      subscribeBody("https://fcm.googleapis.com/fcm/send/shared", 6, "UTC"),
+      second.cookie,
+    );
     expect(await rows()).toEqual([
       {
         learner: second.id,

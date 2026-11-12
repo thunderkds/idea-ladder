@@ -316,7 +316,9 @@ describe("T015 0006_push_subscriptions", () => {
     ]);
     const a = await user(6007);
     await sub(a, "https://fcm.googleapis.com/fcm/send/one");
-    await expect((async () => await sub(a, "https://fcm.googleapis.com/fcm/send/one"))()).rejects.toThrow(/unique|duplicate/i);
+    await expect((async () => await sub(a, "https://fcm.googleapis.com/fcm/send/one"))()).rejects.toThrow(
+      /unique|duplicate/i,
+    );
     await expect((async () => await sub(a, "https://fcm.googleapis.com/fcm/send/h24", 24))()).rejects.toThrow(/check/i);
     await expect((async () => await sub(a, "https://fcm.googleapis.com/fcm/send/h-1", -1))()).rejects.toThrow(/check/i);
     await sub(a, "https://fcm.googleapis.com/fcm/send/h0", 0);
