@@ -110,7 +110,7 @@ before v1 builds the MVP PWA (§ Roadmap, § First experiment and kill criteria)
 - Multi-agent orchestration, handoffs, parallel writer agents, LangGraph, OpenAI Agents SDK (§ LLM architecture, § Framework stack).
 - Any shared database, login or API with Idea Radar (§ Architecture).
 - v2/v3 features until their gates pass: community ladders repo, author credit, cohorts, trending pick, Anki export, paid certificates (§ Brainstorm, § Roadmap).
-- Building the v1 MVP before Gate 1 (v0) passes (§ Roadmap).
+- Building the v1 MVP before Gate 1 (v0) passes (§ Roadmap). Waived by the user on 2026-11-12: v1 work may start now; Gate 2 and Gate 3 still apply.
 
 ---
 
