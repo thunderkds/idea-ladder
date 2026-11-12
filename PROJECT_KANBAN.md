@@ -36,9 +36,9 @@
 - [ ] **T029** — "Learn what's trending" weekly pick | backend-developer | C1 | Risk: Low | P2 | Phase: v3 (after Gate 3)
 
 ### In Progress
+- [ ] **T006** — Repo reader agent (3 read-only tools: list, read, search; step cap; token budget) picks core files; scored on golden set | backend-developer | C2 | Risk: Medium | P0 | Phase: v1 (Gate 1 waived by user 2026-11-12) | Started 2026-11-12: branch `T006-reader` | Verify FAIL 2026-11-12 (paid golden-set run AC 7 / SC 6 not done); fix batch committed, waiting on the owner's run
 
 ### Ready for Review
-- [ ] **T006** — Repo reader agent (3 read-only tools: list, read, search; step cap; token budget) picks core files; scored on golden set | backend-developer | C2 | Risk: Medium | P0 | Phase: v1 (Gate 1 waived by user 2026-11-12) | Started 2026-11-12: branch `T006-reader`
 - [ ] **T010** — Ladder view — L0–L4, locked levels, status unverified, link out to README/DeepWiki | frontend-developer | C2 | Risk: Low | P0 | Phase: v1 (Gate 1 waived by user 2026-11-12) | Started 2026-11-12: branch `T010-ladder-view`
 
 ### Done
@@ -57,6 +57,7 @@
 | v1 tasks T005–T018, T030 | Gate 1 waived by user 2026-11-12; each waits only for its own dependencies | T003 scaffold (and T004 where noted) |
 | v2 tasks T019–T024 | Gate 2: others finish L1 without your help | v1 deployed (T018) + real learners |
 | v3 tasks T025–T029 | Gate 3: proof links get shared; first outside ladder PR | v2 live |
+| T006 → T007, T008, T009 | T006 AC 7 / SC 6: the paid golden-set run needs `ANTHROPIC_API_KEY`, a read-only GitHub token and the real model price in `eval/prices.json`; or a user waiver | User |
 | T013, T017, T018, T023 | Each stops for one user decision (L1 proof; cost cap; hosting; Radar button) | User |
 
 ---
