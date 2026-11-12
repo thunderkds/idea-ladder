@@ -31,3 +31,4 @@
 - [T004 merged](decisions.md#2026-11-12--t004-merged-golden-set-and-eval-harness) — 20 repos + eval/ harness; baseline recall 0.06; `usd: null` for claude-code is T008's job
 - [T003 merged](decisions.md#2026-11-12--t003-merged-v1-app-scaffold) — Hono on Bun, own SQL migrations (down guarded), hand-written GitHub OAuth, React/Vite; T018 hardening list
 - [Codebase Map](codebase-map.md) — structural snapshot: directory tree, entry points, blast-radius hotspots. Refresh via /map-codebase.
+- [T005 merged](decisions.md#2026-11-12--t005-merged-start-repo--sha-cache-inngest-job-status-page) — /start + job + status page; per-learner limit; known gaps list (token drain, stuck queued job) for T018
