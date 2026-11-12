@@ -150,7 +150,15 @@ if (import.meta.main) {
         send({ jsonrpc: "2.0", id: null, error: { code: -32600, message: "invalid request" } });
         return;
       }
-      const res = await server.handle(msg);
+      let res: Response | null;
+      try {
+        res = await server.handle(msg);
+      } catch (err) {
+        // e.g. READER_CALLS_FILE not writable: answer this request with an error, keep the queue serving.
+        console.error(JSON.stringify({ event: "reader-mcp-internal-error", error: String(err) }));
+        if (msg.id === undefined) return;
+        res = { jsonrpc: "2.0", id: msg.id ?? null, error: { code: -32603, message: "internal error" } };
+      }
       if (!res) return;
       if (server.exhausted()) send(res, () => process.exit(EXIT_AFTER_CAP));
       else send(res);

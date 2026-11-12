@@ -178,6 +178,15 @@ describe("reader MCP server (claude-code back end)", () => {
     s.proc.kill();
   });
 
+  test("a handler that throws (calls file not writable) -> -32603 for that id; the server keeps serving", async () => {
+    const s = await start(15, { READER_CALLS_FILE: join(tmpdir(), "il-no-such-dir", "nested", "calls") });
+    const r = await s.rpc("tools/call", { name: "list", arguments: { path: "" } });
+    expect(r.id).toBe(1);
+    expect(r.error?.code).toBe(-32603);
+    expect((await s.rpc("ping")).result).toEqual({});
+    s.proc.kill();
+  });
+
   test("unknown method -> -32601; a malformed JSON line does not crash the server", async () => {
     const s = await start();
     expect((await s.rpc("resources/list")).error?.code).toBe(-32601);
