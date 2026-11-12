@@ -106,24 +106,24 @@ Tests assert code correctness, not these thresholds. A miss is a valid result re
 
 | # | Given (input/state) | Expect (output/behavior) | How it's checked |
 |---|---------------------|--------------------------|------------------|
-| 1 | Fixture repo `developit/mitt` snapshot + core files, mock embedder | chunks stored with line ranges; second run adds 0 rows | vitest (test DB with pgvector) |
-| 2 | Mock model returns an L3 MCQ with key `bitmap`, chunk text `uses a map` | regenerated twice, then dropped `key-check-failed`; 3 model calls for that item | vitest |
-| 3 | Mock MCQ citing a chunk of another level | dropped `bad-citation` | vitest |
-| 4 | Two cards with mock embeddings at cosine 0.95 | second dropped `duplicate` | vitest |
-| 5 | Card that copies 30 words of a chunk | dropped `verbatim-copy` | vitest |
-| 6 | Inngest test run, `generate-level-L2` throws once | only that step retried; ladder saved `unverified`; job `done` | vitest + Inngest test helper |
-| 7 | Snapshot with `fallbackToConcepts: true` | only L0 generated; L1–L4 `concept-only-skipped` | vitest |
+| 1 | Fixture repo `developit/mitt` snapshot + core files, mock embedder | chunks stored with line ranges; second run adds 0 rows | bun test (test DB with pgvector) |
+| 2 | Mock model returns an L3 MCQ with key `bitmap`, chunk text `uses a map` | regenerated twice, then dropped `key-check-failed`; 3 model calls for that item | bun test |
+| 3 | Mock MCQ citing a chunk of another level | dropped `bad-citation` | bun test |
+| 4 | Two cards with mock embeddings at cosine 0.95 | second dropped `duplicate` | bun test |
+| 5 | Card that copies 30 words of a chunk | dropped `verbatim-copy` | bun test |
+| 6 | Inngest test run, `generate-level-L2` throws once | only that step retried; ladder saved `unverified`; job `done` | bun test + Inngest test helper |
+| 7 | Snapshot with `fallbackToConcepts: true` | only L0 generated; L1–L4 `concept-only-skipped` | bun test |
 | 8 | 20 golden repos, live model A + embedder | `generation_report` per repo + summary with the 3 threshold verdicts | command run (paid) |
 
 ### Verification Command (exact, runnable)
 
 ```bash
-# ci: skip — the golden-set run calls model A and the embedding model (paid, needs API keys); CI runs the unit tests only
-pnpm install --frozen-lockfile
-pnpm db:migrate
-pnpm typecheck && pnpm lint
-pnpm test -- chunk-and-embed level-generator answer-key-check dedupe save-ladder
-pnpm eval -- --step ladder --subject level-generators
+# ci: skip — the golden-set run calls model A and the embedding model (paid: API keys, or the owner's Claude login for the `claude-code` back end); CI runs the unit tests only
+bun install --frozen-lockfile
+bun run db:migrate
+bun run typecheck && bun run lint
+bun test chunk-and-embed level-generator answer-key-check dedupe save-ladder
+bun run eval -- --step ladder --subject level-generators
 ```
 
 ### Evidence (filled by reviewer at Stage 4/5)
@@ -152,7 +152,7 @@ pnpm eval -- --step ladder --subject level-generators
 
 Decompose (C3) into subtasks, each with its own tests, landing in this order: (8a) `chunk-and-embed` + migration; (8b) generator per level with schema and citation check; (8c) answer-key check + regeneration loop, verbatim check, dedupe; (8d) `save-ladder`, job `done`, golden-set subject.
 
-The mandatory brainstorm must settle, and record in `docs/decisions/0002-generation.md` for the Supervisor: (1) the embedding model and its provider (constraints: callable through the AI SDK `embedMany`; fixed vector dimension written into the migration; cost logged via `logStepCost`). If its API key is not in env, stop with `Status: blocked` + `Question:` naming the key. (2) chunk size and overlap. (3) whether the regeneration prompt includes the failure reason. Model A comes from env `MODEL_A_ID`. Each generator gets only its level's chunks: L0 → README + dependency files + concept list; L1 → README + setup docs; L2 → tree summary + issues + core files; L3 → core-file chunks; L4 → core files + `good first issue` titles. Migration through `Skill({ skill: "migration-safety" })`; Common-Infrastructure applies it.
+The mandatory brainstorm must settle, and record in `docs/decisions/0002-generation.md` for the Supervisor: (1) the embedding model and its provider (constraints: callable through the AI SDK `embedMany`; fixed vector dimension written into the migration; cost logged via `logStepCost`). If its API key is not in env, stop with `Status: blocked` + `Question:` naming the key. (2) chunk size and overlap. (3) whether the regeneration prompt includes the failure reason. Model A comes from env `MODEL_A_ID` and is called through one `generate` interface with two back ends, chosen by env `MODEL_A_BACKEND`: `claude-code` (headless `claude -p` on the owner's Claude subscription; allowed only while the owner is the only person who starts generations) and `api` (AI SDK with an API key; required before any other learner can start a generation, see T018). Both return the same zod-typed output, and tests use the mock. The `claude-code` back end has no per-token price: it logs the usage it reports and a cost of `null`. Embeddings are not covered by the subscription: the embedding model still needs its own provider key. (User decision 2026-11-12.) Each generator gets only its level's chunks: L0 → README + dependency files + concept list; L1 → README + setup docs; L2 → tree summary + issues + core files; L3 → core-file chunks; L4 → core files + `good first issue` titles. Migration through `Skill({ skill: "migration-safety" })`; Common-Infrastructure applies it.
 
 ---
 
@@ -196,7 +196,7 @@ The mandatory brainstorm must settle, and record in `docs/decisions/0002-generat
 
 ## Test Plan
 
-vitest per subtask with the AI SDK mock language model and a deterministic mock embedder (fixed vectors) for AC 1–6 and 8; Inngest test helper for parallel steps and single-step retry (AC 7, Success 6); integration tests on a pgvector test DB. Real run: golden-set eval on 20 repos and one live `/start?url=https://github.com/developit/mitt` to `done` with a saved `unverified` ladder; paste the `generation_report` and threshold verdicts. Adversarial verify (C3): try a fixture with injected instructions and a fixture with keys only in negated sentences.
+bun test per subtask with the AI SDK mock language model and a deterministic mock embedder (fixed vectors) for AC 1–6 and 8; Inngest test helper for parallel steps and single-step retry (AC 7, Success 6); integration tests on a pgvector test DB. Real run: golden-set eval on 20 repos and one live `/start?url=https://github.com/developit/mitt` to `done` with a saved `unverified` ladder; paste the `generation_report` and threshold verdicts. Adversarial verify (C3): try a fixture with injected instructions and a fixture with keys only in negated sentences.
 
 ---
 
@@ -206,7 +206,7 @@ vitest per subtask with the AI SDK mock language model and a deterministic mock 
 - [ ] Self-review: `Skill({ skill: "code-review" })` run
 - [ ] Security review: `Skill({ skill: "security-review" })` run (Medium risk)
 - [ ] Migration safety: `Skill({ skill: "migration-safety" })` run (new tables, pgvector column)
-- [ ] Lint passes (`pnpm lint`, `pnpm typecheck`)
+- [ ] Lint passes (`bun run lint`, `bun run typecheck`)
 - [ ] Tests written AND pass — output pasted into `tasks/TASK_REVIEW_T008.md` Evidence (Hard-Stop Gate 5)
 - [ ] `Skill({ skill: "verify" })` run — headless auto verify (adversarial at C3)
 - [ ] Supervisor notified: task ready for Stage 4 review

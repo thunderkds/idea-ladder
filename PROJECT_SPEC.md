@@ -34,7 +34,7 @@ v0 (now): no product code. Experiments only — the v0 ladder kit (T002) and a d
 - **Requirements**: PRD.md (source: docs/REQUIREMENT_SOURCE.md)
 - **Direction**: BRAINSTORMING_LOG.md (auto mode — Option B narrowed; report reports/thinking-report_plan-idea-ladder-init_20261101T090447.html)
 - **Codebase map**: none — blank scaffold
-- **Tech stack**: v0 spikes: TypeScript on Node v26, pnpm, vitest, node:crypto (Ed25519, SHA-256); no storage, no hosting. v1 target (unconfirmed until Gate 1): Vercel AI SDK, Inngest, Postgres + pgvector, FSRS, PWA
+- **Tech stack**: v0 spikes: TypeScript on Node v26, pnpm, vitest, node:crypto (Ed25519, SHA-256); no storage, no hosting. v1 target (stack decided 2026-11-12; code still waits for Gate 1): Bun (server, package manager, test runner), React + Vite (client, PWA), Postgres + pgvector, Vercel AI SDK, Inngest, FSRS. Model A generation: the owner's Claude subscription (`claude -p`) while only the owner generates, an API key before any other learner does; model B and embeddings always use API keys (`memory/decisions.md` 2026-11-12). Inngest on Bun is unproven until T003's smoke check
 - **Main flow**: docs/MAIN_FLOW.md
 - **Approved by**:
 - **Waived**:
