@@ -207,20 +207,19 @@ test("SC 6: an unknown ladder id shows the 404 page", async ({ page }) => {
   const missing = await page.goto("/ladders/987654");
   expect(missing?.status()).toBe(404);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Ladder not found");
+  await expectNoSeriousAxeViolations(page);
 });
 
-test("AC 6: signed out, a ladder URL goes to sign-in and back to the same ladder", async ({ page }) => {
+test("AC 6: signed out, a ladder URL goes to sign-in and back to the same ladder", async ({ page, request }) => {
   const { next } = await seededIds(page);
   await page.goto(`/ladders/${next}`);
   await expect(page).toHaveURL(new RegExp(`/ladders/${next}$`));
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("vercel/next.js");
   const api = await page.context().request.get(`/api/ladders/${next}`);
   expect(api.headers()["cache-control"]).toBe("no-store");
-  // Signed out API call: 401.
-  const out = await (await page.context().browser()?.newContext({ baseURL: "http://localhost:54401" }))?.request.get(
-    `/api/ladders/${next}`,
-  );
-  expect(out?.status()).toBe(401);
+  // Signed out API call: 401 (the `request` fixture has no session cookie).
+  const out = await request.get(`/api/ladders/${next}`);
+  expect(out.status()).toBe(401);
 });
 
 test("AC 7: My ladders lists the saved ladders the learner started, each with Open ladder", async ({ page }) => {
@@ -252,4 +251,20 @@ test("AC 7: My ladders lists the saved ladders the learner started, each with Op
   } finally {
     await page.request.get(`${CONTROL}/set-user?id=42&login=octo`);
   }
+});
+
+test("a failed ladder request shows `Could not load this ladder` with a retry link, not Loading forever", async ({
+  page,
+}) => {
+  const { next } = await seededIds(page);
+  await signIn(page);
+  await page.route("**/api/ladders/*", (route) => route.fulfill({ status: 500, body: "boom" }));
+  await page.goto(`/ladders/${next}`);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Could not load this ladder");
+  await expect(page.getByRole("link", { name: "Try again" })).toHaveAttribute("href", `/ladders/${next}`);
+  await expect(page.locator("[aria-busy=true]")).toHaveCount(0);
+  await expectNoSeriousAxeViolations(page);
+  await page.unroute("**/api/ladders/*");
+  await page.getByRole("link", { name: "Try again" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("vercel/next.js");
 });

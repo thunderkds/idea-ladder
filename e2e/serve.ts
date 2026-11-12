@@ -121,11 +121,12 @@ const app = createApp({
     }, QUEUE_DELAY_MS);
   },
 });
-Bun.serve({ port: APP_PORT, fetch: app.fetch });
+Bun.serve({ hostname: "127.0.0.1", port: APP_PORT, fetch: app.fetch });
 console.log(`e2e server on http://localhost:${APP_PORT} (stub GitHub ${stub.url})`);
 
 // Test-only control port: the seeded ladder ids, and a switch for who the GitHub stub signs in.
 Bun.serve({
+  hostname: "127.0.0.1",
   port: APP_PORT + 1,
   fetch(req) {
     const url = new URL(req.url);

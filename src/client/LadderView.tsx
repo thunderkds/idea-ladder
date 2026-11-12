@@ -50,15 +50,20 @@ function Level({ level }: { level: LevelView }) {
 export function LadderPage({ ladderId }: { ladderId: string }) {
   const [ladder, setLadder] = useState<Ladder>();
   const [missing, setMissing] = useState(false);
+  const [failed, setFailed] = useState(false);
   useEffect(() => {
     let stopped = false;
     fetch(`/api/ladders/${encodeURIComponent(ladderId)}`)
       .then(async (res) => {
         if (res.status === 401) return window.location.assign("/");
-        if (res.status === 404) return setMissing(true);
-        if (res.ok && !stopped) setLadder((await res.json()) as Ladder);
+        if (res.status === 404) return stopped ? undefined : setMissing(true);
+        if (!res.ok) throw new Error(`ladder request failed: ${res.status}`);
+        const body = (await res.json()) as Ladder;
+        if (!stopped) setLadder(body);
       })
-      .catch(() => undefined);
+      .catch(() => {
+        if (!stopped) setFailed(true);
+      });
     return () => {
       stopped = true;
     };
@@ -70,7 +75,27 @@ export function LadderPage({ ladderId }: { ladderId: string }) {
         <h1>Ladder not found</h1>
         <p className="status-detail">This ladder does not exist.</p>
         <p>
-          <a href="/ladders">Back to My ladders</a>
+          <a className="back-link" href="/ladders">
+            Back to My ladders
+          </a>
+        </p>
+      </main>
+    );
+  }
+  if (failed) {
+    return (
+      <main className="page" role="alert">
+        <h1>Could not load this ladder</h1>
+        <p className="status-detail">Something went wrong while loading it.</p>
+        <p>
+          <a className="back-link" href={`/ladders/${encodeURIComponent(ladderId)}`}>
+            Try again
+          </a>
+        </p>
+        <p>
+          <a className="back-link" href="/ladders">
+            Back to My ladders
+          </a>
         </p>
       </main>
     );
