@@ -67,7 +67,7 @@ LLM call, structured)". § Sequence: ladder generation: "10 Workflow→LLMs map 
 
 | # | Criterion (testable) | Traces to requirement |
 |---|----------------------|-----------------------|
-| 1 | `mapConcepts({ snapshot, coreFiles, confidence })` makes exactly 1 model A call with an AI SDK structured-output schema (zod): `{ concepts: [{ name (2–60 chars), slug, reason (≤ 300 chars), basis: string[] }] }` with 3–6 items. `slug` is derived in code (lower-case, `-`-joined), not trusted from the model. | 3 to 6 concepts; 1 LLM call, structured |
+| 1 | `mapConcepts({ snapshot, coreFiles, confidence })` makes exactly 1 model A call through the `generate` function with a zod schema: `{ concepts: [{ name (2–60 chars), slug, reason (≤ 300 chars), basis: string[] }] }` with 3–6 items. `slug` is derived in code (lower-case, `-`-joined), not trusted from the model. | 3 to 6 concepts; 1 LLM call, structured |
 | 2 | Every `basis` entry is a core-file path from T006 or one of `readme`, `topics`, `languages`, `depFiles`; any other value is dropped. A concept left with an empty `basis` is dropped; fewer than 3 concepts left → one retry, then step fails `mapper-invalid-output`. | grounded mapping |
 | 3 | Inngest step `map-concepts` runs after `pick-core-files`, stores `repo_concepts` for the repo + SHA, carries `fallbackToConcepts` from the T005 confidence result, logs cost via `logStepCost` with `step: "map-concepts"`, and on retry re-runs only itself. | fall back to concept-only ladders; durable steps |
 | 4 | Learner edit: `PUT /api/ladders/:ladderId/concepts` (signed in) stores a per-learner list in `learner_concepts`. The shared `repo_concepts` rows are unchanged. `GET` returns the learner's list if one exists, else the shared list. | learner can edit; cache shared by repo + SHA |
@@ -94,7 +94,7 @@ LLM call, structured)". § Sequence: ladder generation: "10 Workflow→LLMs map 
 ### Verification Command (exact, runnable)
 
 ```bash
-# ci: skip — the golden-set run calls model A (paid, needs ANTHROPIC_API_KEY); CI runs the unit and e2e tests only
+# ci: skip — the golden-set run calls model A (paid: `ANTHROPIC_API_KEY`, or the owner's Claude login for the `claude-code` back end); CI runs the unit and e2e tests only
 bun install --frozen-lockfile
 bun run typecheck && bun run lint
 bun test concept-mapper learner-concepts
@@ -156,7 +156,7 @@ bun run eval -- --step concepts --subject concept-mapper
 - undo history of edits
 
 1. Input to the prompt: README (first 6,000 chars), topics, languages, dependency names, and the T006 core-file paths + reasons. Repo text is data, not instructions.
-2. Model A via the AI SDK with `MODEL_A_ID`; temperature low; one call, one retry on schema failure.
+2. Model A through a `generate({ schema, prompt })` function with two back ends chosen by env `MODEL_A_BACKEND`: `claude-code` (headless `claude -p` on the owner's Claude subscription, only while the owner is the only person who starts generations) and `api` (AI SDK with `MODEL_A_ID`). This task creates `generate`; T008 and T014 reuse it. Temperature low (`api` only); one call, one retry on schema failure. Tests mock `generate`. (Decision 2026-11-12.)
 3. Migration (`Skill({ skill: "migration-safety" })`): `repo_concepts` keyed by repo + SHA; `learner_concepts` keyed by `(user_id, ladder_id)`.
 4. Server validation is the source of truth; the screen mirrors the same rules (3–6, 2–60 chars, unique slug).
 

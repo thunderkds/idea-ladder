@@ -54,11 +54,11 @@ Source:
 
 | Option | Hosting | Trade-off |
 |---|---|---|
-| A — Serverless platform + managed services | App on a serverless host that fits the web framework chosen in T003 (e.g. Vercel); managed Postgres with pgvector (e.g. Neon or Supabase); Inngest Cloud. | Least ops; free tiers likely cover v1 traffic; three vendors and three dashboards; cold starts. |
+| A — Serverless platform + managed services | App on a serverless host that supports the Bun server chosen in T003 (check Bun support first; e.g. Vercel); managed Postgres with pgvector (e.g. Neon or Supabase); Inngest Cloud. | Least ops; free tiers likely cover v1 traffic; three vendors and three dashboards; cold starts. |
 | B — One container host + managed Postgres | App as one container on a platform such as Fly.io, Railway or Render; managed Postgres with pgvector; Inngest Cloud. | One app runtime, no function time limits; small monthly cost; still a managed DB vendor. |
 | C — One VPS, all self-hosted | One VPS with Docker Compose: app, Postgres + pgvector, self-hosted Inngest server, Caddy for HTTPS. | Lowest vendor count and full control; the owner runs backups, upgrades and TLS. |
 
-Supervisor recommendation: A if T003 chose a framework the serverless host supports natively, else B. **The agent stops with `Status: blocked` + `Question:` until the user answers.** The user also confirms the monthly spend limit for the chosen host before the first deploy.
+Supervisor recommendation: B (one container host), because the server runs on Bun and Inngest steps then have no function time limit; A only if the host supports Bun natively and T003's Bun smoke check passed on it. **The agent stops with `Status: blocked` + `Question:` until the user answers.** The user also confirms the monthly spend limit for the chosen host before the first deploy.
 
 ### Requirement Fidelity Gate (sign off BEFORE implementation)
 
@@ -100,7 +100,7 @@ Supervisor recommendation: A if T003 chose a framework the serverless host suppo
 | # | Criterion (testable) | Traces to requirement |
 |---|----------------------|-----------------------|
 | 1 | The app runs on the chosen host over HTTPS. All migrations are applied to the production database after `Skill({ skill: "migration-safety" })` passes and after a database backup is taken; `pgvector` is enabled. | "v1 MVP PWA ... URL to ladder, review; pass tests, offline, push" |
-| 2 | Secrets (database URL, GitHub OAuth client secret, GitHub app token, model A and model B API keys, Inngest signing and event keys, VAPID private key, the T017 cost cap) live only in the host's secret store; `git grep` finds none of them in the repo, and the client bundle contains none except the VAPID public key and the OAuth client id. | secrets never committed (PROJECT_SPEC § Critical Constraints) |
+| 2 | Secrets (database URL, GitHub OAuth client secret, GitHub app token, model A and model B API keys (with `MODEL_A_BACKEND=api`: the `claude-code` subscription back end must never run in production), Inngest signing and event keys, VAPID private key, the T017 cost cap) live only in the host's secret store; `git grep` finds none of them in the repo, and the client bundle contains none except the VAPID public key and the OAuth client id. | secrets never committed (PROJECT_SPEC § Critical Constraints) |
 | 3 | `bun run smoke:prod` against the production URL passes: health check reports database and Inngest reachable; sign-in redirects to GitHub OAuth with the production callback; `/start?url=https://github.com/lukeed/dset` answers 202 with a job id (or the cached ladder) in < 500 ms; the service worker and manifest are served; a test push reaches the owner's subscribed device. | NFR-001, NFR-003, NFR-005, FR-014 |
 | 4 | After an L1 pass, the learner sees one optional prompt `Did anyone help you pass this level?` with `No, on my own` / `Yes, I got help`; the answer is stored once per learner + ladder. Skipping stores nothing. | "Others finish L1 without your help" |
 | 5 | `bun run metrics:gate2` uses a read-only database role and prints: learners other than the owner (by GitHub id in `OWNER_GITHUB_ID`) who started a ladder; who passed L1 (an L1 evidence record); of those, answered "No, on my own" / "Yes" / no answer; median days from ladder start to L1 pass. No learner names or logins are printed, only counts. | Gate 2 "other learners finish L1 without help" |

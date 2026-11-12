@@ -81,7 +81,7 @@ T001 result: "VERDICT signed proof: KEEP (untouched record verifies; 17/17 tampe
 | 4 | Issuance is idempotent: a second call for the same learner + ladder returns the existing credential (same `id`, `hash`, `signature`); a unique constraint on (learner, ladder) enforces it under two concurrent calls. | append-only proof; one credential per completion |
 | 5 | Each credential gets a unique `status.index` in a status list. `GET /status/:listId` returns `{ listId, updatedAt, revoked: [indexes], hash, signature }` signed with the same issuer key. `bun run revoke-credential <credentialId> --reason "<text>"` adds the index; the list's signature verifies after revocation; revoking twice is a no-op. | "Status list entry per credential, so a credential can be revoked" |
 | 6 | `GET /.well-known/ladder-issuer.json` returns `{ issuerId, keys: [{ keyId, alg: "Ed25519", publicKeyJwk }] }`. The private key is read only from env `LADDER_ISSUER_PRIVATE_KEY`; with it missing or malformed the app refuses to issue (`IssuerKeyError`) and no unsigned credential is stored. The private key never appears in DB rows, logs or API responses. | "signed with the issuer key"; NFR-002 |
-| 7 | No LLM call is on the issuance path (no import of the AI SDK in the credential module — checked by a test that scans the module's import graph). | "The LLM is never in the trust path" |
+| 7 | No LLM call is on the issuance path (no import of the AI SDK or `generate` in the credential module — checked by a test that scans the module's import graph). | "The LLM is never in the trust path" |
 
 ---
 

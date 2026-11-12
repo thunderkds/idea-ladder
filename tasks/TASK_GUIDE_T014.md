@@ -78,7 +78,7 @@ Source (`docs/REQUIREMENT_SOURCE.md`):
 | 4 | Boundary: fewer than 5 verified questions after 2 regenerate rounds → status `diff-questions-unavailable` with the reason, no partial set served, L2 stays open; the learner can submit another branch. A diff that is empty after removing lockfiles, binary files and generated files → `diff-not-testable` before any LLM call. | "keep only keys verified"; no partial result |
 | 5 | `submitDiffAnswers` scores in code: pass iff correct ≥ `DIFF_PASS_MIN = 4` of 5. Pass → one evidence record `{ test: "artifact+diff-questions", evidence: { branch, commit: headSha, diffQuestions: { asked: 5, correct, pass: 4 } } }` through `writeEvidenceRecord`, and L3 unlocks in the same transaction. 3 of 5 → fail, no record, review cards linked. | "pass 4 of 5"; evidence record example; "L3 unlocked (fail: back to review cards)" |
 | 6 | Retakes follow T012's rate limit. A retake gets a newly generated set; no question shown in an earlier attempt for this artifact is reused. Submitting answers for another learner's set, a second submit, or answers for unknown question ids → rejected, nothing stored. | FR-016 anti-cheat |
-| 7 | No LLM call is reachable from `submitDiffAnswers` (AI SDK mocked to throw; scoring test passes). Tests use the AI SDK's mock language model (`ai/test`) for model A and model B; no network. | NFR-002 |
+| 7 | No LLM call is reachable from `submitDiffAnswers` (AI SDK mocked to throw; scoring test passes). Tests mock the `generate` interface (T007) for model A and use the AI SDK's mock language model (`ai/test`) for model B; no network. | NFR-002 |
 
 ---
 

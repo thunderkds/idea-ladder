@@ -77,7 +77,7 @@ Source (`docs/REQUIREMENT_SOURCE.md`):
 | 4 | A pass writes exactly one evidence record per learner + ladder + level, shaped like the source example: `{ learner: "github:<login>", ladder: "repo:<owner/name>@<sha7>", level, test: "mcq", evidence: { asked, correct, pass, questionIds }, verifiedBy: "verifier@<app version>", verifiedAt, hash }`. `hash = "sha256:" + hex(SHA-256(canonicalJson(record without hash)))`. A second pass of the same level writes no second record. | FR-011; evidence record example |
 | 5 | The evidence table is append-only: UPDATE and DELETE are rejected by the database (trigger), not only by app code. Recomputing the hash of any stored record equals its stored `hash`. | "One append-only record per level passed" |
 | 6 | Retakes are rate-limited: at most `MCQ_ATTEMPTS_PER_DAY = 3` started attempts per learner per level per rolling 24 h; the 4th → HTTP 429 with the time the next attempt is allowed. A retake avoids questions of the previous attempt when the pool has ≥ 20 verified questions. | "retakes are rate-limited" |
-| 7 | No LLM call is reachable from `startMcqAttempt` or `submitMcqAttempt` (test: the AI SDK client is mocked to throw; both pass). A level that is locked for the learner, or another learner's attempt id → 404. | NFR-002; FR-007 |
+| 7 | No LLM call is reachable from `startMcqAttempt` or `submitMcqAttempt` (test: the AI SDK client and the `generate` interface are mocked to throw; both pass). A level that is locked for the learner, or another learner's attempt id → 404. | NFR-002; FR-007 |
 
 ---
 
