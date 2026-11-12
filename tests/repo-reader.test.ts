@@ -106,6 +106,7 @@ describe("pickCoreFiles tool loop (AC 1, AC 6)", () => {
       Array(3).fill({ model: "test-model", inputTokens: 100, outputTokens: 10, cachedInputTokens: 0 }),
     );
     expect(r.totalTokens).toBe(330);
+    expect(r.tokens).toEqual({ input: 300, output: 30, cacheRead: 0, cacheCreation: 0 });
   });
 });
 

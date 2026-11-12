@@ -17,6 +17,7 @@ import {
   ReaderInvalidOutputError,
   type ReaderLimits,
   SYSTEM,
+  type TokenCounts,
   type TreeEntry,
   validate,
 } from "./repo-reader.ts";
@@ -119,9 +120,10 @@ export async function pickCoreFilesClaudeCode(input: PickCoreFilesClaudeCodeInpu
     );
 
     let totalTokens = 0;
+    const tokens: TokenCounts = { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 };
     let modelCalls = 0;
     const toolCalls = async () => Number((await readFile(callsFile, "utf8").catch(() => "0")) || 0);
-    const hitLimit = async () => (await toolCalls()) > input.limits.maxSteps || totalTokens > input.limits.tokenBudget;
+    const hitLimit = async () => (await toolCalls()) >= input.limits.maxSteps || totalTokens > input.limits.tokenBudget;
 
     const run = async (prompt: string, resume?: string) => {
       const out = await runClaude(input, dir, mcpConfig, prompt, resume).catch(async (err: unknown) => {
@@ -137,6 +139,10 @@ export async function pickCoreFilesClaudeCode(input: PickCoreFilesClaudeCodeInpu
       };
       modelCalls += out.num_turns ?? 1;
       totalTokens += usage.inputTokens + usage.cachedInputTokens + usage.outputTokens;
+      tokens.input += usage.inputTokens;
+      tokens.output += usage.outputTokens;
+      tokens.cacheRead += u.cache_read_input_tokens ?? 0;
+      tokens.cacheCreation += u.cache_creation_input_tokens ?? 0;
       input.onUsage(usage);
       if (out.is_error) throw new ReaderFailedError(`claude reported an error (${out.subtype})`, await hitLimit());
       const text = out.structured_output !== undefined ? JSON.stringify(out.structured_output) : (out.result ?? "");
@@ -175,6 +181,7 @@ export async function pickCoreFilesClaudeCode(input: PickCoreFilesClaudeCodeInpu
       toolCalls: await toolCalls(),
       hitLimit: limited,
       totalTokens,
+      tokens,
       dropped,
     };
   } finally {

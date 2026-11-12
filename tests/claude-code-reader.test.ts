@@ -154,6 +154,7 @@ describe("pickCoreFilesClaudeCode (fake claude)", () => {
       { model: "claude-sonnet-5-5", inputTokens: 100, outputTokens: 50, cachedInputTokens: 1200 },
     ]);
     expect(out).toMatchObject({ modelCalls: 4, toolCalls: 3, hitLimit: false, totalTokens: 1350, dropped: [] });
+    expect(out.tokens).toEqual({ input: 100, output: 50, cacheRead: 1000, cacheCreation: 200 });
   });
 
   test("invented paths dropped; one repair via --resume; still < 3 -> reader-invalid-output", async () => {
@@ -234,5 +235,14 @@ describe("pickCoreFilesClaudeCode (fake claude)", () => {
     ]);
     const out = await pick({ limits: { maxSteps: 5, tokenBudget: 80_000 } }).run;
     expect(out).toMatchObject({ hitLimit: true, toolCalls: 6 });
+  });
+
+  test("hitLimit as on the API back end: cap 15, 15 tool calls -> true, 14 -> false", async () => {
+    const answer = result({ structured_output: files(["src/index.ts", "src/util.ts", "README.md"]) });
+    await replies([{ stdout: answer, toolCalls: 15 }]);
+    expect(await pick().run).toMatchObject({ hitLimit: true, toolCalls: 15 });
+    await rm(join(rec, "calls.jsonl"));
+    await replies([{ stdout: answer, toolCalls: 14 }]);
+    expect(await pick().run).toMatchObject({ hitLimit: false, toolCalls: 14 });
   });
 });

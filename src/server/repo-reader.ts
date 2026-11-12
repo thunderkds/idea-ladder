@@ -31,6 +31,8 @@ export type ReadFile = (path: string) => Promise<string | null>;
 /** Token usage of one model call, as the AI SDK reports it. */
 export type CallUsage = { model: string; inputTokens: number; outputTokens: number; cachedInputTokens: number };
 
+export type TokenCounts = { input: number; output: number; cacheRead: number; cacheCreation: number };
+
 export type CoreFile = { path: string; reason: string };
 export type PickResult = {
   coreFiles: CoreFile[];
@@ -39,7 +41,10 @@ export type PickResult = {
   toolCalls: number;
   /** The loop stopped at the step cap or the token budget, not on its own. */
   hitLimit: boolean;
+  /** input + output + cacheRead + cacheCreation over every model call (what the token budget counts). */
   totalTokens: number;
+  /** The same tokens, split: input without cache, output, cache reads, cache writes. */
+  tokens: TokenCounts;
   /** Paths the model named that are not files in the tree at the SHA. */
   dropped: string[];
 };
@@ -251,12 +256,19 @@ export async function pickCoreFiles(input: PickCoreFilesInput): Promise<PickResu
     input.tree.filter((t) => t.type === "blob" && t.path.length <= MAX_PATH_CHARS).map((t) => t.path),
   );
   let totalTokens = 0;
+  const split: TokenCounts = { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 };
   let modelCalls = 0;
   let lastUsage: LanguageModelUsage | undefined;
   const count = (u: LanguageModelUsage) => {
     modelCalls++;
     lastUsage = u;
     totalTokens += tokens(u);
+    const cacheRead = u.inputTokenDetails?.cacheReadTokens ?? 0;
+    const cacheCreation = u.inputTokenDetails?.cacheWriteTokens ?? 0;
+    split.input += Math.max((u.inputTokens ?? 0) - cacheRead - cacheCreation, 0);
+    split.output += u.outputTokens ?? 0;
+    split.cacheRead += cacheRead;
+    split.cacheCreation += cacheCreation;
     onUsage(callUsage(modelId, u));
   };
 
@@ -348,6 +360,7 @@ export async function pickCoreFiles(input: PickCoreFilesInput): Promise<PickResu
     toolCalls,
     hitLimit,
     totalTokens,
+    tokens: split,
     dropped,
   };
 }
