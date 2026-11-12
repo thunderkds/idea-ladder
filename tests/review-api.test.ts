@@ -293,6 +293,34 @@ describe("T011 rating (AC 2, AC 3, Success Criteria 2, 3)", () => {
     expect((await storedState(me.id, card))?.reps).toBe(3);
   });
 
+  test("a rating with an earlier server time than the last review never moves reviewed_at back; replay still matches", async () => {
+    const me = await learner();
+    const card = await seedCard(await seedLadder(me.id), "L0");
+    await rateCard(sql(), me.id, req(card, "good"), T, noPasses);
+    await rateCard(sql(), me.id, req(card, "good"), at(-MIN), noPasses); // e.g. it waited on the row lock
+    const rows = await logRows(me.id);
+    expect(rows.length).toBe(2);
+    expect(rows[1].reviewed_at).toEqual(rows[0].reviewed_at);
+    for (const r of rows) {
+      const last = r.state_before.last_review;
+      if (last) expect(Date.parse(last)).toBeLessThanOrEqual(r.reviewed_at.getTime());
+    }
+    let replay: Card = createEmptyCard(rows[0].reviewed_at);
+    for (const r of rows) replay = lib.next(replay, r.reviewed_at, GRADE[r.rating as ReviewRating]).card;
+    const stored = (await storedState(me.id, card)) as Card;
+    for (const k of Object.keys(stored) as (keyof Card)[]) expect([k, replay[k]]).toEqual([k, stored[k]]);
+  });
+
+  test("elapsed ms is stored as sent, capped at 24 hours; a huge value still saves", async () => {
+    const me = await learner();
+    const ladder = await seedLadder(me.id);
+    const [a, b] = [await seedCard(ladder, "L0"), await seedCard(ladder, "L0")];
+    const huge = await postRate(req(a, "good", "huge", 1e308), me.cookie);
+    expect(huge.status).toBe(200);
+    expect((await postRate(req(b, "good", "normal", 4321), me.cookie)).status).toBe(200);
+    expect((await logRows(me.id)).map((r: { elapsed_ms: number }) => r.elapsed_ms)).toEqual([86_400_000, 4321]);
+  });
+
   test("the review log rejects UPDATE and DELETE (Success Criteria 7)", async () => {
     const me = await learner();
     const card = await seedCard(await seedLadder(me.id), "L0");

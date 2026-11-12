@@ -16,6 +16,8 @@ export const QUEUE_LIMIT = 50;
 /** New cards (never rated) that may enter one queue. A fixed constant: the per-learner setting is on the cut list. */
 export const NEW_CARDS_PER_QUEUE = 10;
 const MAX_KEY_LENGTH = 200;
+/** Stored elapsed time is capped at 24 h: a tab left open overnight still saves its rating. */
+const MAX_ELAPSED_MS = 86_400_000;
 const CARD_ID = /^[1-9][0-9]{0,17}$/; // fits a bigint
 
 /** `ladderId:level` for every level not locked for this learner, on every ladder they started. */
@@ -143,7 +145,9 @@ export async function rateCard(
         SELECT due, stability, difficulty, elapsed_days, scheduled_days, learning_steps, reps, lapses, state, last_review
         FROM card_states WHERE learner_id = ${userId} AND card_id = ${req.cardId} FOR UPDATE`;
       const before: Card = { ...s, last_review: s.last_review ?? undefined };
-      const after = scheduleNext(before, req.rating, now);
+      // A request that waited on the lock may hold an earlier `now` than the rating that just committed: never go back.
+      const at = new Date(Math.max(now.getTime(), before.last_review?.getTime() ?? 0));
+      const after = scheduleNext(before, req.rating, at);
       await tx`
         UPDATE card_states SET due = ${after.due}, stability = ${after.stability}, difficulty = ${after.difficulty},
           elapsed_days = ${after.elapsed_days}, scheduled_days = ${after.scheduled_days}, learning_steps = ${after.learning_steps},
@@ -152,7 +156,7 @@ export async function rateCard(
       await tx`
         INSERT INTO review_log (learner_id, card_id, rating, state_before, state_after, reviewed_at, elapsed_ms, idempotency_key)
         VALUES (${userId}, ${req.cardId}, ${req.rating}, ${JSON.stringify(before)}::text::jsonb, ${JSON.stringify(after)}::text::jsonb,
-          ${now}, ${req.elapsedMs}, ${req.idempotencyKey})`;
+          ${at}, ${Math.min(req.elapsedMs, MAX_ELAPSED_MS)}, ${req.idempotencyKey})`;
       return { cardId: req.cardId, dueAt: after.due.toISOString(), state: cardState(after.state), duplicate: false };
     });
   } catch (err) {
