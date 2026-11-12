@@ -33,6 +33,13 @@ export function createApp(opts: { config: Config; sql: SQL; clientDir: string; n
 
   const app = new Hono();
   app.use(secureHeaders());
+  // Per-user and auth responses must never be stored by browsers or shared caches.
+  for (const path of ["/ladders", "/api/me", "/auth/*"]) {
+    app.use(path, async (c, next) => {
+      await next();
+      c.res.headers.set("Cache-Control", "no-store");
+    });
+  }
 
   app.get("/", async (c) => ((await currentUser(c)) ? c.redirect("/ladders", 302) : c.html(await indexHtml())));
 

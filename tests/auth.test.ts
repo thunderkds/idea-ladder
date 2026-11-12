@@ -268,3 +268,23 @@ describe("security headers", () => {
     expect(res.headers.get("x-content-type-options")).toBe("nosniff");
   });
 });
+
+describe("Cache-Control: no-store on private and auth responses", () => {
+  test("/api/me, /ladders and /auth routes are not cacheable", async () => {
+    const session = await signIn();
+    const { state, stateCookie } = await startSignIn();
+    const responses = {
+      "/api/me signed in": await app.request(`${BASE}/api/me`, { headers: { cookie: session } }),
+      "/api/me signed out": await app.request(`${BASE}/api/me`),
+      "/ladders signed in": await app.request(`${BASE}/ladders`, { headers: { cookie: session } }),
+      "/ladders signed out": await app.request(`${BASE}/ladders`),
+      "/auth/github": await app.request(`${BASE}/auth/github`),
+      "/auth/github/callback ok": await callback({ code: stub.issueCode(), state }, stateCookie),
+      "/auth/github/callback failed": await callback({ code: "bad", state: "bad" }),
+      "/auth/sign-out": await app.request(`${BASE}/auth/sign-out`, { method: "POST", headers: { cookie: session } }),
+    };
+    for (const [name, res] of Object.entries(responses)) {
+      expect(`${name}: ${res.headers.get("cache-control")}`).toBe(`${name}: no-store`);
+    }
+  });
+});

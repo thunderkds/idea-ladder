@@ -62,8 +62,23 @@ export async function migrateUp(sql: SQL, dir = DEFAULT_DIR): Promise<string[]> 
  * Reverts the most recent migration. DESTRUCTIVE: the down files drop tables and their rows.
  * When the last migration is reverted, the tracking table is dropped too (empty schema).
  * Returns the name reverted, or undefined when nothing was applied.
+ * Refuses to run unless `MIGRATE_ALLOW_DOWN=1`, and always refuses when `NODE_ENV=production`.
  */
-export async function migrateDown(sql: SQL, dir = DEFAULT_DIR): Promise<string | undefined> {
+export async function migrateDown(
+  sql: SQL,
+  dir = DEFAULT_DIR,
+  env: Record<string, string | undefined> = process.env,
+): Promise<string | undefined> {
+  if (env.NODE_ENV === "production") {
+    throw new Error(
+      "Refusing to run the down migration: NODE_ENV=production. Down drops tables and data; MIGRATE_ALLOW_DOWN is ignored in production.",
+    );
+  }
+  if (env.MIGRATE_ALLOW_DOWN !== "1") {
+    throw new Error(
+      "Refusing to run the down migration: it drops tables and data. Set MIGRATE_ALLOW_DOWN=1 to allow it (throwaway databases only).",
+    );
+  }
   return sql.begin(async (tx) => {
     await tx`SELECT pg_advisory_xact_lock(${LOCK_ID})`;
     if (!(await tx`SELECT to_regclass('public.schema_migrations') AS t`)[0].t) return undefined;

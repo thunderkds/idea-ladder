@@ -27,7 +27,8 @@ const steps: [name: string, cmd: string[], env?: Record<string, string>][] = [
   ["lint", ["bun", "run", "lint"]],
   ["unit tests", ["bun", "test"]],
   ["migrate up", ["bun", "run", "db:migrate"], { DATABASE_URL: ciDb.toString() }],
-  ["migrate down", ["bun", "run", "db:migrate:down"], { DATABASE_URL: ciDb.toString() }],
+  // Opt-in for the destructive down step: il_ci is a throwaway database.
+  ["migrate down", ["bun", "run", "db:migrate:down"], { DATABASE_URL: ciDb.toString(), MIGRATE_ALLOW_DOWN: "1" }],
   ["migrate up again", ["bun", "run", "db:migrate"], { DATABASE_URL: ciDb.toString() }],
   ["e2e sign-in", ["bun", "run", "test:e2e", "--", "sign-in"]],
 ];
