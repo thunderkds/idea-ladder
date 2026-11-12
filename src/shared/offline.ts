@@ -32,7 +32,8 @@ export type SyncRating = {
   elapsedMs: number;
   reviewedAt: string;
 };
-export type SyncRequest = { ratings: SyncRating[] };
+/** `learnerId`: the learner the queue was recorded for; when present and not the session learner, sync answers 409. */
+export type SyncRequest = { learnerId?: string; ratings: SyncRating[] };
 export type SyncResult = {
   idempotencyKey: string;
   cardId: string;

@@ -89,7 +89,8 @@ type Valid = { i: number; req: RateRequest & { reviewedAt: string } };
 
 /**
  * Applies queued offline ratings in `reviewedAt` order (stable), each through rateCard. Results keep the request
- * order. One bad item never blocks the others. A string is a whole-request error (400).
+ * order. One bad item never blocks the others. A string is a whole-request error (400; "wrong-learner" is 409:
+ * the queue was recorded for another learner than the session's, so nothing is written).
  */
 export async function syncRatings(
   sql: SQL,
@@ -97,9 +98,11 @@ export async function syncRatings(
   body: unknown,
   now: Date,
   passed: PassedLevels,
-): Promise<SyncResponse | "too-many" | "invalid-request"> {
-  const ratings = (body as { ratings?: unknown } | null)?.ratings;
+): Promise<SyncResponse | "too-many" | "invalid-request" | "wrong-learner"> {
+  const { ratings, learnerId } = (body ?? {}) as { ratings?: unknown; learnerId?: unknown };
   if (!body || typeof body !== "object" || Array.isArray(body) || !Array.isArray(ratings)) return "invalid-request";
+  if (learnerId !== undefined && typeof learnerId !== "string") return "invalid-request";
+  if (learnerId !== undefined && learnerId !== userId) return "wrong-learner";
   if (ratings.length > MAX_SYNC_BATCH) return "too-many";
 
   const results: SyncResult[] = [];

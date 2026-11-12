@@ -20,6 +20,9 @@ Rules:
   `usedClientTime` is the record of which time was used: there is no `clientTimeRejected` column. A card with no
   `last_review` (never rated) accepts any past `reviewedAt`, so a restore from an export keeps its old times;
   backdating only changes the learner's own schedule. Idempotency keys (ADR 0003) make a rating sent twice one row.
+  The request may carry `learnerId` (the learner the queue was recorded for): when it is not the session learner,
+  sync answers `409 wrong-learner` and writes nothing; a non-string is `400 invalid-request`; absent, sync works as
+  before.
 - **Import.** The file is size-checked (5 MiB, `413 file-too-large`) before it is read, then validated whole with zod
   (`version: 1` only; at most 20 000 review rows and 20 000 rows in each other list) before anything is written,
   and refused (`403 wrong-account`) when `learner.githubId` is not the signed-in account. Only `reviewLog` rows are

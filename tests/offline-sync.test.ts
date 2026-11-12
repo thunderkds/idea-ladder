@@ -407,6 +407,65 @@ describe("T015 sync (AC 3, Success Criteria 3)", () => {
   });
 });
 
+describe("T015 sync learnerId (QA F3: a queue never applies under another account)", () => {
+  test("learnerId of the session learner: applied as before; absent: applied as before", async () => {
+    const me = await learner();
+    const ladder = await seedLadder(me.id);
+    const [a, b] = [await seedCard(ladder), await seedCard(ladder)];
+    const same = (await syncRatings(
+      sql(),
+      me.id,
+      { learnerId: me.id, ratings: [rating(a, "good", iso(0), "same")] },
+      at(MIN),
+      noPasses,
+    )) as SyncResponse;
+    expect(same.results.map((r) => r.status)).toEqual(["applied"]);
+    const absent = (await syncRatings(
+      sql(),
+      me.id,
+      { ratings: [rating(b, "good", iso(0), "absent")] },
+      at(MIN),
+      noPasses,
+    )) as SyncResponse;
+    expect(absent.results.map((r) => r.status)).toEqual(["applied"]);
+    expect(await count("review_log")).toBe(2);
+  });
+
+  test("another learner's id: wrong-learner, nothing written; a non-string learnerId: invalid-request", async () => {
+    const me = await learner();
+    const other = await learner();
+    const card = await seedCard(await seedLadder(me.id));
+    const ratings = [rating(card, "good", iso(0), "queued")];
+    expect(await syncRatings(sql(), me.id, { learnerId: other.id, ratings }, at(MIN), noPasses)).toBe(
+      "wrong-learner",
+    );
+    for (const learnerId of [Number(me.id), null, {}, [me.id]]) {
+      expect(await syncRatings(sql(), me.id, { learnerId, ratings }, at(MIN), noPasses)).toBe("invalid-request");
+    }
+    expect(await count("review_log")).toBe(0);
+    expect(await count("card_states")).toBe(0);
+  });
+
+  test("POST /api/review/sync: 409 wrong-learner and zero rows; 400 for a non-string learnerId; 200 for the own id", async () => {
+    const me = await learner();
+    const other = await learner();
+    const card = await seedCard(await seedLadder(me.id));
+    const ratings = [rating(card, "good", new Date(Date.now() - MIN).toISOString(), "http")];
+    const wrong = await post("/api/review/sync", { learnerId: other.id, ratings }, me.cookie);
+    expect(wrong.status).toBe(409);
+    expect(await wrong.json()).toEqual({ error: "wrong-learner" });
+    expect(await count("review_log")).toBe(0);
+    expect(await count("card_states")).toBe(0);
+    const bad = await post("/api/review/sync", { learnerId: 5, ratings }, me.cookie);
+    expect(bad.status).toBe(400);
+    expect(await bad.json()).toEqual({ error: "invalid-request" });
+    const ok = await post("/api/review/sync", { learnerId: me.id, ratings }, me.cookie);
+    expect(ok.status).toBe(200);
+    expect(((await ok.json()) as SyncResponse).results[0]?.status).toBe("applied");
+    expect(await count("review_log")).toBe(1);
+  });
+});
+
 describe("T015 offline pack (AC 2)", () => {
   test("unlocked levels of started ladders, due within 7 days, plus up to 10 New cards; due ascending; states attached", async () => {
     const me = await learner();

@@ -298,7 +298,8 @@ export function createApp(opts: {
     if (!user) return c.json({ error: "unauthorized" }, 401);
     const body = await c.req.json().catch(() => undefined);
     const result = await syncRatings(sql, user.userId, body, new Date(now()), passedLevels);
-    return typeof result === "string" ? c.json({ error: result }, 400) : c.json(result);
+    if (typeof result !== "string") return c.json(result);
+    return c.json({ error: result }, result === "wrong-learner" ? 409 : 400);
   });
 
   app.get(SETTINGS_PATH, async (c) =>
