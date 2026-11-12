@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Delivery Report — T011 — T011-daily-review</title>
+<style>
+  :root {
+    --bg:        #0a0a12;
+    --surface:   #111128;
+    --surface2:  #16162e;
+    --border:    #1e1e42;
+    --text:      #e2e2f0;
+    --muted:     #6b6b9a;
+    --cyan:      #00d4ff;
+    --green:     #00ff88;
+    --amber:     #ffb800;
+    --purple:    #a855f7;
+    --cyan-dim:  rgba(0,212,255,.12);
+    --green-dim: rgba(0,255,136,.12);
+    --amber-dim: rgba(255,184,0,.12);
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    max-width: 980px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.5;
+  }
+  h1 { margin: 0; font-size: 1.25rem; color: #fff; letter-spacing: .02em; }
+  h2 { font-size: .8rem; color: var(--muted); margin: 0 0 .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; }
+
+  .header {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--cyan);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 0 24px rgba(0,212,255,.08), 0 4px 24px rgba(0,0,0,.5);
+  }
+  .header-meta { color: var(--muted); font-size: .85rem; margin-top: .3rem; }
+  .header-meta code { color: var(--cyan); background: var(--cyan-dim); padding: .1rem .4rem; border-radius: 4px; font-size: .8rem; }
+
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 16px rgba(0,0,0,.4);
+  }
+  .section-head { padding: .7rem 1.25rem; background: var(--surface2); border-bottom: 1px solid var(--border); }
+
+  /* ── BEFORE/AFTER SIDE BY SIDE ── */
+  .ba-wrap { display: flex; flex-wrap: wrap; gap: 1rem; padding: 1.25rem 1.5rem; }
+  .ba-col { flex: 1 1 320px; min-width: 0; }
+  .ba-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin-bottom: .5rem; }
+  .ba-before .ba-label { color: var(--amber); }
+  .ba-after  .ba-label  { color: var(--green); }
+  .ba-col pre {
+    background: #06060c; border: 1px solid var(--border); border-radius: 6px;
+    padding: .85rem; font-size: .8rem; white-space: pre-wrap; word-break: break-word;
+    margin: 0; max-height: 320px; overflow-y: auto; font-family: 'Cascadia Code', 'Fira Code', monospace;
+  }
+
+  .delta-box {
+    padding: 1.1rem 1.5rem; font-size: 1.05rem; font-weight: 600; color: #fff;
+    border-left: 3px solid var(--cyan); box-shadow: -6px 0 12px rgba(0,212,255,.08);
+  }
+  .delta-box::before { content: 'DELTA → '; color: var(--cyan); font-size: .78rem; letter-spacing: .05em; }
+
+  .witness-box { padding: 1rem 1.5rem; font-size: .85rem; color: #b0b0d0; }
+  .witness-box pre { white-space: pre-wrap; word-break: break-word; margin: 0; font-family: 'Cascadia Code', 'Fira Code', monospace; }
+
+  .no-demo-warning {
+    margin: 0 1.5rem 1rem; padding: .75rem 1rem; background: var(--amber-dim);
+    border: 1px solid rgba(255,184,0,.3); border-radius: 6px; color: var(--amber); font-size: .82rem;
+  }
+
+  /* ── EVIDENCE TABLE ── */
+  .evidence-summary {
+    padding: .9rem 1.5rem; font-size: 1rem; font-weight: 700; color: var(--green);
+    background: var(--green-dim); border-bottom: 1px solid var(--border);
+  }
+  .matrix-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: .6rem 1.25rem; font-size: .82rem; border-top: 1px solid var(--border); vertical-align: top; }
+  td pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-family: inherit; font-size: inherit; color: inherit; }
+  .ev-check pre { color: #cfcfe8; font-weight: 500; }
+  .ev-filled  { color: var(--green); }
+  .ev-blank   { color: var(--amber); }
+  .ev-n-a     { color: var(--muted); }
+  .ev-notes pre { color: #9090b8; }
+
+  .footer {
+    font-size: .72rem; color: var(--muted); text-align: center;
+    padding: 1rem 0 2rem; border-top: 1px solid var(--border); margin-top: .5rem;
+  }
+  code { font-family: 'Cascadia Code', 'Fira Code', monospace; background: var(--cyan-dim); color: var(--cyan); padding: .1rem .4rem; border-radius: 3px; font-size: .78rem; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Delivery Report — T011</h1>
+  <div class="header-meta">Branch: <code>T011-daily-review</code> &nbsp;·&nbsp; 2026-11-12</div>
+</div>
+
+
+
+<div class="section">
+  <div class="section-head"><h2>Before / After</h2></div>
+  <div class="ba-wrap">
+    <div class="ba-col ba-before">
+      <div class="ba-label">Before</div>
+      <pre>captured by backend-developer in `/home/thunderkds/workspace/pets/wt-t011`, branch `T011-daily-review` at
+`ba14a6d`, before any T011 implementation commit.
+
+```
+$ date -u; bun test -t "T011"
+2026-11-12T10:57:04Z
+bun test v1.4.3 (c6da4a4d3)
+
+error: regex "T011" matched 0 tests. Searched 11 files (skipping 143 tests) [129.00ms]
+(exit code 1)
+
+$ date -u; grep -n "ts-fsrs" package.json
+2026-11-12T10:57:04Z
+(no output, grep exit=1)
+
+$ bun run build && bun e2e/serve.ts   # BEFORE state
+$ curl -si http://localhost:54401/api/review/queue   # signed out
+2026-11-12T10:57:41Z
+HTTP/1.1 404 Not Found
+$ curl -s -c jar -b jar -L -o /dev/null -w '%{http_code} %{url_effective}' http://localhost:54401/auth/github   # sign in as octo via the stub
+2026-11-12T10:57:41Z
+200 http://localhost:54401/ladders
+$ curl -s -b jar http://localhost:54401/api/me   # signed in
+{"login":"octo"}
+$ curl -si -b jar http://localhost:54401/api/review/queue   # signed in
+2026-11-12T10:57:41Z
+HTTP/1.1 404 Not Found
+$ curl -si -b jar http://localhost:54401/review   # signed in
+2026-11-12T10:57:41Z
+HTTP/1.1 404 Not Found
+```</pre>
+    </div>
+    <div class="ba-col ba-after">
+      <div class="ba-label">After</div>
+      <pre>2026-11-12T11:35Z, worktree wt-t011 at 1aee88d (Supervisor run), same commands as BEFORE plus the real app:
+
+```
+$ bun test -t "T011"
+ 31 pass
+ 143 filtered out
+ 0 fail
+ 199 expect() calls
+
+$ bunx playwright test --grep T011
+  11 passed (2.5m)
+
+$ grep -n "ts-fsrs" package.json
+25:    "ts-fsrs": "5.4.2"
+```
+
+Real app (independent QA, `bun e2e/serve.ts`, signed in as `reviewer`): `GET /api/review/queue` -> cards 1, 2, 3 (all open L0), locked L1 cards 4 and 5 absent; `/review` shows `Card 1 of 3`; after a Good rating `{"state":"learning","duplicate":false}`, the same key again `duplicate:true`; signed out `/api/review/queue` -> 401; `/review` signed out -> 302 `/auth/github?next=%2Freview`; as `waiter` the page shows `Nothing due | Next review: Jan 2, 2030, 9:00 AM`; as `octo` `No cards yet`.</pre>
+    </div>
+  </div>
+  <div class="delta-box">a signed-in learner can open `/review`, see the cards due from their unlocked levels one at a time, rate them Again/Hard/Good/Easy within a 5-minute session, and every rating is scheduled by ts-fsrs 5.4.2 on the server and stored as an append-only log row that replays to the same card state, where before `/review` and `/api/review/*` returned 404.</div>
+</div>
+
+<div class="section">
+  <div class="section-head"><h2>Witness</h2></div>
+  <div class="witness-box"><pre>Derived from memory/event-trace/T011.jsonl: 226 tool-call record(s), 2026-11-12T10:53:45.476992+00:00 → 2026-11-12T11:58:25.591115+00:00 (session trace, not a claimed name)</pre></div>
+</div>
+
+<div class="section">
+  <div class="section-head"><h2>Evidence Completion</h2></div>
+  <div class="evidence-summary">9 / 10 filled, 1 N/A</div>
+  <div class="matrix-wrap">
+    <table>
+      <tbody>
+        <tr><td class="ev-check"><pre>**New test(s) cover Acceptance Criteria (file paths pasted)**</pre></td><td class="ev-status ev-filled"><pre>☑ pass</pre></td><td class="ev-notes"><pre>tests/review-scheduler.test.ts (6: ts-fsrs 5.4.2 pin, all 4 ratings from all 4 card states equal the library, manual rejected); tests/review-api.test.ts (23: AC 1, 2, 3, 6, 7, queue order and caps, due exactly now, locked level, idempotency incl. concurrent, two tabs, 401/404/400, /review page and return target, reviewed_at never moves back, elapsed_ms cap); tests/migrate.test.ts `T011 0005_review` (up/down/up with rows, checks, append-only trigger, FK); e2e/review.e2e.ts (11: AC 4, 5, 6, keyboard, SC 4 fake clock 4:59/5:01, 401, queue error, Start review links, 1 real-server end to end). `bun test -t T011` = 31 pass.</pre></td></tr>
+<tr><td class="ev-check"><pre>Verification command run</pre></td><td class="ev-status ev-filled"><pre>☑ pass</pre></td><td class="ev-notes"><pre>Supervisor run 2026-11-12T11:35Z at 1aee88d: `bun install --frozen-lockfile` (no changes); `bun run typecheck` clean; `bun run lint` "Checked 58 files ... No fixes applied.", "check-tokens: 0 color literals outside src/client/tokens.css"; `bun test -t "T011"` = 31 pass, 0 fail, 199 expect() calls; `bunx playwright test --grep T011` = 11 passed (2.5m).</pre></td></tr>
+<tr><td class="ev-check"><pre>Negative cases hold</pre></td><td class="ev-status ev-filled"><pre>☑ pass</pre></td><td class="ev-notes"><pre>Mutation runs (each made at least one T011 test fail, code restored after): backend `<=` to `<` on the queue; no lock filter in the queue; no ownership or lock check on rating; no append-only trigger; no FOR UPDATE; no duplicate answer; fix batch: `at = now` instead of max(now, last_review) -> `Expected: 2026-11-01T09:00:00.000Z Received: 2026-11-01T08:59:00.000Z`, and elapsed cap -> `-   86400000, +   1e+308`. Frontend: `timeUp = false` -> SC 4 `Expected "Session done" Received "Review"`; a new key per attempt -> AC 6 failed. Independent QA (real server, own scripts): AC 1-7 and 25 probes PASS; log replay with ts-fsrs matched stored card_states for every card (3 match, 0 mismatch, incl. a card rated 11 times); UPDATE/DELETE on review_log rejected; one P2 found (reviewed_at backwards under the row-lock wait) and fixed in 1aee88d.</pre></td></tr>
+<tr><td class="ev-check"><pre>verify</pre></td><td class="ev-status ev-filled"><pre>☑ pass</pre></td><td class="ev-notes"><pre>auto-run by hook, session 34f68f99-705e-43e5-8fdc-11be0dbfc8eb, commit 42909c3caa10dac0fd0e864dffbde43d68f1781b, log .claude/verify-runs/T011-42909c3caa10.log — pass</pre></td></tr>
+<tr><td class="ev-check"><pre>Review scope bounded to the change's blast radius (affected set, not whole repo)</pre></td><td class="ev-status ev-filled"><pre>☑ pass</pre></td><td class="ev-notes"><pre>code-review (reports/code-review_T011-daily-review_20261112T182251.html): scope src/server/review.ts, scheduler.ts, app.ts, src/shared/review.ts, src/client/Review.tsx, App.tsx, LadderView.tsx, styles.css, migrations/0005, tests, e2e; 0 P0, 0 P1, 2 P2 (entry point name fixed in the guide; lane EXCEEDS 33 files/1805 lines vs C2 14/500, 15 are PNG baselines, raised to the Supervisor), 5 P3 left open. security-review (reports/security-review_T011-daily-review_*.html): 0 findings at confidence 8+. migration-safety on 0005_review: GO; the dry-run-on-production-data box accepted as N/A by the user (no production database), recorded in memory/decisions.md. Skipped: T003-T010 code (unchanged), experiments/.</pre></td></tr>
+<tr><td class="ev-check"><pre>Full smoke suite still green (no regression)</pre></td><td class="ev-status ev-filled"><pre>☑ pass</pre></td><td class="ev-notes"><pre>`npm run test` at 1aee88d: 174 pass, 0 fail, 700 expect() calls, 13 files (baseline 143). `bun run test:e2e` (all specs: sign-in, start-flow, ladder-view, review): 28 passed (3.1m).</pre></td></tr>
+<tr><td class="ev-check"><pre>**Companion score (easy-verifier)**</pre></td><td class="ev-status ev-n-a"><pre>☑ N/A</pre></td><td class="ev-notes"><pre>easy-verifier not installed; not run.</pre></td></tr>
+<tr><td class="ev-check"><pre>**UI: Visual regression (diff or verdict pasted)**</pre></td><td class="ev-status ev-filled"><pre>☑ pass</pre></td><td class="ev-notes"><pre>Baselines e2e/baseline/review-{front,back,empty,no-cards,session-end}-{mobile,tablet,desktop}.png (15). Frontend agent read each and wrote LLM-vision verdicts "matches spec" at 360/768/1280 (one card, readable question, answer hidden until Show answer, 4 buttons Again/Hard/Good/Easy, timer visible; empty and session-end text present, no layout break). Independent QA read real-app screenshots at 375 and 1280 (qa-t011/ in the session scratchpad): same verdict. Known cosmetic P3: heavy focus outline on the revealed answer.</pre></td></tr>
+<tr><td class="ev-check"><pre>**UI: Design-system compliance (tokens/colors/typography verified)**</pre></td><td class="ev-status ev-filled"><pre>☑ pass</pre></td><td class="ev-notes"><pre>Playwright computed-style checks: body, card, question, level label, timer, Show answer and the 4 rating buttons resolve to tokens.css custom properties; `bun run lint` check-tokens: 0 color literals outside tokens.css; body/answer text 16px; font stack = T010's system-ui stack; rating buttons 146x44 (768/1280) and 80x44 (375/360), gap 8px. QA measured the same on the real app.</pre></td></tr>
+<tr><td class="ev-check"><pre>**UI: Responsiveness at target viewports**</pre></td><td class="ev-status ev-filled"><pre>☑ pass</pre></td><td class="ev-notes"><pre>360/375/768/1280: scrollWidth equals the viewport (360 at 360, 375 at 375, 768, 1280); 4 buttons in one row at every width; card centred with max width 640 on tablet and desktop; a 120-char unbroken string and long front/back text wrap at 360 (QA longtext run); axe 0 serious/critical on card front/back, rate-error, Nothing due, No cards yet, Session done, queue-error, My ladders and ladder view with Start review. ux-evaluate (frontend agent, baseline checks only): 8 pass, 1 fail (older) = My ladders has no primary action (P3).</pre></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="footer">
+  Task: T011 &nbsp;·&nbsp; Branch: <code>T011-daily-review</code> &nbsp;·&nbsp; Generated: 2026-11-12T11:58:30.153770+00:00
+</div>
+
+</body>
+</html>
