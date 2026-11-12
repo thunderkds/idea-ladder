@@ -77,10 +77,11 @@ v0 (now): no product code. Experiments only — the v0 ladder kit (T002) and a d
 
 | CLI | Run command | C0 | C1 | C2 | C3 |
 |---|---|---|---|---|---|
-| claude | `claude` | | | | |
+| claude | `claude` | haiku-5-5 | sonnet-5-5 | sonnet-5-5 or opus-5-5 | opus-5-5 |
 
-> Auto mode (2026-11-01): the user did not list CLIs or models. Cells stay empty; spawns use the CLI and
-> model this session runs as (`docs/claude-md/tracks.md` § Auto mode row 14).
+> Set by the Supervisor on 2026-11-12 (user: "supervisor should evaluate and set that"). C2: Sonnet when
+> Risk is Low, Opus when Risk is Medium or High. C3 always Opus. Model ids: `claude-haiku-5-5`,
+> `claude-sonnet-5-5`, `claude-opus-5-5`.
 
 ---
 
