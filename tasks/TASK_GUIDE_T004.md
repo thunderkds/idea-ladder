@@ -16,7 +16,7 @@ Before writing any code:
 3. Read this file completely
 4. Read `agents/qa.md`
 5. Note the **Complexity Level** above and apply the matching process from the Complexity matrix in `agents/qa.md`
-6. C2: this task has no dependency on T003 and may run before the app exists. Read `memory/codebase-map.md` if it exists; if T003 has merged, follow its layout and add `eval/` to its pnpm workspace. Read `docs/REQUIREMENT_SOURCE.md` § Framework stack (Tracing and evals row), § Alternatives to investigate, § Repo to ladder engine, and `experiments/core-spike/RESULTS.md` § 3 and § Known limits.
+6. C2: this task has no dependency on T003 and may run before the app exists. Read `memory/codebase-map.md` if it exists; if T003 has merged, follow its layout and add `eval/` to its Bun workspace. Read `docs/REQUIREMENT_SOURCE.md` § Framework stack (Tracing and evals row), § Alternatives to investigate, § Repo to ladder engine, and `experiments/core-spike/RESULTS.md` § 3 and § Known limits.
 
 ---
 
@@ -59,7 +59,7 @@ v1 task measures real cost per ladder on the golden set first".
 ## Dependencies & Reachability
 
 **Depends on**: None
-**Entry point**: `pnpm eval` (script in `eval/package.json`); library entry `logStepCost` (imported by T006–T009 and T017)
+**Entry point**: `bun run eval` (script in `eval/package.json`); library entry `logStepCost` (imported by T006–T009 and T017)
 
 ---
 
@@ -69,10 +69,10 @@ v1 task measures real cost per ladder on the golden set first".
 |---|----------------------|-----------------------|
 | 1 | `eval/golden/repos.json` holds exactly 20 public repos. Each entry has `fullName`, a 40-hex `sha`, `tier` (`trending` / `medium` / `lowkey`), `language`, `expectedCoreFiles` (3–10 paths that exist in that SHA's tree), `expectedConcepts` (3–6), `expectedConfidence` (`low` / `medium` / `high`), `checkedBy`, `checkedAt`. A schema test (zod) validates every entry. | golden set of about 20 hand-checked repos |
 | 2 | Mix: ≥ 5 repos per tier; ≥ 4 languages; ≥ 4 repos whose recorded snapshot scores `low` with the T001 confidence rule (so the concept fallback is exercised — T001 had none); the 3 v0 repos (`The-Pocket/PocketFlow`, `developit/mitt`, `lukeed/dset`) are included. | Score confidence: thin README → fall back |
-| 3 | Fixtures: `pnpm eval:record` reads each repo once through the GitHub API at its pinned SHA (tree, README, topics, languages, dependency files, open issues, `good first issue` labels) into `eval/golden/fixtures/`. Every other script and test runs offline from these fixtures. | pin to a commit SHA; catch regressions before learners do |
-| 4 | `scoreCoreFiles(predicted, expected)` returns `{ recall, precision, missed[], extra[] }`; `scoreConcepts(predicted, expected)` returns `{ overlap, missed[], extra[] }` using a normalised slug match. `pnpm eval -- --step <name> --subject <module>` runs a subject over all 20 repos and writes `eval/reports/<step>-<timestamp>.json` + a Markdown summary with per-repo and mean scores. | catch prompt regressions |
-| 5 | A deterministic baseline subject (`baseline-readme`: files named in the README plus the dependency-file entry point) runs through `pnpm eval` with no network and no LLM, so every later step has a number to beat. | most tests run on the golden set |
-| 6 | `logStepCost({ runId, ladderKey, step, model, inputTokens, outputTokens, cachedInputTokens })` appends one JSON line to the cost log and computes `usd` from `eval/prices.json`. `pnpm eval:cost -- --run <runId>` prints cost per step and per ladder. | cost and accuracy per step on the golden set |
+| 3 | Fixtures: `bun run eval:record` reads each repo once through the GitHub API at its pinned SHA (tree, README, topics, languages, dependency files, open issues, `good first issue` labels) into `eval/golden/fixtures/`. Every other script and test runs offline from these fixtures. | pin to a commit SHA; catch regressions before learners do |
+| 4 | `scoreCoreFiles(predicted, expected)` returns `{ recall, precision, missed[], extra[] }`; `scoreConcepts(predicted, expected)` returns `{ overlap, missed[], extra[] }` using a normalised slug match. `bun run eval -- --step <name> --subject <module>` runs a subject over all 20 repos and writes `eval/reports/<step>-<timestamp>.json` + a Markdown summary with per-repo and mean scores. | catch prompt regressions |
+| 5 | A deterministic baseline subject (`baseline-readme`: files named in the README plus the dependency-file entry point) runs through `bun run eval` with no network and no LLM, so every later step has a number to beat. | most tests run on the golden set |
+| 6 | `logStepCost({ runId, ladderKey, step, model, inputTokens, outputTokens, cachedInputTokens })` appends one JSON line to the cost log and computes `usd` from `eval/prices.json`. `bun run eval:cost -- --run <runId>` prints cost per step and per ladder. | cost and accuracy per step on the golden set |
 | 7 | Negative: an unknown `model` id (not in `prices.json`) throws `UnknownModelPriceError`; it never logs `usd: 0`. Negative token counts or a missing `step` are rejected. | cost per ladder must be real, not silently zero |
 | 8 | Negative: a golden entry whose `expectedCoreFiles` path is not in its fixture tree fails the schema test with the repo and path named. | hand-checked labels |
 
@@ -84,17 +84,17 @@ v1 task measures real cost per ladder on the golden set first".
 
 | # | Given (input/state) | Expect (output/behavior) | How it's checked |
 |---|---------------------|--------------------------|------------------|
-| 1 | `eval/golden/repos.json` + fixtures | schema test passes; 20 entries; tier/language/low-confidence counts per AC 2 | vitest |
-| 2 | predicted `["a.ts","b.ts"]`, expected `["a.ts","c.ts"]` | `recall 0.5`, `precision 0.5`, `missed ["c.ts"]`, `extra ["b.ts"]` | vitest |
-| 3 | `pnpm eval -- --step core-files --subject baseline-readme` with the network blocked | report JSON + Markdown written; 20 rows; exit 0 | command run |
-| 4 | `logStepCost` with test price `{ "test-model": { input: 3, output: 15, cachedInput: 0.3 } }` (USD per 1M tokens), 1,000,000 input / 100,000 output tokens | `usd = 4.5` | vitest |
-| 5 | `logStepCost` with `model: "not-in-table"` | throws `UnknownModelPriceError` | vitest |
-| 6 | golden entry with a core path absent from the tree | schema test fails naming repo + path | vitest (fixture copy) |
+| 1 | `eval/golden/repos.json` + fixtures | schema test passes; 20 entries; tier/language/low-confidence counts per AC 2 | bun test |
+| 2 | predicted `["a.ts","b.ts"]`, expected `["a.ts","c.ts"]` | `recall 0.5`, `precision 0.5`, `missed ["c.ts"]`, `extra ["b.ts"]` | bun test |
+| 3 | `bun run eval -- --step core-files --subject baseline-readme` with the network blocked | report JSON + Markdown written; 20 rows; exit 0 | command run |
+| 4 | `logStepCost` with test price `{ "test-model": { input: 3, output: 15, cachedInput: 0.3 } }` (USD per 1M tokens), 1,000,000 input / 100,000 output tokens | `usd = 4.5` | bun test |
+| 5 | `logStepCost` with `model: "not-in-table"` | throws `UnknownModelPriceError` | bun test |
+| 6 | golden entry with a core path absent from the tree | schema test fails naming repo + path | bun test (fixture copy) |
 
 ### Verification Command (exact, runnable)
 
 ```bash
-cd eval && pnpm install --frozen-lockfile && pnpm test && pnpm eval -- --step core-files --subject baseline-readme && pnpm eval:cost -- --run test-fixture-run
+cd eval && bun install --frozen-lockfile && bun test && bun run eval -- --step core-files --subject baseline-readme && bun run eval:cost -- --run test-fixture-run
 ```
 
 ### Evidence (filled by reviewer at Stage 4/5)
@@ -145,7 +145,7 @@ cd eval && pnpm install --frozen-lockfile && pnpm test && pnpm eval -- --step co
 
 | File | Change |
 |------|--------|
-| `eval/package.json`, `eval/pnpm-lock.yaml`, `eval/tsconfig.json` | new eval package (or workspace member if T003 merged first) |
+| `eval/package.json`, `eval/bun.lock`, `eval/tsconfig.json` | new eval package (or workspace member if T003 merged first) |
 | `eval/golden/repos.json`, `eval/golden/notes/**`, `eval/golden/fixtures/**` | the golden set |
 | `eval/src/**` | schema, scorers, harness runner, baseline subject, cost logger |
 | `eval/prices.json` | price table |
@@ -165,7 +165,7 @@ cd eval && pnpm install --frozen-lockfile && pnpm test && pnpm eval -- --step co
 
 ## Test Plan
 
-vitest: schema test over the real golden file (AC 1, 2, 8), scorer unit tests (AC 4), cost logger unit tests (AC 6, 7), harness test with a 2-repo fixture subset. Real run: `pnpm eval` with the baseline subject on all 20 repos (AC 5); paste the Markdown summary into the review file.
+bun test: schema test over the real golden file (AC 1, 2, 8), scorer unit tests (AC 4), cost logger unit tests (AC 6, 7), harness test with a 2-repo fixture subset. Real run: `bun run eval` with the baseline subject on all 20 repos (AC 5); paste the Markdown summary into the review file.
 
 ---
 

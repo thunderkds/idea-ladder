@@ -88,23 +88,23 @@ a commit SHA)".
 
 | # | Given (input/state) | Expect (output/behavior) | How it's checked |
 |---|---------------------|--------------------------|------------------|
-| 1 | `levelLockState([])` | `[open, locked, locked, locked, locked]` | vitest |
-| 2 | `levelLockState(["L0","L2"])` | `[passed, open, passed, locked, locked]` | vitest |
-| 3 | `levelLockState(["L0","L1","L2","L3","L4"])` | all `passed` | vitest |
+| 1 | `levelLockState([])` | `[open, locked, locked, locked, locked]` | bun test |
+| 2 | `levelLockState(["L0","L2"])` | `[passed, open, passed, locked, locked]` | bun test |
+| 3 | `levelLockState(["L0","L1","L2","L3","L4"])` | all `passed` | bun test |
 | 4 | Seeded ladder `developit/mitt@6b41670516ed8e8b738612f60491995470aa63b3`, status `unverified`, 5 level rows | page shows 5 levels, badge `Unverified`, SHA `6b41670`, README link with full SHA, DeepWiki link | Playwright e2e |
 | 5 | Same ladder, keyboard only | Tab reaches the open level; locked levels are skipped as links and announce `aria-disabled` | Playwright e2e + axe accessibility scan (0 violations of serious/critical) |
 | 6 | `GET /ladders/does-not-exist` | 404 page | Playwright e2e |
-| 7 | Ladder row with no level rows | 5 levels with `Not generated yet` goals | vitest (loader) |
+| 7 | Ladder row with no level rows | 5 levels with `Not generated yet` goals | bun test (loader) |
 
 ### Verification Command (exact, runnable)
 
 ```bash
 docker compose up -d db
-pnpm install --frozen-lockfile
-pnpm db:migrate
-pnpm typecheck && pnpm lint
-pnpm test -- ladder-view level-lock-state
-pnpm test:e2e -- ladder-view
+bun install --frozen-lockfile
+bun run db:migrate
+bun run typecheck && bun run lint
+bun test ladder-view level-lock-state
+bun run test:e2e -- ladder-view
 ```
 
 ### Evidence (filled by reviewer at Stage 4/5)
@@ -186,7 +186,7 @@ pnpm test:e2e -- ladder-view
 | app page `/ladders/:ladderId` and its loader `getLadderView` (layout set by T003) | ladder view |
 | shared module for `levelLockState` | lock rule |
 | T003 `My ladders` page | list rows with `Open ladder` (empty state unchanged) |
-| tests (vitest + Playwright + axe) | AC 1–7 |
+| tests (bun test + Playwright + axe) | AC 1–7 |
 | `tasks/TASK_REVIEW_T010.md` | Evidence (reviewer) |
 
 ## Files Must NOT Touch
@@ -204,7 +204,7 @@ pnpm test:e2e -- ladder-view
 
 ## Test Plan
 
-vitest for `levelLockState` (all lock cases, out-of-order passes) and `getLadderView` (with and without level rows, fallback ladder); Playwright e2e on seeded ladders for AC 3–7 with screenshots at 360/768/1280 px and an axe scan. Real run: `pnpm dev`, open a seeded ladder, click both link-outs, paste the screenshots' LLM-vision verdicts.
+bun test for `levelLockState` (all lock cases, out-of-order passes) and `getLadderView` (with and without level rows, fallback ladder); Playwright e2e on seeded ladders for AC 3–7 with screenshots at 360/768/1280 px and an axe scan. Real run: `bun run dev`, open a seeded ladder, click both link-outs, paste the screenshots' LLM-vision verdicts.
 
 ---
 
@@ -212,7 +212,7 @@ vitest for `levelLockState` (all lock cases, out-of-order passes) and `getLadder
 
 - [ ] Implementation done
 - [ ] Self-review: `Skill({ skill: "code-review" })` run
-- [ ] Lint passes (`pnpm lint`, `pnpm typecheck`)
+- [ ] Lint passes (`bun run lint`, `bun run typecheck`)
 - [ ] Tests written AND pass — output pasted into `tasks/TASK_REVIEW_T010.md` Evidence (Hard-Stop Gate 5)
 - [ ] `Skill({ skill: "verify" })` run — headless auto verify
 - [ ] Supervisor notified: task ready for Stage 4 review

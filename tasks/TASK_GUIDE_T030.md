@@ -107,7 +107,7 @@ Source (`docs/REQUIREMENT_SOURCE.md`):
 
 ```bash
 # describe blocks of this task start with "T030"
-pnpm install --frozen-lockfile && pnpm typecheck && pnpm lint && pnpm test -- -t "T030" && pnpm exec playwright test --grep T030
+bun install --frozen-lockfile && bun run typecheck && bun run lint && bun test -t "T030" && bunx playwright test --grep T030
 ```
 
 ### Evidence (filled by reviewer at Stage 4/5)
@@ -189,7 +189,7 @@ Build one shared result view used by all three test types. Map server reason cod
 | diff-question screen | new |
 | shared result view + reason-code text module | new |
 | ladder view level card (T010) | add `Take the test` button for unlocked, not-passed levels |
-| tests (vitest, Playwright, `@axe-core/playwright` exact pin) | AC 1–7 |
+| tests (bun test, Playwright, `@axe-core/playwright` exact pin) | AC 1–7 |
 | `tasks/TASK_REVIEW_T030.md` | Evidence (reviewer) |
 
 ## Files Must NOT Touch
@@ -206,7 +206,7 @@ Build one shared result view used by all three test types. Map server reason cod
 
 ## Test Plan
 
-Unit (vitest): reason-code → text mapping, poll stop rules. E2E (Playwright with network mocks and clock control): Success Criteria 1–8 and the UI rows above. Integration E2E (Playwright against the real T012 handlers and a seeded test Postgres): Success Criterion 9; extend to T013/T014 handlers once merged (recorded GitHub fixtures and mock models, no network). Paste `pnpm test` and Playwright output into the report.
+Unit (bun test): reason-code → text mapping, poll stop rules. E2E (Playwright with network mocks and clock control): Success Criteria 1–8 and the UI rows above. Integration E2E (Playwright against the real T012 handlers and a seeded test Postgres): Success Criterion 9; extend to T013/T014 handlers once merged (recorded GitHub fixtures and mock models, no network). Paste `bun test` and Playwright output into the report.
 
 ---
 
@@ -215,7 +215,7 @@ Unit (vitest): reason-code → text mapping, poll stop rules. E2E (Playwright wi
 - [ ] Implementation done
 - [ ] Self-review: `Skill({ skill: "code-review" })` run
 - [ ] Security review: `Skill({ skill: "security-review" })` run (Medium risk)
-- [ ] Lint passes (`pnpm lint`, `pnpm typecheck`)
+- [ ] Lint passes (`bun run lint`, `bun run typecheck`)
 - [ ] Tests written AND pass — output pasted into `tasks/TASK_REVIEW_T030.md` Evidence (Hard-Stop Gate 5)
 - [ ] UI Evidence rows (visual regression, design-system compliance, responsiveness) filled with pasted evidence (Hard-Stop Gate 6)
 - [ ] `Skill({ skill: "verify" })` run — headless auto verify

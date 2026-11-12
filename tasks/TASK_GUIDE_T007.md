@@ -73,7 +73,7 @@ LLM call, structured)". § Sequence: ladder generation: "10 Workflow→LLMs map 
 | 4 | Learner edit: `PUT /api/ladders/:ladderId/concepts` (signed in) stores a per-learner list in `learner_concepts`. The shared `repo_concepts` rows are unchanged. `GET` returns the learner's list if one exists, else the shared list. | learner can edit; cache shared by repo + SHA |
 | 5 | Negative / boundary: saving 2 or 7 concepts, an empty or > 60-char name, or duplicate slugs → `422` with the field named; the screen shows the error next to the field and keeps the learner's input. | 3 to 6 concepts |
 | 6 | The screen `/ladders/:ladderId/concepts` lists the concepts with their reason, lets the learner rename, remove and add (keyboard reachable, labelled inputs), and `Save concepts` persists; reload shows the saved list. A banner reads `Low confidence: this ladder uses concepts only` when `fallbackToConcepts` is true. | learner can edit; fall back flag visible |
-| 7 | Golden set: `pnpm eval -- --step concepts --subject concept-mapper` reports mean concept overlap vs T004 labels and mean cost per call for all 20 repos (reported, no threshold: wrong mapping is cheap to fix). | Compare concept maps on the golden set |
+| 7 | Golden set: `bun run eval -- --step concepts --subject concept-mapper` reports mean concept overlap vs T004 labels and mean cost per call for all 20 repos (reported, no threshold: wrong mapping is cheap to fix). | Compare concept maps on the golden set |
 
 ---
 
@@ -83,10 +83,10 @@ LLM call, structured)". § Sequence: ladder generation: "10 Workflow→LLMs map 
 
 | # | Given (input/state) | Expect (output/behavior) | How it's checked |
 |---|---------------------|--------------------------|------------------|
-| 1 | Mock model returns 4 concepts, one with `basis: ["src/nope.ts"]` only | 3 concepts stored; the invented basis dropped | vitest |
-| 2 | Mock model returns 2 valid concepts twice | step fails `mapper-invalid-output` after 1 retry | vitest |
-| 3 | Learner A saves `["Event emitter","Pub/sub","TypeScript generics"]` | learner A sees it; learner B and `repo_concepts` unchanged | vitest (integration, test DB) |
-| 4 | `PUT` with 7 concepts / duplicate slug | `422` naming the field | vitest |
+| 1 | Mock model returns 4 concepts, one with `basis: ["src/nope.ts"]` only | 3 concepts stored; the invented basis dropped | bun test |
+| 2 | Mock model returns 2 valid concepts twice | step fails `mapper-invalid-output` after 1 retry | bun test |
+| 3 | Learner A saves `["Event emitter","Pub/sub","TypeScript generics"]` | learner A sees it; learner B and `repo_concepts` unchanged | bun test (integration, test DB) |
+| 4 | `PUT` with 7 concepts / duplicate slug | `422` naming the field | bun test |
 | 5 | Playwright: rename one concept, remove one, add one, `Save concepts`, reload | saved list shown | automated e2e |
 | 6 | Snapshot with `fallbackToConcepts: true` | banner text visible | automated e2e |
 | 7 | 20 golden repos, model A | report with mean overlap and cost | command run (paid) |
@@ -95,11 +95,11 @@ LLM call, structured)". § Sequence: ladder generation: "10 Workflow→LLMs map 
 
 ```bash
 # ci: skip — the golden-set run calls model A (paid, needs ANTHROPIC_API_KEY); CI runs the unit and e2e tests only
-pnpm install --frozen-lockfile
-pnpm typecheck && pnpm lint
-pnpm test -- concept-mapper learner-concepts
-pnpm test:e2e -- concepts-edit
-pnpm eval -- --step concepts --subject concept-mapper
+bun install --frozen-lockfile
+bun run typecheck && bun run lint
+bun test concept-mapper learner-concepts
+bun run test:e2e -- concepts-edit
+bun run eval -- --step concepts --subject concept-mapper
 ```
 
 ### Evidence (filled by reviewer at Stage 4/5)
@@ -182,7 +182,7 @@ pnpm eval -- --step concepts --subject concept-mapper
 | routes `GET`/`PUT /api/ladders/:ladderId/concepts`, page `/ladders/:ladderId/concepts` | learner edit |
 | new migration | `repo_concepts`, `learner_concepts` |
 | `eval/src/subjects/concept-mapper.ts` | golden-set subject |
-| tests (vitest + Playwright) | AC 1–7 |
+| tests (bun test + Playwright) | AC 1–7 |
 | `tasks/TASK_REVIEW_T007.md` | Evidence (reviewer) |
 
 ## Files Must NOT Touch
@@ -199,7 +199,7 @@ pnpm eval -- --step concepts --subject concept-mapper
 
 ## Test Plan
 
-vitest with the AI SDK mock model for schema, basis filtering, retry and slug rules; integration tests on a test DB for per-learner edits; Playwright e2e for the edit screen and the UI section screenshots at 360/768/1280 px. Real run: golden-set eval (AC 7) and one live `/start` on `developit/mitt` showing concepts on the edit screen.
+bun test with the AI SDK mock model for schema, basis filtering, retry and slug rules; integration tests on a test DB for per-learner edits; Playwright e2e for the edit screen and the UI section screenshots at 360/768/1280 px. Real run: golden-set eval (AC 7) and one live `/start` on `developit/mitt` showing concepts on the edit screen.
 
 ---
 
@@ -208,7 +208,7 @@ vitest with the AI SDK mock model for schema, basis filtering, retry and slug ru
 - [ ] Implementation done
 - [ ] Self-review: `Skill({ skill: "code-review" })` run
 - [ ] Migration safety: `Skill({ skill: "migration-safety" })` run (new tables)
-- [ ] Lint passes (`pnpm lint`, `pnpm typecheck`)
+- [ ] Lint passes (`bun run lint`, `bun run typecheck`)
 - [ ] Tests written AND pass — output pasted into `tasks/TASK_REVIEW_T007.md` Evidence (Hard-Stop Gate 5)
 - [ ] `Skill({ skill: "verify" })` run — headless auto verify
 - [ ] Supervisor notified: task ready for Stage 4 review

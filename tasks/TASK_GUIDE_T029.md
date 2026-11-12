@@ -86,16 +86,16 @@ confidence; fall back to concept-only ladders."
 
 | # | Given (input/state) | Expect (output/behavior) | How it's checked |
 |---|---------------------|--------------------------|------------------|
-| 1 | Mocked search result of 5 repos: 1 fork, 1 low confidence, 1 picked 3 weeks ago, 2 valid | the higher-star valid repo is picked | vitest |
-| 2 | Run twice in the same week | 1 row, same repo | vitest (test DB) |
-| 3 | Mock 403 + `x-ratelimit-remaining: 0` | no row; card hidden | vitest + Playwright |
+| 1 | Mocked search result of 5 repos: 1 fork, 1 low confidence, 1 picked 3 weeks ago, 2 valid | the higher-star valid repo is picked | bun test |
+| 2 | Run twice in the same week | 1 row, same repo | bun test (test DB) |
+| 3 | Mock 403 + `x-ratelimit-remaining: 0` | no row; card hidden | bun test + Playwright |
 | 4 | Pick stored | card `This week's pick` with `Learn this` href `/start?url=https%3A%2F%2Fgithub.com%2Fo%2Fr` (or the unencoded form T023 documents) | Playwright |
 | 5 | Repo description `<b>x</b>` | rendered literally | Playwright |
 
 ### Verification Command (exact, runnable)
 
 ```bash
-pnpm install --frozen-lockfile && pnpm db:migrate && pnpm test -- trending-pick && pnpm test:e2e -- trending-pick && pnpm lint
+bun install --frozen-lockfile && bun run db:migrate && bun test trending-pick && bun run test:e2e -- trending-pick && bun run lint
 ```
 
 ### Evidence (filled by reviewer at Stage 4/5)
@@ -172,7 +172,7 @@ run. Run `Skill({ skill: "migration-safety" })` for the new `trending_picks` tab
 | Inngest functions folder (T005, app layout set by T003, see `memory/codebase-map.md` once mapped) | `pickTrendingWeekly` cron |
 | new migration in T003's migrations folder | `trending_picks` (unique `weekStart`) |
 | "My ladders" page (T003 tracer page) | `This week's pick` card |
-| tests `trending-pick` (vitest + Playwright) + mocked search fixtures | AC 1–6 |
+| tests `trending-pick` (bun test + Playwright) + mocked search fixtures | AC 1–6 |
 | `tasks/TASK_REVIEW_T029.md` | Evidence (reviewer) |
 
 ## Files Must NOT Touch
@@ -189,7 +189,7 @@ run. Run `Skill({ skill: "migration-safety" })` for the new `trending_picks` tab
 
 ## Test Plan
 
-vitest with mocked GitHub search and repo fixtures for filters, idempotency and failure (Success 1–3).
+bun test with mocked GitHub search and repo fixtures for filters, idempotency and failure (Success 1–3).
 Playwright for the card and its link, plus the UI section at 360/768/1280 px with LLM-vision verdicts
 (Success 4, 5). Real run: trigger `pickTrendingWeekly` once in the Inngest dev server against the live GitHub
 API with the dev token, paste the stored row and a screenshot of the card.
@@ -201,7 +201,7 @@ API with the dev token, paste the stored row and a screenshot of the card.
 - [ ] Implementation done
 - [ ] Self-review: `Skill({ skill: "code-review" })` run
 - [ ] `Skill({ skill: "migration-safety" })` run (new table)
-- [ ] Lint passes (`pnpm lint`, `tsc --noEmit`)
+- [ ] Lint passes (`bun run lint`, `tsc --noEmit`)
 - [ ] Tests written AND pass — output pasted into `tasks/TASK_REVIEW_T029.md` Evidence (Hard-Stop Gate 5)
 - [ ] UI / Design Evidence rows filled with screenshots and verdicts (Hard-Stop Gate 6)
 - [ ] `Skill({ skill: "verify" })` run — headless auto verify

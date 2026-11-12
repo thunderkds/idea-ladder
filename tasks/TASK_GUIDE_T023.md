@@ -96,16 +96,16 @@ The agent stops with `Status: blocked` + `Question:` until answered.
 
 | # | Given (input/state) | Expect (output/behavior) | How it's checked |
 |---|---------------------|--------------------------|------------------|
-| 1 | 6 GitHub URL forms of `o/r` | same repo, same response kind | vitest contract test |
-| 2 | `/start?url=javascript:alert(1)` | 400-class, no `Location` header with that value | vitest contract test |
-| 3 | `/start` with no `url` | 400-class with message | vitest contract test |
-| 4 | `/start?url=https://example.com/post` | the pinned T005 response for a non-GitHub URL | vitest contract test |
-| 5 | `docs/contracts/start-url.md` | contains the URL form, each case of AC 2–4, the versioning rule and the snippet | vitest doc check (greps the headings) |
+| 1 | 6 GitHub URL forms of `o/r` | same repo, same response kind | bun test contract test |
+| 2 | `/start?url=javascript:alert(1)` | 400-class, no `Location` header with that value | bun test contract test |
+| 3 | `/start` with no `url` | 400-class with message | bun test contract test |
+| 4 | `/start?url=https://example.com/post` | the pinned T005 response for a non-GitHub URL | bun test contract test |
+| 5 | `docs/contracts/start-url.md` | contains the URL form, each case of AC 2–4, the versioning rule and the snippet | bun test doc check (greps the headings) |
 
 ### Verification Command (exact, runnable)
 
 ```bash
-pnpm install --frozen-lockfile && pnpm test -- start-url.contract && pnpm lint
+bun install --frozen-lockfile && bun test start-url.contract && bun run lint
 ```
 
 ### Evidence (filled by reviewer at Stage 4/5)
@@ -170,7 +170,7 @@ question instead of changing T005. Tests call the handler in-process with a mock
 
 ## Test Plan
 
-vitest contract tests in-process with mocked GitHub (Success 1–4) and a doc check (Success 5). Real run: start
+bun test contract tests in-process with mocked GitHub (Success 1–4) and a doc check (Success 5). Real run: start
 the app, open each URL form in a browser and paste the resulting page or status for 3 of them.
 
 ---
@@ -179,7 +179,7 @@ the app, open each URL form in a browser and paste the resulting page or status 
 
 - [ ] Implementation done
 - [ ] Self-review: `Skill({ skill: "code-review" })` run
-- [ ] Lint passes (`pnpm lint`, `tsc --noEmit`)
+- [ ] Lint passes (`bun run lint`, `tsc --noEmit`)
 - [ ] Tests written AND pass — output pasted into `tasks/TASK_REVIEW_T023.md` Evidence (Hard-Stop Gate 5)
 - [ ] `Skill({ skill: "verify" })` run — headless auto verify
 - [ ] Supervisor notified: task ready for Stage 4 review

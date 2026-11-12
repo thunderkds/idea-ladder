@@ -81,16 +81,16 @@ no credit".
 
 | # | Given (input/state) | Expect (output/behavior) | How it's checked |
 |---|---------------------|--------------------------|------------------|
-| 1 | 3 learners pass v1, 1 of them passes v2 too, 1 author passes | count = 3 | vitest (test DB) |
-| 2 | One learner's pass belongs to a revoked credential | count drops by 1 | vitest |
+| 1 | 3 learners pass v1, 1 of them passes v2 too, 1 author passes | count = 3 | bun test (test DB) |
+| 2 | One learner's pass belongs to a revoked credential | count drops by 1 | bun test |
 | 3 | Count 1 / 0 | `1 learner passed your ladder` / `No learners have passed yet` | Playwright |
 | 4 | `unverified` concept ladder | no author line, no count | Playwright |
-| 5 | 10,000 seeded passing records | query < 50 ms (`EXPLAIN ANALYZE` pasted) | vitest + command run |
+| 5 | 10,000 seeded passing records | query < 50 ms (`EXPLAIN ANALYZE` pasted) | bun test + command run |
 
 ### Verification Command (exact, runnable)
 
 ```bash
-pnpm install --frozen-lockfile && pnpm db:migrate && pnpm test -- author-credit && pnpm test:e2e -- author-credit && pnpm lint
+bun install --frozen-lockfile && bun run db:migrate && bun test author-credit && bun run test:e2e -- author-credit && bun run lint
 ```
 
 ### Evidence (filled by reviewer at Stage 4/5)
@@ -168,7 +168,7 @@ case-insensitive.
 | concept ladder module from T022/T026 (app layout set by T003, see `memory/codebase-map.md` once mapped) | `learnersPassedCount` |
 | concept ladder view component (T010 layout) | author line + count text |
 | new migration in T003's migrations folder (only if the index is missing) | index on passing evidence records |
-| tests `author-credit` (vitest + Playwright) | AC 1–6 |
+| tests `author-credit` (bun test + Playwright) | AC 1–6 |
 | `tasks/TASK_REVIEW_T027.md` | Evidence (reviewer) |
 
 ## Files Must NOT Touch
@@ -185,7 +185,7 @@ case-insensitive.
 
 ## Test Plan
 
-vitest integration tests on the test DB for the count rules and the 10,000-record timing (Success 1, 2, 5).
+bun test integration tests on the test DB for the count rules and the 10,000-record timing (Success 1, 2, 5).
 Playwright for the text variants and the UI section at 360/768/1280 px with LLM-vision verdicts (Success 3, 4).
 Real run: open a synced community ladder in the dev app, paste the screenshot.
 
@@ -195,7 +195,7 @@ Real run: open a synced community ladder in the dev app, paste the screenshot.
 
 - [ ] Implementation done
 - [ ] Self-review: `Skill({ skill: "code-review" })` run
-- [ ] Lint passes (`pnpm lint`, `tsc --noEmit`)
+- [ ] Lint passes (`bun run lint`, `tsc --noEmit`)
 - [ ] Tests written AND pass — output pasted into `tasks/TASK_REVIEW_T027.md` Evidence (Hard-Stop Gate 5)
 - [ ] UI / Design Evidence rows filled with screenshots and verdicts (Hard-Stop Gate 6)
 - [ ] `Skill({ skill: "verify" })` run — headless auto verify

@@ -93,13 +93,13 @@ Source (`docs/REQUIREMENT_SOURCE.md`):
 | 3 | Mock B disagrees on every question in all rounds | `diff-questions-unavailable` after 2 regenerate rounds; 0 questions served | integration test |
 | 4 | Blind-solve step throws once, then succeeds | generation mock called once in total | integration test (call counter) |
 | 5 | Answers 4 / 5 correct; then a separate set 3 / 5 | pass, evidence `diffQuestions {asked:5, correct:4, pass:4}`, L3 unlocked; fail, no record | integration test |
-| 6 | Diff that changes only `pnpm-lock.yaml` | `diff-not-testable`; LLM mocks never called | integration test |
+| 6 | Diff that changes only `bun.lock` | `diff-not-testable`; LLM mocks never called | integration test |
 
 ### Verification Command (exact, runnable)
 
 ```bash
 # describe blocks of this task start with "T014"; models are mocks, GitHub is recorded fixtures
-pnpm install --frozen-lockfile && pnpm typecheck && pnpm lint && pnpm test -- -t "T014"
+bun install --frozen-lockfile && bun run typecheck && bun run lint && bun test -t "T014"
 ```
 
 ### Evidence (filled by reviewer at Stage 4/5)
@@ -125,7 +125,7 @@ pnpm install --frozen-lockfile && pnpm typecheck && pnpm lint && pnpm test -- -t
 - per-question explanations after the test
 - learner choice of question count
 
-Split the diff into hunks with stable ids (`<file path>#<hunk index>`). Cap the input at `DIFF_TOKEN_BUDGET` (a constant the agent sets from the T006 token-budget pattern); a diff above it keeps the largest code hunks first and drops the rest, and the dropped count is logged. Excluded files: lockfiles (`pnpm-lock.yaml`, `package-lock.json`, `yarn.lock`, `Cargo.lock`, `poetry.lock`), binary diffs, paths under `dist/`, `build/`, `vendor/`. Model A is the Claude model configured by T008; model B is "model B (second provider, chosen in T009)" — read both from the shared model config, never name a model in this task's code. Status values: `generating`, `ready`, `diff-questions-unavailable`, `diff-not-testable`, `passed`, `failed`. Write the migration (diff question set + question rows); it must pass `Skill({ skill: "migration-safety" })` and Common-Infrastructure applies it.
+Split the diff into hunks with stable ids (`<file path>#<hunk index>`). Cap the input at `DIFF_TOKEN_BUDGET` (a constant the agent sets from the T006 token-budget pattern); a diff above it keeps the largest code hunks first and drops the rest, and the dropped count is logged. Excluded files: lockfiles (`bun.lock`, `package-lock.json`, `yarn.lock`, `Cargo.lock`, `poetry.lock`), binary diffs, paths under `dist/`, `build/`, `vendor/`. Model A is the Claude model configured by T008; model B is "model B (second provider, chosen in T009)" — read both from the shared model config, never name a model in this task's code. Status values: `generating`, `ready`, `diff-questions-unavailable`, `diff-not-testable`, `passed`, `failed`. Write the migration (diff question set + question rows); it must pass `Skill({ skill: "migration-safety" })` and Common-Infrastructure applies it.
 
 ---
 
@@ -151,7 +151,7 @@ Split the diff into hunks with stable ids (`<file path>#<hunk index>`). Cap the 
 | `submitDiffAnswers` handler (server code area set by T003) | new |
 | new migration (migrations folder set by T003) | diff question set and question tables |
 | recorded diff fixtures; mock model setups | new |
-| tests (vitest + Inngest test engine + test Postgres) | AC 1–7 |
+| tests (bun test + Inngest test engine + test Postgres) | AC 1–7 |
 | `tasks/TASK_REVIEW_T014.md` | Evidence (reviewer) |
 
 ## Files Must NOT Touch
@@ -169,7 +169,7 @@ Split the diff into hunks with stable ids (`<file path>#<hunk index>`). Cap the 
 
 ## Test Plan
 
-Unit (vitest): hunk splitter and filter; scoring arithmetic (5/5, 4/5, 3/5, 0/5). Integration (vitest + Inngest test engine + test Postgres, AI SDK mock models, recorded diff fixtures): every Success Criteria row and the edge cases. No live model call in the suite. One manual real run on the owner's own L2 branch (live models, keys in env) is recorded in the review with its question set — not part of CI. Paste `pnpm test` output into the report.
+Unit (bun test): hunk splitter and filter; scoring arithmetic (5/5, 4/5, 3/5, 0/5). Integration (bun test + Inngest test engine + test Postgres, AI SDK mock models, recorded diff fixtures): every Success Criteria row and the edge cases. No live model call in the suite. One manual real run on the owner's own L2 branch (live models, keys in env) is recorded in the review with its question set — not part of CI. Paste `bun test` output into the report.
 
 ---
 
@@ -179,7 +179,7 @@ Unit (vitest): hunk splitter and filter; scoring arithmetic (5/5, 4/5, 3/5, 0/5)
 - [ ] Self-review: `Skill({ skill: "code-review" })` run
 - [ ] Security review: `Skill({ skill: "security-review" })` run (High risk)
 - [ ] `Skill({ skill: "migration-safety" })` passed for the new migration
-- [ ] Lint passes (`pnpm lint`, `pnpm typecheck`)
+- [ ] Lint passes (`bun run lint`, `bun run typecheck`)
 - [ ] Tests written AND pass — output pasted into `tasks/TASK_REVIEW_T014.md` Evidence (Hard-Stop Gate 5)
 - [ ] `Skill({ skill: "verify" })` run — headless auto verify
 - [ ] Supervisor notified: task ready for Stage 4 review

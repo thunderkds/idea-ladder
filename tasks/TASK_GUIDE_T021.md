@@ -90,7 +90,7 @@ proof profile". Gate 3: "Proof links get shared".
 ### Verification Command (exact, runnable)
 
 ```bash
-pnpm install --frozen-lockfile && pnpm db:migrate && pnpm test:e2e -- proof-profile && pnpm lint
+bun install --frozen-lockfile && bun run db:migrate && bun run test:e2e -- proof-profile && bun run lint
 ```
 
 ### Evidence (filled by reviewer at Stage 4/5)
@@ -196,7 +196,7 @@ a private window, paste the screenshot.
 - [ ] Implementation done
 - [ ] Self-review: `Skill({ skill: "code-review" })` run
 - [ ] `Skill({ skill: "migration-safety" })` run (new column)
-- [ ] Lint passes (`pnpm lint`, `tsc --noEmit`)
+- [ ] Lint passes (`bun run lint`, `tsc --noEmit`)
 - [ ] Tests written AND pass — output pasted into `tasks/TASK_REVIEW_T021.md` Evidence (Hard-Stop Gate 5)
 - [ ] UI / Design Evidence rows filled with screenshots and verdicts (Hard-Stop Gate 6)
 - [ ] `Skill({ skill: "verify" })` run — headless auto verify

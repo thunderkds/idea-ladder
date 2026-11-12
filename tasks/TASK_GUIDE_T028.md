@@ -87,16 +87,16 @@ passing its test".
 | # | Given (input/state) | Expect (output/behavior) | How it's checked |
 |---|---------------------|--------------------------|------------------|
 | 1 | Learner A starts cohort, learner B opens the invite | B on the cohort page; B follows the ladder | Playwright (2 browser contexts) |
-| 2 | Cohort with 9 members, 2 joins at once | exactly 1 succeeds; the other sees `This cohort is full (10 of 10)` | vitest (API, test DB) + Playwright |
-| 3 | Member reviewed on 4 of the last 7 days | `Reviewed 4 of the last 7 days` | vitest + Playwright |
-| 4 | Non-member calls `GET /api/cohorts/:id` | 403, body without member data | vitest |
+| 2 | Cohort with 9 members, 2 joins at once | exactly 1 succeeds; the other sees `This cohort is full (10 of 10)` | bun test (API, test DB) + Playwright |
+| 3 | Member reviewed on 4 of the last 7 days | `Reviewed 4 of the last 7 days` | bun test + Playwright |
+| 4 | Non-member calls `GET /api/cohorts/:id` | 403, body without member data | bun test |
 | 5 | Invite token 15 days old | `This invite is no longer valid` | Playwright |
 | 6 | Offline after one visit | cohort page with `Last updated <time>` | Playwright (offline context) |
 
 ### Verification Command (exact, runnable)
 
 ```bash
-pnpm install --frozen-lockfile && pnpm db:migrate && pnpm test -- cohort && pnpm test:e2e -- cohort && pnpm lint
+bun install --frozen-lockfile && bun run db:migrate && bun test cohort && bun run test:e2e -- cohort && bun run lint
 ```
 
 ### Evidence (filled by reviewer at Stage 4/5)
@@ -179,7 +179,7 @@ not only in the UI. Store only the hash of each invite token.
 | API routes (backend sub-slice) | `POST /api/cohorts`, `POST /api/cohorts/join`, `GET /api/cohorts/:id`, `DELETE /api/cohorts/:id/members/:memberId` |
 | new migration in T003's migrations folder (backend sub-slice) | `cohorts`, `cohort_members`, `cohort_invites` |
 | service worker cache rules from T015 | cache the cohort page data |
-| tests `cohort` (vitest + Playwright) | AC 1–7 |
+| tests `cohort` (bun test + Playwright) | AC 1–7 |
 | `tasks/TASK_REVIEW_T028.md` | Evidence (reviewer) |
 
 ## Files Must NOT Touch
@@ -196,7 +196,7 @@ not only in the UI. Store only the hash of each invite token.
 
 ## Test Plan
 
-vitest API tests on the test DB for membership checks, the 10-member cap under concurrency, invite expiry and
+bun test API tests on the test DB for membership checks, the 10-member cap under concurrency, invite expiry and
 the review-days count (Success 2–4). Playwright with two or more browser contexts for the invite flow, the
 offline page and the UI section at 360/768/1280 px with LLM-vision verdicts (Success 1, 5, 6). Adversarial
 verify (C3): a second agent tries to read a cohort as a non-member, to join an 11th member, and to reuse a
@@ -210,7 +210,7 @@ revoked token. Real run: create a cohort in the dev app with 2 test accounts, pa
 - [ ] Self-review: `Skill({ skill: "code-review" })` run
 - [ ] Security review: `Skill({ skill: "security-review" })` run (Medium risk — shared progress, invite tokens)
 - [ ] `Skill({ skill: "migration-safety" })` run (cohort tables)
-- [ ] Lint passes (`pnpm lint`, `tsc --noEmit`)
+- [ ] Lint passes (`bun run lint`, `tsc --noEmit`)
 - [ ] Tests written AND pass — output pasted into `tasks/TASK_REVIEW_T028.md` Evidence (Hard-Stop Gate 5)
 - [ ] UI / Design Evidence rows filled with screenshots and verdicts (Hard-Stop Gate 6)
 - [ ] `Skill({ skill: "verify" })` run — headless auto verify (adversarial at C3)

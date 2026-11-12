@@ -96,23 +96,23 @@ token".
 
 | # | Given (input/state) | Expect (output/behavior) | How it's checked |
 |---|---------------------|--------------------------|------------------|
-| 1 | URL table: 10 accepted forms, 8 rejected forms (incl. `javascript:alert(1)`, `https://gitlab.com/o/n`, `https://github.com/o`) | parsed / `UnsupportedUrlError` exactly as listed | vitest |
-| 2 | Ladder row for `developit/mitt@6b41670516ed8e8b738612f60491995470aa63b3`, stub GitHub returns that SHA | `200 { ladderId }`, Inngest send spy called 0 times | vitest (integration, test DB) |
-| 3 | Empty DB, same stub | `202 { jobId }`, one event with `{ repo, sha, jobId }` | vitest |
-| 4 | 2 parallel calls, empty DB | 1 job row, same `jobId` in both responses | vitest |
-| 5 | Inngest test run of the function with recorded fixture for `lukeed/dset` | snapshot row with 40-hex SHA; confidence row; status `fetched` | vitest + Inngest test helper |
-| 6 | Stub returns 403 + `x-ratelimit-remaining: 0` in `fetch-repo` | status `failed`, reason `rate-limited`, 0 snapshot rows | vitest |
+| 1 | URL table: 10 accepted forms, 8 rejected forms (incl. `javascript:alert(1)`, `https://gitlab.com/o/n`, `https://github.com/o`) | parsed / `UnsupportedUrlError` exactly as listed | bun test |
+| 2 | Ladder row for `developit/mitt@6b41670516ed8e8b738612f60491995470aa63b3`, stub GitHub returns that SHA | `200 { ladderId }`, Inngest send spy called 0 times | bun test (integration, test DB) |
+| 3 | Empty DB, same stub | `202 { jobId }`, one event with `{ repo, sha, jobId }` | bun test |
+| 4 | 2 parallel calls, empty DB | 1 job row, same `jobId` in both responses | bun test |
+| 5 | Inngest test run of the function with recorded fixture for `lukeed/dset` | snapshot row with 40-hex SHA; confidence row; status `fetched` | bun test + Inngest test helper |
+| 6 | Stub returns 403 + `x-ratelimit-remaining: 0` in `fetch-repo` | status `failed`, reason `rate-limited`, 0 snapshot rows | bun test |
 | 7 | Playwright: signed-in learner opens `/start?url=https://github.com/lukeed/dset` (stub GitHub, local Inngest dev server) | lands on `/jobs/:jobId`, sees `Reading the repo`, then `Done` | automated e2e |
 
 ### Verification Command (exact, runnable)
 
 ```bash
 docker compose up -d db
-pnpm install --frozen-lockfile
-pnpm db:migrate
-pnpm typecheck && pnpm lint
-pnpm test -- start-ladder repo-url fetch-repo jobs
-pnpm test:e2e -- start-flow
+bun install --frozen-lockfile
+bun run db:migrate
+bun run typecheck && bun run lint
+bun test start-ladder repo-url fetch-repo jobs
+bun run test:e2e -- start-flow
 ```
 
 ### Evidence (filled by reviewer at Stage 4/5)
@@ -169,7 +169,7 @@ pnpm test:e2e -- start-flow
 - job cancellation
 
 1. Migration (run `Skill({ skill: "migration-safety" })`; Common-Infrastructure applies it): `ladders` (`id`, `repo_full_name`, `commit_sha`, `status`, unique on `(repo_full_name, commit_sha)`), `generation_jobs` (`id`, `repo_full_name`, `commit_sha`, `status`, `reason`, `started_by`, timestamps, unique on `(repo_full_name, commit_sha)` for open jobs), `repo_snapshots` (keyed by repo + SHA, JSONB fields), `repo_confidence`. Store `repo_full_name` lower-cased.
-2. Add Inngest (pinned exact version ≥ 2 weeks old) with its serve handler in the framework chosen by T003; local dev server pinned in a `pnpm inngest:dev` script.
+2. Add Inngest (pinned exact version ≥ 2 weeks old) with its serve handler in the framework chosen by T003; local dev server pinned in a `bun run inngest:dev` script.
 3. App token: env `GITHUB_APP_TOKEN` (fine-grained, public read only); add the name to `.env.example`. Never log it. Every GitHub call checks `x-ratelimit-remaining`.
 4. The request path does one GitHub call (resolve HEAD SHA) and one indexed DB lookup; everything else happens in the Inngest step. Later tasks append steps after `fetch-repo`.
 
@@ -195,9 +195,9 @@ pnpm test:e2e -- start-flow
 | app routes for `/start`, `/api/start`, `/api/jobs/:jobId`, `/jobs/:jobId` (layout set by T003) | entry points |
 | app server modules: repo URL parser, GitHub client, confidence rule, start service, Inngest client + function `ladder-generate` with step `fetch-repo` | logic |
 | new migration (T003's migration tool) | `ladders`, `generation_jobs`, `repo_snapshots`, `repo_confidence` |
-| `package.json`, `pnpm-lock.yaml` | Inngest dependency; `inngest:dev` script |
+| `package.json`, `bun.lock` | Inngest dependency; `inngest:dev` script |
 | `.env.example` | `GITHUB_APP_TOKEN`, Inngest keys |
-| tests (vitest + Playwright) and GitHub fixtures for the 3 v0 repos | AC 1–8 |
+| tests (bun test + Playwright) and GitHub fixtures for the 3 v0 repos | AC 1–8 |
 | `tasks/TASK_REVIEW_T005.md` | Evidence (reviewer) |
 
 ## Files Must NOT Touch
@@ -214,7 +214,7 @@ pnpm test:e2e -- start-flow
 
 ## Test Plan
 
-vitest unit tests (URL parser, confidence port), integration tests on a test Postgres (start service hit/miss, concurrency, job API), Inngest function tests with the Inngest test helper and recorded GitHub fixtures (snapshot, rate limit, retry), Playwright e2e for the start flow and the UI section screenshots. Real run: local Inngest dev server + real `GITHUB_APP_TOKEN`, `/start?url=https://github.com/developit/mitt` twice — first a new job, second the same `jobId`; then insert a `ladders` row for that repo + SHA by hand in the dev DB and call it a third time → cache hit (no ladder row is written by this task; T008 writes them). Paste the output.
+bun test unit tests (URL parser, confidence port), integration tests on a test Postgres (start service hit/miss, concurrency, job API), Inngest function tests with the Inngest test helper and recorded GitHub fixtures (snapshot, rate limit, retry), Playwright e2e for the start flow and the UI section screenshots. Real run: local Inngest dev server + real `GITHUB_APP_TOKEN`, `/start?url=https://github.com/developit/mitt` twice — first a new job, second the same `jobId`; then insert a `ladders` row for that repo + SHA by hand in the dev DB and call it a third time → cache hit (no ladder row is written by this task; T008 writes them). Paste the output.
 
 ---
 
@@ -224,7 +224,7 @@ vitest unit tests (URL parser, confidence port), integration tests on a test Pos
 - [ ] Self-review: `Skill({ skill: "code-review" })` run
 - [ ] Security review: `Skill({ skill: "security-review" })` run (Medium risk)
 - [ ] Migration safety: `Skill({ skill: "migration-safety" })` run (new tables)
-- [ ] Lint passes (`pnpm lint`, `pnpm typecheck`)
+- [ ] Lint passes (`bun run lint`, `bun run typecheck`)
 - [ ] Tests written AND pass — output pasted into `tasks/TASK_REVIEW_T005.md` Evidence (Hard-Stop Gate 5)
 - [ ] `Skill({ skill: "verify" })` run — headless auto verify
 - [ ] Supervisor notified: task ready for Stage 4 review

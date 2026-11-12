@@ -59,7 +59,7 @@ Architecture: "GitHub API (public): each app calls it on its own, with its own t
 ## Dependencies & Reachability
 
 **Depends on**: T025 — the content repo scaffold, its `schema/concept-ladder.schema.json` with `schemaVersion`, and the example ladders used as sync fixtures
-**Entry point**: `syncCommunityLadders` (Inngest function, cron + event `community-ladders/sync.requested`); manual trigger `pnpm sync-ladders`
+**Entry point**: `syncCommunityLadders` (Inngest function, cron + event `community-ladders/sync.requested`); manual trigger `bun run sync-ladders`
 
 > v3 task: planned only. Pickup waits for Gate 3 ("Proof links get shared; first outside ladder PR").
 
@@ -85,18 +85,18 @@ Architecture: "GitHub API (public): each app calls it on its own, with its own t
 
 | # | Given (input/state) | Expect (output/behavior) | How it's checked |
 |---|---------------------|--------------------------|------------------|
-| 1 | Mocked GitHub serving T025's 2 example ladders at SHA `a` | 2 upserted, run record with SHA `a` | vitest (test DB) |
-| 2 | Same SHA again | 0 writes | vitest |
-| 3 | SHA `b` adds 1 invalid file | 1 skipped with errors; 2 unchanged | vitest |
-| 4 | SHA `c` bumps one ladder to `version: 2` | new version row; learner linked to v1 still on v1 | vitest |
-| 5 | SHA `d` deletes one ladder | `retired`; learner progress row intact | vitest |
-| 6 | Mock 403 + `x-ratelimit-remaining: 0` mid-run | run `failed`, 0 concept ladder writes | vitest |
-| 7 | AI draft `embeddings` + community `embeddings` | `findConceptLadder("embeddings")` returns the community one | vitest |
+| 1 | Mocked GitHub serving T025's 2 example ladders at SHA `a` | 2 upserted, run record with SHA `a` | bun test (test DB) |
+| 2 | Same SHA again | 0 writes | bun test |
+| 3 | SHA `b` adds 1 invalid file | 1 skipped with errors; 2 unchanged | bun test |
+| 4 | SHA `c` bumps one ladder to `version: 2` | new version row; learner linked to v1 still on v1 | bun test |
+| 5 | SHA `d` deletes one ladder | `retired`; learner progress row intact | bun test |
+| 6 | Mock 403 + `x-ratelimit-remaining: 0` mid-run | run `failed`, 0 concept ladder writes | bun test |
+| 7 | AI draft `embeddings` + community `embeddings` | `findConceptLadder("embeddings")` returns the community one | bun test |
 
 ### Verification Command (exact, runnable)
 
 ```bash
-pnpm install --frozen-lockfile && pnpm db:migrate && pnpm test -- community-sync && pnpm lint
+bun install --frozen-lockfile && bun run db:migrate && bun test community-sync && bun run lint
 ```
 
 ### Evidence (filled by reviewer at Stage 4/5)
@@ -150,7 +150,7 @@ rows and the run table.
 | concept ladder module from T022 | status `community`, version rows, preference in `findConceptLadder` |
 | new migration in T003's migrations folder | `community` status, `concept_ladder_versions`, `community_sync_runs` |
 | vendored `concept-ladder.schema.json` from T025 | validation |
-| `scripts/sync-ladders.ts` + `package.json` script | `pnpm sync-ladders` sends the event |
+| `scripts/sync-ladders.ts` + `package.json` script | `bun run sync-ladders` sends the event |
 | `.env.example` | `COMMUNITY_LADDERS_REPO=` |
 | tests `community-sync` + mocked GitHub fixtures | AC 1–7 |
 | `tasks/TASK_REVIEW_T026.md` | Evidence (reviewer) |
@@ -171,7 +171,7 @@ rows and the run table.
 
 Integration tests on the test Postgres with a mocked GitHub serving fixture trees at SHAs `a`–`d`
 (Success 1–7). Real run: point `COMMUNITY_LADDERS_REPO` at a test copy of T025's repo (or the fixture server),
-run `pnpm sync-ladders`, paste the run record and the concept ladder rows.
+run `bun run sync-ladders`, paste the run record and the concept ladder rows.
 
 ---
 
@@ -181,7 +181,7 @@ run `pnpm sync-ladders`, paste the run record and the concept ladder rows.
 - [ ] Self-review: `Skill({ skill: "code-review" })` run
 - [ ] Security review: `Skill({ skill: "security-review" })` run (Medium risk — untrusted outside content)
 - [ ] `Skill({ skill: "migration-safety" })` run (status value, version rows, run table)
-- [ ] Lint passes (`pnpm lint`, `tsc --noEmit`)
+- [ ] Lint passes (`bun run lint`, `tsc --noEmit`)
 - [ ] Tests written AND pass — output pasted into `tasks/TASK_REVIEW_T026.md` Evidence (Hard-Stop Gate 5)
 - [ ] `Skill({ skill: "verify" })` run — headless auto verify
 - [ ] Supervisor notified: task ready for Stage 4 review

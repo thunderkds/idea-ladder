@@ -65,7 +65,7 @@ T001 result: "VERDICT signed proof: KEEP (untouched record verifies; 17/17 tampe
 ## Dependencies & Reachability
 
 **Depends on**: T012 — append-only evidence records with SHA-256 hashes exist per passed level (the credential lists them; L4 records come through T013 on top of T012's store)
-**Entry point**: `issueCredential` (called by the Inngest function `credential.issue` on the event `evidence/recorded` that this task emits after each `writeEvidenceRecord` call); revocation script `pnpm revoke-credential`
+**Entry point**: `issueCredential` (called by the Inngest function `credential.issue` on the event `evidence/recorded` that this task emits after each `writeEvidenceRecord` call); revocation script `bun run revoke-credential`
 
 > v2 task: planned only. Pickup waits for Gate 2 ("Others finish L1 without your help").
 
@@ -79,7 +79,7 @@ T001 result: "VERDICT signed proof: KEEP (untouched record verifies; 17/17 tampe
 | 2 | The credential body is plain JSON: `{ type: "IdeaLadderCredential", version: 1, id, learner: "github:<login>", learnerGithubId: <number>, ladder: "repo:<owner>/<name>@<sha>", levels: [{ level, evidenceId, evidenceHash, evidenceUrl }], issuer: { id, keyId }, issuedAt, status: { listUrl, index } }`, then `hash` = `sha256:<hex>` over canonical JSON of the body without `hash`/`signature`, and `signature` = base64url Ed25519 over the `hash` string. | "signed with the issuer key, listing the evidence URLs"; plain signed JSON |
 | 3 | `verifyCredential(credential, publicKey)` returns true for the issued credential and false for every T001 tamper case applied to a credential (change any field, add field, remove field, bad hash, flipped signature bit, other public key, change a level and recompute hash). | "Anyone can re-check a proof" |
 | 4 | Issuance is idempotent: a second call for the same learner + ladder returns the existing credential (same `id`, `hash`, `signature`); a unique constraint on (learner, ladder) enforces it under two concurrent calls. | append-only proof; one credential per completion |
-| 5 | Each credential gets a unique `status.index` in a status list. `GET /status/:listId` returns `{ listId, updatedAt, revoked: [indexes], hash, signature }` signed with the same issuer key. `pnpm revoke-credential <credentialId> --reason "<text>"` adds the index; the list's signature verifies after revocation; revoking twice is a no-op. | "Status list entry per credential, so a credential can be revoked" |
+| 5 | Each credential gets a unique `status.index` in a status list. `GET /status/:listId` returns `{ listId, updatedAt, revoked: [indexes], hash, signature }` signed with the same issuer key. `bun run revoke-credential <credentialId> --reason "<text>"` adds the index; the list's signature verifies after revocation; revoking twice is a no-op. | "Status list entry per credential, so a credential can be revoked" |
 | 6 | `GET /.well-known/ladder-issuer.json` returns `{ issuerId, keys: [{ keyId, alg: "Ed25519", publicKeyJwk }] }`. The private key is read only from env `LADDER_ISSUER_PRIVATE_KEY`; with it missing or malformed the app refuses to issue (`IssuerKeyError`) and no unsigned credential is stored. The private key never appears in DB rows, logs or API responses. | "signed with the issuer key"; NFR-002 |
 | 7 | No LLM call is on the issuance path (no import of the AI SDK in the credential module — checked by a test that scans the module's import graph). | "The LLM is never in the trust path" |
 
@@ -91,17 +91,17 @@ T001 result: "VERDICT signed proof: KEEP (untouched record verifies; 17/17 tampe
 
 | # | Given (input/state) | Expect (output/behavior) | How it's checked |
 |---|---------------------|--------------------------|------------------|
-| 1 | Test DB with evidence records for L0–L3 only | `{ issued: false, reason: "ladder-incomplete", missing: ["L4"] }`, 0 credential rows | vitest (integration, test DB) |
-| 2 | Evidence for L0–L4, test key pair in env | credential row; `verifyCredential` → true with the published JWK | vitest |
-| 3 | Issued credential with `levels[2].evidenceHash` changed | `verifyCredential` → false | vitest |
-| 4 | Two concurrent `issueCredential` calls | exactly 1 row; both return the same `id` | vitest |
-| 5 | `pnpm revoke-credential <id> --reason "cheating"` | index appears in `GET /status/:listId`; list signature verifies | vitest + command run |
-| 6 | `LADDER_ISSUER_PRIVATE_KEY` unset | `IssuerKeyError`, 0 rows written | vitest |
+| 1 | Test DB with evidence records for L0–L3 only | `{ issued: false, reason: "ladder-incomplete", missing: ["L4"] }`, 0 credential rows | bun test (integration, test DB) |
+| 2 | Evidence for L0–L4, test key pair in env | credential row; `verifyCredential` → true with the published JWK | bun test |
+| 3 | Issued credential with `levels[2].evidenceHash` changed | `verifyCredential` → false | bun test |
+| 4 | Two concurrent `issueCredential` calls | exactly 1 row; both return the same `id` | bun test |
+| 5 | `bun run revoke-credential <id> --reason "cheating"` | index appears in `GET /status/:listId`; list signature verifies | bun test + command run |
+| 6 | `LADDER_ISSUER_PRIVATE_KEY` unset | `IssuerKeyError`, 0 rows written | bun test |
 
 ### Verification Command (exact, runnable)
 
 ```bash
-pnpm install --frozen-lockfile && pnpm db:migrate && pnpm test -- credential && pnpm lint
+bun install --frozen-lockfile && bun run db:migrate && bun test credential && bun run lint
 ```
 
 ### Evidence (filled by reviewer at Stage 4/5)
@@ -159,7 +159,7 @@ in the test setup. Run `Skill({ skill: "migration-safety" })` for the new tables
 | new migration in T003's migrations folder | `credentials` (append-only), `credential_status` tables |
 | Inngest functions folder (T005) | `credential.issue` function on the `evidence/recorded` event; one emit line after `writeEvidenceRecord` |
 | API routes (T003 layout) | `GET /status/:listId`, `GET /.well-known/ladder-issuer.json`, `GET /credentials/:id`, `GET /evidence/:id` (read-only JSON of one evidence record, the `evidenceUrl` target) |
-| `scripts/revoke-credential.ts` + `package.json` script | `pnpm revoke-credential` |
+| `scripts/revoke-credential.ts` + `package.json` script | `bun run revoke-credential` |
 | `.env.example` | `LADDER_ISSUER_PRIVATE_KEY=` (empty) with a comment |
 | tests for the credential module | AC 1–7 |
 | `tasks/TASK_REVIEW_T019.md` | Evidence (reviewer) |
@@ -178,7 +178,7 @@ in the test setup. Run `Skill({ skill: "migration-safety" })` for the new tables
 
 ## Test Plan
 
-vitest unit tests for canonical JSON, hash, sign, verify and the tamper cases (AC 2, 3, 7). Integration tests
+bun test unit tests for canonical JSON, hash, sign, verify and the tamper cases (AC 2, 3, 7). Integration tests
 against the test Postgres from T003 for issuance, idempotency, concurrency and revocation (AC 1, 4, 5, 6).
 Real run: issue a credential on a seeded test ladder, fetch it and the issuer JWKS with `curl`, verify it with a
 separate 20-line Node script that uses only `node:crypto` (proves outside re-checkability). Paste outputs.
@@ -191,7 +191,7 @@ separate 20-line Node script that uses only `node:crypto` (proves outside re-che
 - [ ] Self-review: `Skill({ skill: "code-review" })` run
 - [ ] Security review: `Skill({ skill: "security-review" })` run (High risk)
 - [ ] `Skill({ skill: "migration-safety" })` run (new tables)
-- [ ] Lint passes (`pnpm lint`, `tsc --noEmit`)
+- [ ] Lint passes (`bun run lint`, `tsc --noEmit`)
 - [ ] Tests written AND pass — output pasted into `tasks/TASK_REVIEW_T019.md` Evidence (Hard-Stop Gate 5)
 - [ ] `Skill({ skill: "verify" })` run — headless auto verify
 - [ ] Supervisor notified: task ready for Stage 4 review
