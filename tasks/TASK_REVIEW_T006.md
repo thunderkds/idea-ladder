@@ -67,8 +67,19 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 > **before any implementation commit exists**; if it does not (docs, templates, skill-instruction
 > text), BEFORE is the **verbatim prior content** of what changed — a quoted excerpt, not a command.
 
-**BEFORE**: [pasted timestamped command output showing the thing absent/failing, captured before the
-first implementation commit] OR [verbatim excerpt of the prior content, for non-executable changes]
+**BEFORE**: captured 2026-11-12T09:29:00Z on `3042e26` (worktree `T006-reader`, before any implementation commit):
+
+```
+$ bun test repo-reader pick-core-files
+21 files were searched [2.00ms]
+
+note: Tests need ".test", "_test_", ".spec" or "_spec_" in the filename (ex: "MyApp.test.ts")
+
+$ cd eval && bun run eval -- --step core-files --subject repo-reader
+$ bun run src/cli-eval.ts --step core-files --subject repo-reader
+eval failed: subject "repo-reader" not found in src/subjects/: Cannot find module './subjects/repo-reader.ts' imported from /home/thunderkds/workspace/pets/wt-t006/eval/src/harness.ts
+error: script "eval" exited with code 1
+```
 
 **AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
 
