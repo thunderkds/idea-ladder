@@ -4,11 +4,12 @@
 // T015: when the queue request cannot reach the network, the session runs from the offline pack cached in IndexedDB:
 // each rating gets its next state locally from the same `scheduleNext` and is queued for sync (offline-store.ts).
 // A session started online switches to the cached pack when a rating hits a network error (not an HTTP status).
+// Online, ratings still queued are sent before the queue request (at most 5 s), and a card still queued is never shown.
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { OfflinePack } from "../shared/offline.ts";
 import { RATINGS, type RateRequest, type Rating, type ReviewCard, type ReviewQueue } from "../shared/review.ts";
 import { useOnline } from "./offline.tsx";
-import { currentPack, expireSession, rateOffline, refresh } from "./offline-store.ts";
+import { currentPack, expireSession, pendingCardIds, rateOffline, refresh, syncBeforeReview } from "./offline-store.ts";
 import { installAvailable, onInstallChange, promptInstall } from "./pwa.ts";
 
 const LABELS: Record<Rating, string> = { again: "Again", hard: "Hard", good: "Good", easy: "Easy" };
@@ -131,14 +132,17 @@ export function ReviewPage() {
         ended: false,
       });
     };
-    fetch("/api/review/queue")
+    syncBeforeReview()
+      .then(() => fetch("/api/review/queue"))
       .then(
         async (res) => {
           if (res.status === 401) return expireSession();
           if (!res.ok) throw new Error(`review queue request failed: ${res.status}`);
           const body = (await res.json()) as ReviewQueue;
+          // A card with a rating still queued here is already rated; the server applies it on the next sync.
+          const pending = await pendingCardIds();
           if (stopped) return;
-          begin(body);
+          begin({ ...body, cards: body.cards.filter((c) => !pending.has(c.cardId)) });
         },
         // No network: run the session from the cached pack of the learner who last opened the review online.
         async () => {

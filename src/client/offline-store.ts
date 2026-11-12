@@ -215,10 +215,38 @@ async function runRefresh() {
 }
 
 let chain: Promise<void> = Promise.resolve();
+/** True while a refresh (or the sign-out sync) is queued or running on `chain`. */
+let busy = false;
 /** One refresh at a time, so a rating is never sent twice by two overlapping syncs. */
 export function refresh(): Promise<void> {
-  chain = chain.then(runRefresh);
-  return chain;
+  busy = true;
+  const run = chain.then(runRefresh);
+  chain = run;
+  void run.then(() => {
+    if (chain === run) busy = false;
+  });
+  return run;
+}
+
+/** Card ids that still have a queued rating of the cached learner: rated on this device, not yet on the server. */
+export async function pendingCardIds(): Promise<Set<string>> {
+  try {
+    const learnerId = await (await db()).get("meta", "learner");
+    return new Set(learnerId ? (await queuedRatings(learnerId)).map((q) => q.cardId) : []);
+  } catch {
+    return new Set(); // IndexedDB unavailable: nothing was queued
+  }
+}
+
+const SYNC_FIRST_MS = 5_000;
+/**
+ * Review open online with ratings still queued: wait (at most 5 s) for them to be sent before the review queue is
+ * asked for, so the server does not list a card already rated here. Joins the refresh already running (app open)
+ * instead of sending the queue a second time. Never throws; a failed or slow sync just lets the caller go on.
+ */
+export async function syncBeforeReview(): Promise<void> {
+  if (!navigator.onLine || (await pendingCardIds()).size === 0) return;
+  await Promise.race([busy ? chain : refresh(), new Promise((resolve) => setTimeout(resolve, SYNC_FIRST_MS))]);
 }
 
 const SIGN_OUT_SYNC_MS = 2_000;
