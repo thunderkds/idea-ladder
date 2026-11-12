@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Code Review Report — T006-reader</title>
+<style>
+  :root {
+    --bg:        #0a0a12;
+    --surface:   #111128;
+    --surface2:  #16162e;
+    --border:    #1e1e42;
+    --border-glow: #2a2a6e;
+    --text:      #e2e2f0;
+    --muted:     #6b6b9a;
+    --cyan:      #00d4ff;
+    --green:     #00ff88;
+    --amber:     #ffb800;
+    --red:       #ff3b6b;
+    --purple:    #a855f7;
+    --cyan-dim:  rgba(0,212,255,.12);
+    --green-dim: rgba(0,255,136,.12);
+    --red-dim:   rgba(255,59,107,.12);
+    --amber-dim: rgba(255,184,0,.12);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.5;
+  }
+  h1 { margin: 0; font-size: 1.25rem; color: #fff; letter-spacing: .02em; }
+  h2 { font-size: .85rem; color: var(--muted); margin: 0 0 .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--cyan);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 0 24px rgba(0,212,255,.08), 0 4px 24px rgba(0,0,0,.5);
+  }
+  .header-meta { color: var(--muted); font-size: .85rem; margin-top: .3rem; }
+  .header-meta code { color: var(--cyan); background: var(--cyan-dim); padding: .1rem .4rem; border-radius: 4px; font-size: .8rem; }
+
+  /* ── OVERALL BADGE ── */
+  .badge { display: inline-block; padding: .3rem .9rem; border-radius: 999px; font-weight: 700; font-size: .8rem; letter-spacing: .05em; text-transform: uppercase; }
+  .badge-green  { background: var(--green-dim); color: var(--green); border: 1px solid rgba(0,255,136,.3); box-shadow: 0 0 8px rgba(0,255,136,.2); }
+  .badge-yellow { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(255,184,0,.3); box-shadow: 0 0 8px rgba(255,184,0,.2); }
+  .badge-red    { background: var(--red-dim);   color: var(--red);   border: 1px solid rgba(255,59,107,.3); box-shadow: 0 0 8px rgba(255,59,107,.2); }
+
+  /* ── SEVERITY BADGES ── */
+  .sev { display: inline-block; padding: .15rem .55rem; border-radius: 999px; font-weight: 700; font-size: .75rem; white-space: nowrap; letter-spacing: .04em; }
+  .sev-high { background: var(--red-dim);   color: var(--red);   border: 1px solid rgba(255,59,107,.25); }
+  .sev-med  { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(255,184,0,.25); }
+  .sev-low  { background: var(--cyan-dim);  color: var(--cyan);  border: 1px solid rgba(0,212,255,.25); }
+  .sev-info { background: rgba(168,85,247,.1); color: var(--purple); border: 1px solid rgba(168,85,247,.25); }
+
+  /* ── GAUGE CARDS ── */
+  .gauges { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+  .gauge-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+    transition: border-color .2s;
+  }
+  .gauge-card:hover { border-color: var(--border-glow); }
+  .gauge-label { font-size: .7rem; font-weight: 700; letter-spacing: .1em; color: var(--muted); text-transform: uppercase; margin-bottom: .5rem; }
+  .gauge-value { font-size: 2rem; font-weight: 700; margin-bottom: .6rem; font-variant-numeric: tabular-nums; }
+  .gauge-value-risk    { color: var(--red); text-shadow: 0 0 12px rgba(255,59,107,.5); }
+  .gauge-value-quality { color: var(--green); text-shadow: 0 0 12px rgba(0,255,136,.5); }
+  .gauge-value-effort  { color: var(--amber); text-shadow: 0 0 12px rgba(255,184,0,.5); }
+  .bar-bg   { background: var(--border); border-radius: 999px; height: 6px; overflow: hidden; }
+  .bar-fill { height: 6px; border-radius: 999px; }
+  .bar-risk    { background: linear-gradient(90deg, #ff3b6b, #ff006e); box-shadow: 0 0 8px rgba(255,59,107,.6); }
+  .bar-quality { background: linear-gradient(90deg, #00c96e, #00ff88); box-shadow: 0 0 8px rgba(0,255,136,.6); }
+  .bar-effort  { background: linear-gradient(90deg, #e0a000, #ffb800); box-shadow: 0 0 8px rgba(255,184,0,.6); }
+
+  /* ── SECTION CARD ── */
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 16px rgba(0,0,0,.4);
+  }
+  .section-head {
+    padding: .7rem 1.25rem;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ── TABLE ── */
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left;
+    padding: .6rem 1.25rem;
+    font-size: .72rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: .8rem 1.25rem;
+    font-size: .875rem;
+    border-top: 1px solid var(--border);
+    vertical-align: top;
+    color: var(--text);
+  }
+  tr:hover td { background: rgba(255,255,255,.02); }
+  td pre {
+    margin: 0;
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    font-size: .78rem;
+    background: #0d0d1f;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--cyan);
+    border-radius: 4px;
+    padding: .5rem .75rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: #b0c4ff;
+    line-height: 1.6;
+  }
+  td code {
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    background: var(--cyan-dim);
+    color: var(--cyan);
+    padding: .1rem .4rem;
+    border-radius: 3px;
+    font-size: .78rem;
+  }
+
+  /* ── PROSE ── */
+  .prose {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.5rem;
+    line-height: 1.8;
+    margin-bottom: 1.5rem;
+    font-size: .9rem;
+    color: #c0c0e0;
+    box-shadow: 0 2px 16px rgba(0,0,0,.4);
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    font-size: .72rem;
+    color: var(--muted);
+    text-align: center;
+    padding-bottom: 2rem;
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+    margin-top: .5rem;
+  }
+  .footer code { color: var(--purple); background: rgba(168,85,247,.1); padding: .1rem .4rem; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══════════════════════════════════════════════════════════ -->
+<div class="header">
+  <div>
+    <h1>Code Review</h1>
+    <div class="header-meta">
+      Branch: <code>T006-reader</code> &nbsp;·&nbsp; 2026-11-12
+    </div>
+  </div>
+  <span class="badge badge-red">Critical</span>
+</div>
+
+<!-- ═══ DIMENSION GAUGES ═════════════════════════════════════════════════ -->
+<!--
+  OVERALL_CLASS  : green | yellow | red
+  OVERALL_LABEL  : e.g. "Healthy" | "Needs Attention" | "Critical"
+  RISK_SCORE     : integer 0–100 (higher = more risk)
+  QUALITY_SCORE  : integer 0–100 (higher = better quality)
+  EFFORT_SCORE   : integer 0–100 (higher = more adaptation work needed)
+-->
+<div class="gauges">
+  <div class="gauge-card">
+    <div class="gauge-label">Risk</div>
+    <div class="gauge-value gauge-value-risk">76%</div>
+    <div class="bar-bg"><div class="bar-fill bar-risk" style="width:76%"></div></div>
+  </div>
+  <div class="gauge-card">
+    <div class="gauge-label">Code Quality</div>
+    <div class="gauge-value gauge-value-quality">34%</div>
+    <div class="bar-bg"><div class="bar-fill bar-quality" style="width:34%"></div></div>
+  </div>
+  <div class="gauge-card">
+    <div class="gauge-label">Adaptation Effort</div>
+    <div class="gauge-value gauge-value-effort">60%</div>
+    <div class="bar-bg"><div class="bar-fill bar-effort" style="width:60%"></div></div>
+  </div>
+</div>
+
+<!-- ═══ FINDINGS TABLE ═══════════════════════════════════════════════════ -->
+<!--
+  Replace <tr>
+  <td><span class="sev sev-high">High</span></td>
+  <td><code>tasks/TASK_REVIEW_T006.md</code></td>
+  <td>84-99</td>
+  <td><pre>P1 (conf 100). AC 7 and the AC 9 real run are not evidenced: no init-event proof of the tool list, no golden report; AFTER block and owner steps still describe the old API-only design; the Verification row still says fail/partial. Action: run the claude-code golden-set run, paste report, verdict lines and the init tool list; rewrite AFTER and owner steps.
+
+Disposition: OPEN: closed by the Supervisor&#x27;s golden-set run and the QA rewrite of the review file (before Ready for Review)</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-med">Med</span></td>
+  <td><code>src/server/claude-code-reader.ts</code></td>
+  <td>119-121</td>
+  <td><pre>P2 (75). SYSTEM (role and injection hygiene) is sent as the user prompt, so the CLI&#x27;s default Claude Code system prompt stays active; the API back end sends it as the system role. Action: --system-prompt &lt;SYSTEM&gt;, keep only the task in -p.
+
+Disposition: FIXED in 6acef4e</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-med">Med</span></td>
+  <td><code>src/server/claude-code-reader.ts; repo-reader.ts</code></td>
+  <td>83-85, 140-143, 168 / 266-275, 318</td>
+  <td><pre>P2 (75/50). hitLimit and budget not equivalent between back ends: (a) cap is toolCalls &gt; maxSteps on claude-code vs last step still a tool call on the API (off-by-one against the pre-registered at most 4 of 20); (b) budget enforced by forecast on the API, measured after the run (with CLI context and cache reads) on claude-code. Action: &gt;= maxSteps; record per-run totalTokens in the real run.
+
+Disposition: FIXED in ee37d43 (a); (b) accepted and documented, both token definitions reported in the golden run</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-med">Med</span></td>
+  <td><code>src/server/claude-code-reader.ts</code></td>
+  <td>160-170</td>
+  <td><pre>P2 (75). AC 9: a run with no answer after repair goes to reader-failed; code throws ReaderInvalidOutputError (non-retryable). No test for the no-answer case.
+
+Disposition: FIXED in afa3f66</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-med">Med</span></td>
+  <td><code>src/server/reader-mcp.ts; main.ts; claude-code-reader.ts</code></td>
+  <td>119-124; 48-60; 82-95</td>
+  <td><pre>P2 (100). The claude-code back end bypasses repo_file_cache and the configured GitHub base URL (hard-coded https://api.github.com); a retried step re-reads every file; guide Approach step 2 and AC 5 say a retry re-reads nothing.
+
+Disposition: FIXED in 05d7840 (base URL); cache bypass accepted and documented in the ADR</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-med">Med</span></td>
+  <td><code>src/server/main.ts</code></td>
+  <td>35-50</td>
+  <td><pre>P2 (75). The production wiring of logCost to logStepCost (backend claude-code, usd null) is untested; if backend were dropped every claude-code call would throw UnknownModelPriceError after a paid run.
+
+Disposition: FIXED in 3ac8a1f</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-med">Med</span></td>
+  <td><code>src/server/claude-code-reader.ts</code></td>
+  <td>207-215</td>
+  <td><pre>P2 (75). --no-session-persistence not passed: every run leaves a transcript under ~/.claude/projects/-tmp-il-reader-*, not removed by the finally rm.
+
+Disposition: ACCEPTED: --resume for the repair needs persistence; documented in the ADR</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-med">Med</span></td>
+  <td><code>src/server/claude-code-reader.ts</code></td>
+  <td>213-214</td>
+  <td><pre>P2 (75). The child gets the full server environment minus ANTHROPIC_API_KEY (DATABASE_URL, SESSION_SECRET, GITHUB_CLIENT_SECRET, GITHUB_APP_TOKEN, INNGEST keys, VAPID private key). Action: allowlist.
+
+Disposition: FIXED in 0fe7732</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low</span></td>
+  <td><code>src/server/claude-code-reader.ts</code></td>
+  <td>90-100, 148-150</td>
+  <td><pre>P3 (75). The repair run starts a new MCP server: the call counter restarts and READER_CALLS_FILE is overwritten; the step cap resets per run and a repair erases the first run&#x27;s cap hit.
+
+Disposition: FIXED in 5edf80d</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low</span></td>
+  <td><code>src/server/ladder-generate.ts</code></td>
+  <td>195-210</td>
+  <td><pre>P3 (75). A ReaderFailedError (timeout, not logged in, usage limit, claude not installed) is retried 3 times, up to about 20 minutes; no startup check that claude exists.
+
+Disposition: FIXED in 7d9a96d (not installed); the rest stays retryable</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low</span></td>
+  <td><code>src/server/reader-mcp.ts</code></td>
+  <td>126-143</td>
+  <td><pre>P3 (75). queue = queue.then(...) has no catch: if handle throws, every later line is ignored until the 300 s kill.
+
+Disposition: FIXED in b79e411</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low</span></td>
+  <td><code>src/server/claude-code-reader.ts</code></td>
+  <td>165, 193</td>
+  <td><pre>P3 (50). modelCalls += num_turns of a resumed session may be cumulative (stats only).
+
+Disposition: To check in the real run</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low</span></td>
+  <td><code>src/server/ladder-generate.ts</code></td>
+  <td>160</td>
+  <td><pre>P3 (75). err instanceof ZodError matches only our own zod 4 errors; the AI SDK tool-input errors are not ZodErrors, so the branch is dead.
+
+Disposition: FIXED in a024845</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low</span></td>
+  <td><code>src/server/progress.ts</code></td>
+  <td>117-124</td>
+  <td><pre>P3 (100). With zod 4.6.7 the detail string for an invalid import reads Invalid input: expected number, received string; tests assert only a non-empty string.
+
+Disposition: No action (text only)</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-info">Info</span></td>
+  <td><code>src/server/claude-code-reader.ts</code></td>
+  <td>223-243</td>
+  <td><pre>Needs validation. After the timeout SIGKILL, Promise.all([stdout, stderr, proc.exited]) blocks only if a grandchild inherited the pipes. Safe check: start claude with a 300 ms timeout and confirm the promise rejects and pgrep -f reader-mcp is empty.
+
+Disposition: FIXED in 893caf3 (grace race)</pre></td>
+</tr> with one <tr> per finding.
+  Severity class: sev-high | sev-med | sev-low | sev-info
+  Finding description goes inside <pre>...</pre> — do NOT HTML-escape manually;
+  wrap the text in <pre> and let the browser handle rendering safely.
+
+  Example row:
+  <tr>
+    <td><span class="sev sev-high">High</span></td>
+    <td><code>scripts/setup.sh</code></td>
+    <td>42–55</td>
+    <td><pre>Unquoted variable $TARGET_DIR in rm call — word-splitting can delete wrong path.</pre></td>
+  </tr>
+-->
+<div class="section">
+  <div class="section-head"><h2>Findings</h2></div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:90px">Severity</th>
+        <th style="width:200px">File</th>
+        <th style="width:80px">Lines</th>
+        <th>Finding</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+  <td><span class="sev sev-high">High</span></td>
+  <td><code>tasks/TASK_REVIEW_T006.md</code></td>
+  <td>84-99</td>
+  <td><pre>P1 (conf 100). AC 7 and the AC 9 real run are not evidenced: no init-event proof of the tool list, no golden report; AFTER block and owner steps still describe the old API-only design; the Verification row still says fail/partial. Action: run the claude-code golden-set run, paste report, verdict lines and the init tool list; rewrite AFTER and owner steps.
+
+Disposition: OPEN: closed by the Supervisor&#x27;s golden-set run and the QA rewrite of the review file (before Ready for Review)</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-med">Med</span></td>
+  <td><code>src/server/claude-code-reader.ts</code></td>
+  <td>119-121</td>
+  <td><pre>P2 (75). SYSTEM (role and injection hygiene) is sent as the user prompt, so the CLI&#x27;s default Claude Code system prompt stays active; the API back end sends it as the system role. Action: --system-prompt &lt;SYSTEM&gt;, keep only the task in -p.
+
+Disposition: FIXED in 6acef4e</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-med">Med</span></td>
+  <td><code>src/server/claude-code-reader.ts; repo-reader.ts</code></td>
+  <td>83-85, 140-143, 168 / 266-275, 318</td>
+  <td><pre>P2 (75/50). hitLimit and budget not equivalent between back ends: (a) cap is toolCalls &gt; maxSteps on claude-code vs last step still a tool call on the API (off-by-one against the pre-registered at most 4 of 20); (b) budget enforced by forecast on the API, measured after the run (with CLI context and cache reads) on claude-code. Action: &gt;= maxSteps; record per-run totalTokens in the real run.
+
+Disposition: FIXED in ee37d43 (a); (b) accepted and documented, both token definitions reported in the golden run</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-med">Med</span></td>
+  <td><code>src/server/claude-code-reader.ts</code></td>
+  <td>160-170</td>
+  <td><pre>P2 (75). AC 9: a run with no answer after repair goes to reader-failed; code throws ReaderInvalidOutputError (non-retryable). No test for the no-answer case.
+
+Disposition: FIXED in afa3f66</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-med">Med</span></td>
+  <td><code>src/server/reader-mcp.ts; main.ts; claude-code-reader.ts</code></td>
+  <td>119-124; 48-60; 82-95</td>
+  <td><pre>P2 (100). The claude-code back end bypasses repo_file_cache and the configured GitHub base URL (hard-coded https://api.github.com); a retried step re-reads every file; guide Approach step 2 and AC 5 say a retry re-reads nothing.
+
+Disposition: FIXED in 05d7840 (base URL); cache bypass accepted and documented in the ADR</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-med">Med</span></td>
+  <td><code>src/server/main.ts</code></td>
+  <td>35-50</td>
+  <td><pre>P2 (75). The production wiring of logCost to logStepCost (backend claude-code, usd null) is untested; if backend were dropped every claude-code call would throw UnknownModelPriceError after a paid run.
+
+Disposition: FIXED in 3ac8a1f</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-med">Med</span></td>
+  <td><code>src/server/claude-code-reader.ts</code></td>
+  <td>207-215</td>
+  <td><pre>P2 (75). --no-session-persistence not passed: every run leaves a transcript under ~/.claude/projects/-tmp-il-reader-*, not removed by the finally rm.
+
+Disposition: ACCEPTED: --resume for the repair needs persistence; documented in the ADR</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-med">Med</span></td>
+  <td><code>src/server/claude-code-reader.ts</code></td>
+  <td>213-214</td>
+  <td><pre>P2 (75). The child gets the full server environment minus ANTHROPIC_API_KEY (DATABASE_URL, SESSION_SECRET, GITHUB_CLIENT_SECRET, GITHUB_APP_TOKEN, INNGEST keys, VAPID private key). Action: allowlist.
+
+Disposition: FIXED in 0fe7732</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low</span></td>
+  <td><code>src/server/claude-code-reader.ts</code></td>
+  <td>90-100, 148-150</td>
+  <td><pre>P3 (75). The repair run starts a new MCP server: the call counter restarts and READER_CALLS_FILE is overwritten; the step cap resets per run and a repair erases the first run&#x27;s cap hit.
+
+Disposition: FIXED in 5edf80d</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low</span></td>
+  <td><code>src/server/ladder-generate.ts</code></td>
+  <td>195-210</td>
+  <td><pre>P3 (75). A ReaderFailedError (timeout, not logged in, usage limit, claude not installed) is retried 3 times, up to about 20 minutes; no startup check that claude exists.
+
+Disposition: FIXED in 7d9a96d (not installed); the rest stays retryable</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low</span></td>
+  <td><code>src/server/reader-mcp.ts</code></td>
+  <td>126-143</td>
+  <td><pre>P3 (75). queue = queue.then(...) has no catch: if handle throws, every later line is ignored until the 300 s kill.
+
+Disposition: FIXED in b79e411</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low</span></td>
+  <td><code>src/server/claude-code-reader.ts</code></td>
+  <td>165, 193</td>
+  <td><pre>P3 (50). modelCalls += num_turns of a resumed session may be cumulative (stats only).
+
+Disposition: To check in the real run</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low</span></td>
+  <td><code>src/server/ladder-generate.ts</code></td>
+  <td>160</td>
+  <td><pre>P3 (75). err instanceof ZodError matches only our own zod 4 errors; the AI SDK tool-input errors are not ZodErrors, so the branch is dead.
+
+Disposition: FIXED in a024845</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low</span></td>
+  <td><code>src/server/progress.ts</code></td>
+  <td>117-124</td>
+  <td><pre>P3 (100). With zod 4.6.7 the detail string for an invalid import reads Invalid input: expected number, received string; tests assert only a non-empty string.
+
+Disposition: No action (text only)</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-info">Info</span></td>
+  <td><code>src/server/claude-code-reader.ts</code></td>
+  <td>223-243</td>
+  <td><pre>Needs validation. After the timeout SIGKILL, Promise.all([stdout, stderr, proc.exited]) blocks only if a grandchild inherited the pipes. Safe check: start claude with a 300 ms timeout and confirm the promise rejects and pgrep -f reader-mcp is empty.
+
+Disposition: FIXED in 893caf3 (grace race)</pre></td>
+</tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ═══ SUMMARY PROSE ════════════════════════════════════════════════════ -->
+<!--
+  Replace Independent read-only review of git diff main...HEAD on T006-reader at f22bfb9 (44 files). P0 0, P1 1, P2 7, P3 6, 1 needs-validation. Scores follow the html-report formula with P1 mapped to High, P2 to Med, P3 to Low; the only P1 is an evidence gap (the golden-set run and the review-file AFTER block), not a code defect, so the Critical badge overstates the code risk. lane_check: C2, 43 files, 2937 lines, EXCEEDS (files 43 &gt; 14; lines 2937 &gt; 500): the task is under-labelled (raised to the Supervisor). All five review questions were answered: AC 1-8 have tests that would fail if the criterion broke; AC 9 gaps are the no-answer path, the main.ts cost wiring and the real run; zod 3.25.76 to 4.6.7 shows no behavioural break in T015 code (.int() is stricter on unsafe integers, issue messages changed). Dispositions are shown per row; fixes landed on T006-reader (0fe7732 to 72a0e3c, ADR 1c60622); gates re-run at 72a0e3c: 304 unit, 77 eval, typecheck, lint, e2e 48. with the LLM's full narrative text.
+  Plain text is safe here; no HTML escaping needed for prose.
+-->
+<div class="prose">
+  Independent read-only review of git diff main...HEAD on T006-reader at f22bfb9 (44 files). P0 0, P1 1, P2 7, P3 6, 1 needs-validation. Scores follow the html-report formula with P1 mapped to High, P2 to Med, P3 to Low; the only P1 is an evidence gap (the golden-set run and the review-file AFTER block), not a code defect, so the Critical badge overstates the code risk. lane_check: C2, 43 files, 2937 lines, EXCEEDS (files 43 &gt; 14; lines 2937 &gt; 500): the task is under-labelled (raised to the Supervisor). All five review questions were answered: AC 1-8 have tests that would fail if the criterion broke; AC 9 gaps are the no-answer path, the main.ts cost wiring and the real run; zod 3.25.76 to 4.6.7 shows no behavioural break in T015 code (.int() is stricter on unsafe integers, issue messages changed). Dispositions are shown per row; fixes landed on T006-reader (0fe7732 to 72a0e3c, ADR 1c60622); gates re-run at 72a0e3c: 304 unit, 77 eval, typecheck, lint, e2e 48.
+</div>
+
+<!-- ═══ FOOTER ═══════════════════════════════════════════════════════════ -->
+<!--
+  MODEL     : e.g. claude-sonnet-4-6
+  TASK_ID   : e.g. T001 (or "—" if not task-scoped)
+  TIMESTAMP : ISO-8601, e.g. 2026-06-18T14:30:22
+-->
+<div class="footer">
+  Model: <code>claude-sonnet-5-5</code> &nbsp;·&nbsp; Task: T006 &nbsp;·&nbsp; Generated: 2026-11-12T23:23:34
+</div>
+
+</body>
+</html>
