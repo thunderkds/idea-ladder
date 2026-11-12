@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import type { SQL } from "bun";
 import { type Context, Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { serveStatic } from "hono/bun";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { secureHeaders } from "hono/secure-headers";
@@ -27,6 +28,7 @@ import {
 } from "./github-repo.ts";
 import { getLadderView, ladderExists, listLadders, noPasses, type PassedLevels } from "./ladder-view.ts";
 import { offlinePack, syncRatings } from "./offline.ts";
+import { exportProgress, importProgress, MAX_IMPORT_BYTES, parseProgressFile } from "./progress.ts";
 import { checkSubscribe, isEndpoint, pushStatus, subscribe, unsubscribe } from "./push.ts";
 import { checkRateRequest, rateCard, reviewQueue } from "./review.ts";
 import {
@@ -45,7 +47,7 @@ const FAILED_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <body><main><h1>Sign-in failed</h1><p>GitHub sign-in did not complete. No account was changed.</p>
 <p><a href="/">Try again</a></p></main></body></html>`;
 
-/** Return target kept across GitHub sign-in: only a same-origin `/start?...`, `/ladders/<id>` or `/review` path is ever stored or followed. */
+/** Return target kept across GitHub sign-in: only a same-origin `/start?...`, `/ladders/<id>`, `/review` or `/settings` path is ever stored or followed. */
 const RETURN_COOKIE = "il_return_to";
 // biome-ignore lint/suspicious/noControlCharactersInRegex: matching control characters is the point
 const CONTROL_CHARS = /[\x00-\x1f\x7f]/;
@@ -58,8 +60,9 @@ const safeDecode = (value: string) => {
 };
 const LADDER_PATH = /^\/ladders\/[1-9][0-9]{0,17}$/;
 const REVIEW_PATH = "/review";
+const SETTINGS_PATH = "/settings";
 function returnPath(value: string | undefined): string | undefined {
-  if (value && (LADDER_PATH.test(value) || value === REVIEW_PATH)) return value;
+  if (value && (LADDER_PATH.test(value) || value === REVIEW_PATH || value === SETTINGS_PATH)) return value;
   if (!value || value.length > MAX_URL_LENGTH * 4 || !value.startsWith("/start?")) return undefined;
   if (CONTROL_CHARS.test(value) || CONTROL_CHARS.test(safeDecode(value))) return undefined;
   const url = new URL(value, "http://idea-ladder.invalid");
@@ -129,6 +132,8 @@ export function createApp(opts: {
     REVIEW_PATH,
     "/api/review/*",
     "/api/push/*",
+    "/api/progress/*",
+    SETTINGS_PATH,
   ]) {
     app.use(path, async (c, next) => {
       await next();
@@ -294,6 +299,36 @@ export function createApp(opts: {
     const body = await c.req.json().catch(() => undefined);
     const result = await syncRatings(sql, user.userId, body, new Date(now()), passedLevels);
     return typeof result === "string" ? c.json({ error: result }, 400) : c.json(result);
+  });
+
+  app.get(SETTINGS_PATH, async (c) =>
+    (await currentUser(c))
+      ? c.html(await indexHtml())
+      : c.redirect(`/auth/github?next=${encodeURIComponent(SETTINGS_PATH)}`, 302),
+  );
+
+  // T015: the progress file. Import is size-checked before it is read or parsed, then validated whole before any write.
+  app.get("/api/progress/export", async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const at = new Date(now());
+    c.header(
+      "Content-Disposition",
+      `attachment; filename="idea-ladder-progress-${at.toISOString().slice(0, 10)}.json"`,
+    );
+    return c.json(await exportProgress(sql, user.userId, at, passedLevels));
+  });
+
+  const tooLarge = (c: Context) => c.json({ error: "file-too-large" }, 413);
+  app.post("/api/progress/import", bodyLimit({ maxSize: MAX_IMPORT_BYTES, onError: tooLarge }), async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const text = await c.req.text();
+    if (Buffer.byteLength(text) > MAX_IMPORT_BYTES) return tooLarge(c);
+    const [me] = await sql`SELECT github_id::int AS github_id FROM users WHERE id = ${user.userId}`;
+    const file = parseProgressFile(text, me.github_id);
+    if ("status" in file) return c.json(file.body, file.status);
+    return c.json(await importProgress(sql, user.userId, file, new Date(now()), passedLevels));
   });
 
   // T015: push reminders. Only the VAPID public key ever reaches a client.
