@@ -99,5 +99,9 @@ describe("loadConfig", () => {
       /READER_MAX_STEPS must be a positive integer/,
     );
     expect(() => loadConfig({ ...valid, READER_TOKEN_BUDGET: "-5" })).toThrow(/READER_TOKEN_BUDGET/);
+    // upper bounds: a typo must not lift the cap or the budget
+    expect(loadConfig({ ...valid, READER_MAX_STEPS: "50", READER_TOKEN_BUDGET: "500000" }).readerMaxSteps).toBe(50);
+    expect(() => loadConfig({ ...valid, READER_MAX_STEPS: "51" })).toThrow(/READER_MAX_STEPS must be .* at most 50/);
+    expect(() => loadConfig({ ...valid, READER_TOKEN_BUDGET: "500001" })).toThrow(/at most 500000/);
   });
 });
