@@ -1,0 +1,9 @@
+{
+  "test-model": {
+    "input": 3,
+    "output": 15,
+    "cachedInput": 0.3,
+    "source": "none: synthetic price for tests only, not a real model",
+    "checkedAt": "2026-11-12"
+  }
+}
