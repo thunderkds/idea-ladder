@@ -1,5 +1,5 @@
 # PROJECT_KANBAN.md
-**Last updated**: 2026-11-12 (Gate 1 waived; T003, T004, T005 Done)
+**Last updated**: 2026-11-12 (Gate 1 waived; T003, T004, T005, T010 Done; T006 Blocked on the owner's paid run)
 
 > Idea Ladder board (board mode `local`). Full context lives in `PROJECT_SPEC.md`.
 > The previous file was another project's Linear cache; it is archived at `docs/archive/easy-personal-board/`.
@@ -36,12 +36,14 @@
 - [ ] **T029** — "Learn what's trending" weekly pick | backend-developer | C1 | Risk: Low | P2 | Phase: v3 (after Gate 3)
 
 ### In Progress
-- [ ] **T006** — Repo reader agent (3 read-only tools: list, read, search; step cap; token budget) picks core files; scored on golden set | backend-developer | C2 | Risk: Medium | P0 | Phase: v1 (Gate 1 waived by user 2026-11-12) | Started 2026-11-12: branch `T006-reader` | Verify FAIL 2026-11-12 (paid golden-set run AC 7 / SC 6 not done); fix batch committed, waiting on the owner's run
 
 ### Ready for Review
-- [ ] **T010** — Ladder view — L0–L4, locked levels, status unverified, link out to README/DeepWiki | frontend-developer | C2 | Risk: Low | P0 | Phase: v1 (Gate 1 waived by user 2026-11-12) | Started 2026-11-12: branch `T010-ladder-view`
+
+### Blocked
+- [ ] **T006** — Repo reader agent (3 read-only tools: list, read, search; step cap; token budget) picks core files; scored on golden set | backend-developer | C2 | Risk: Medium | P0 | Phase: v1 (Gate 1 waived by user 2026-11-12) | Started 2026-11-12: branch `T006-reader` | Verify FAIL 2026-11-12 (paid golden-set run AC 7 / SC 6 not done); fix batch committed, waiting on the owner's run | Moved to Blocked 2026-11-12 on the user's instruction so T010 can merge; branch `T006-reader` and `wt-t006` untouched; returns to In Progress when the owner runs the paid golden-set run or waives AC 7 / SC 6
 
 ### Done
+- [x] **T010** — Ladder view — L0–L4, locked levels, status unverified, link out to README/DeepWiki | frontend-developer | C2 | Risk: Low | P0 | Phase: v1 (Gate 1 waived by user 2026-11-12) | Started 2026-11-12: branch `T010-ladder-view` | Done 2026-11-12: auto verify pass (session 6da48ca5-e2ec-49cb-8cbd-41884726bf0d, commit ce131cd) + manual /verify PASS on the running app; code-review 0 P0/P1 (2 P2, 1 P3 open: lane label, locked text); merged 299a631
 - [x] **T005** — /start?url= → read repo with token, pin SHA, cache by repo+SHA, background job (Inngest), status page | backend-developer | C2 | Risk: Medium | P0 | Phase: v1 (Gate 1 waived by user 2026-11-12) | Started 2026-11-12: branch `T005-start-job` | Done 2026-11-12: auto verify pass (session 2be86b0e-bc7e-4351-a859-6ea093a20ae9, commit fdd8580); code-review 0 P0/P1; security P1 fixed, re-review GO; merged 6d9da64
 - [x] **T003** — Scaffold — TypeScript app, Postgres + pgvector, migrations, GitHub OAuth sign-in, CI | common-infrastructure | C2 | Risk: Medium | P0 | Phase: v1 (Gate 1 waived by user 2026-11-12) | Started 2026-11-12: branch `T003-scaffold` | Done 2026-11-12: auto verify pass (session eddf10a9-c600-4b5c-99ad-f21392bd3ac1, commit b688b44); code-review 0 P0/P1 after fix batch; security-review P1 fixed; merged d73e0d4
 - [x] **T004** — Golden set of 20 hand-checked repos, eval harness, per-step cost logging | qa-expert | C2 | Risk: Low | P0 | Phase: v1 (Gate 1 waived by user 2026-11-12) | Started 2026-11-12: branch `T004-golden-set` | Done 2026-11-12: auto verify pass (session 5e1ab1ed-ec62-4aa3-b2bd-9519005bf20e, commit 082092d); code-review 0 P0/P1; merged 6982de5

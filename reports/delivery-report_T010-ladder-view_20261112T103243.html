@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Delivery Report — T010 — T010-ladder-view</title>
+<style>
+  :root {
+    --bg:        #0a0a12;
+    --surface:   #111128;
+    --surface2:  #16162e;
+    --border:    #1e1e42;
+    --text:      #e2e2f0;
+    --muted:     #6b6b9a;
+    --cyan:      #00d4ff;
+    --green:     #00ff88;
+    --amber:     #ffb800;
+    --purple:    #a855f7;
+    --cyan-dim:  rgba(0,212,255,.12);
+    --green-dim: rgba(0,255,136,.12);
+    --amber-dim: rgba(255,184,0,.12);
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    max-width: 980px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.5;
+  }
+  h1 { margin: 0; font-size: 1.25rem; color: #fff; letter-spacing: .02em; }
+  h2 { font-size: .8rem; color: var(--muted); margin: 0 0 .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; }
+
+  .header {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--cyan);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 0 24px rgba(0,212,255,.08), 0 4px 24px rgba(0,0,0,.5);
+  }
+  .header-meta { color: var(--muted); font-size: .85rem; margin-top: .3rem; }
+  .header-meta code { color: var(--cyan); background: var(--cyan-dim); padding: .1rem .4rem; border-radius: 4px; font-size: .8rem; }
+
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 16px rgba(0,0,0,.4);
+  }
+  .section-head { padding: .7rem 1.25rem; background: var(--surface2); border-bottom: 1px solid var(--border); }
+
+  /* ── BEFORE/AFTER SIDE BY SIDE ── */
+  .ba-wrap { display: flex; flex-wrap: wrap; gap: 1rem; padding: 1.25rem 1.5rem; }
+  .ba-col { flex: 1 1 320px; min-width: 0; }
+  .ba-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin-bottom: .5rem; }
+  .ba-before .ba-label { color: var(--amber); }
+  .ba-after  .ba-label  { color: var(--green); }
+  .ba-col pre {
+    background: #06060c; border: 1px solid var(--border); border-radius: 6px;
+    padding: .85rem; font-size: .8rem; white-space: pre-wrap; word-break: break-word;
+    margin: 0; max-height: 320px; overflow-y: auto; font-family: 'Cascadia Code', 'Fira Code', monospace;
+  }
+
+  .delta-box {
+    padding: 1.1rem 1.5rem; font-size: 1.05rem; font-weight: 600; color: #fff;
+    border-left: 3px solid var(--cyan); box-shadow: -6px 0 12px rgba(0,212,255,.08);
+  }
+  .delta-box::before { content: 'DELTA → '; color: var(--cyan); font-size: .78rem; letter-spacing: .05em; }
+
+  .witness-box { padding: 1rem 1.5rem; font-size: .85rem; color: #b0b0d0; }
+  .witness-box pre { white-space: pre-wrap; word-break: break-word; margin: 0; font-family: 'Cascadia Code', 'Fira Code', monospace; }
+
+  .no-demo-warning {
+    margin: 0 1.5rem 1rem; padding: .75rem 1rem; background: var(--amber-dim);
+    border: 1px solid rgba(255,184,0,.3); border-radius: 6px; color: var(--amber); font-size: .82rem;
+  }
+
+  /* ── EVIDENCE TABLE ── */
+  .evidence-summary {
+    padding: .9rem 1.5rem; font-size: 1rem; font-weight: 700; color: var(--green);
+    background: var(--green-dim); border-bottom: 1px solid var(--border);
+  }
+  .matrix-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: .6rem 1.25rem; font-size: .82rem; border-top: 1px solid var(--border); vertical-align: top; }
+  td pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-family: inherit; font-size: inherit; color: inherit; }
+  .ev-check pre { color: #cfcfe8; font-weight: 500; }
+  .ev-filled  { color: var(--green); }
+  .ev-blank   { color: var(--amber); }
+  .ev-n-a     { color: var(--muted); }
+  .ev-notes pre { color: #9090b8; }
+
+  .footer {
+    font-size: .72rem; color: var(--muted); text-align: center;
+    padding: 1rem 0 2rem; border-top: 1px solid var(--border); margin-top: .5rem;
+  }
+  code { font-family: 'Cascadia Code', 'Fira Code', monospace; background: var(--cyan-dim); color: var(--cyan); padding: .1rem .4rem; border-radius: 3px; font-size: .78rem; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Delivery Report — T010</h1>
+  <div class="header-meta">Branch: <code>T010-ladder-view</code> &nbsp;·&nbsp; 2026-11-12</div>
+</div>
+
+
+
+<div class="section">
+  <div class="section-head"><h2>Before / After</h2></div>
+  <div class="ba-wrap">
+    <div class="ba-col ba-before">
+      <div class="ba-label">Before</div>
+      <pre>captured 2026-11-12T09:28:06Z in the T010 worktree, before any implementation commit (`bun install --frozen-lockfile` done):
+
+```
+$ bun test ladder-view level-lock-state
+bun test v1.4.3 (c6da4a4d3)
+The following filters did not match any test files in --cwd="/home/thunderkds/workspace/pets/wt-t010":
+ ladder-view level-lock-state
+21 files were searched [2.00ms]
+$ bun run test:e2e -- ladder-view --list
+Listing tests:
+Total: 0 tests in 0 files
+error: script "test:e2e" exited with code 1
+```
+
+At this commit `GET /ladders/:ladderId` has no route (T005 redirects a cache hit there and it 404s), there is no `levelLockState`, no `getLadderView`, and `My ladders` renders only `No ladders yet`.</pre>
+    </div>
+    <div class="ba-col ba-after">
+      <div class="ba-label">After</div>
+      <pre>2026-11-12 (worktree wt-t010, after the last commit):
+
+```
+$ bun test level-lock-state ladder-view   (both files run inside the full `bun test`: 142 pass, 0 fail)
+$ bun run test:e2e -- ladder-view
+  ✓ SC 4: seeded ladder shows 5 levels L0-L4, Unverified badge, SHA 6b41670 and the two link-outs
+  ✓ SC 5: keyboard reaches the open level; locked levels have nothing to focus and announce aria-disabled
+  ✓ L0 and L1 passed: L2 open, L3 and L4 locked; a very long goal wraps at 360px
+  ✓ SC 7: a ladder with no level rows shows five levels with `Not generated yet`
+  ✓ SC 6: an unknown ladder id shows the 404 page
+  ✓ AC 6: signed out, a ladder URL goes to sign-in and back to the same ladder
+  ✓ AC 7: My ladders lists the saved ladders the learner started, each with Open ladder
+  7 passed (6.2s)
+$ bun run ci:local  ->  ci:local: all steps passed
+```</pre>
+    </div>
+  </div>
+  <div class="delta-box">A signed-in learner can open `/ladders/:ladderId` from `My ladders` and see L0-L4 with goals, pass tests and lock state, the `Unverified` badge, the pinned SHA, and links to the README at that SHA and to DeepWiki.</div>
+</div>
+
+<div class="section">
+  <div class="section-head"><h2>Witness</h2></div>
+  <div class="witness-box"><pre>Derived from memory/event-trace/T010.jsonl: 72 tool-call record(s), 2026-11-12T09:27:33.288721+00:00 → 2026-11-12T10:30:20.199151+00:00 (session trace, not a claimed name)</pre></div>
+</div>
+
+<div class="section">
+  <div class="section-head"><h2>Evidence Completion</h2></div>
+  <div class="evidence-summary">8 / 10 filled</div>
+  <div class="matrix-wrap">
+    <table>
+      <tbody>
+        <tr><td class="ev-check"><pre>**New test(s) cover Acceptance Criteria (file paths pasted)**</pre></td><td class="ev-status ev-filled"><pre>☑ pass</pre></td><td class="ev-notes"><pre>`tests/level-lock-state.test.ts` (AC 2, SC 1-3), `tests/ladder-view.test.ts` (AC 1, 6, 7, SC 7; endpoints 401/404/no-store, return-to-ladder cookie), `tests/migrate.test.ts` (0004 up/down/up), `e2e/ladder-view.e2e.ts` (AC 3-7, SC 4-6, axe, tokens, 3 viewports). `bun test`: `143 pass, 0 fail` after the fix batch (new: `listLadders duplicates`, verified to fail with `DISTINCT` removed, then restored). `bun run test:e2e -- ladder-view`: `8 passed (7.1s)` (new: failed ladder request shows `Could not load this ladder`).</pre></td></tr>
+<tr><td class="ev-check"><pre>Verification command run</pre></td><td class="ev-status ev-filled"><pre>☑ pass</pre></td><td class="ev-notes"><pre>`bun run ci:local` (re-run after the fix batch) ends `ci:local: all steps passed`: typecheck clean; lint `Checked 51 files ... No fixes applied.` + `check-tokens: 0 color literals outside src/client/tokens.css`; unit `143 pass 0 fail`; migrate up/down/up ok; e2e sign-in `3 passed`, start-flow `6 passed`, ladder-view `8 passed`. Guide's `bun test ladder-view level-lock-state` is covered by `bun test` (the two files are in it).</pre></td></tr>
+<tr><td class="ev-check"><pre>Negative cases hold</pre></td><td class="ev-status ev-filled"><pre>☑ pass</pre></td><td class="ev-notes"><pre>Unknown/non-numeric/overflow ids give `undefined` (loader) and 404 (API + page: `Ladder not found`); signed-out API 401; signed-out page redirects to `/auth/github?next=%2Fladders%2F<id>` and returns to the ladder; look-alike return targets (`/ladders/42/x`, `//evil...`, CRLF) refused; `Cache-Control: no-store` on every ladder route; out-of-order passes do not open L3.</pre></td></tr>
+<tr><td class="ev-check"><pre>verify</pre></td><td class="ev-status ev-filled"><pre>☑ pass</pre></td><td class="ev-notes"><pre>auto-run by hook, session 6da48ca5-e2ec-49cb-8cbd-41884726bf0d, commit ce131cd120212dbbbc3606072f77b322a4c99182, log .claude/verify-runs/T010-ce131cd12021.log — pass</pre></td></tr>
+<tr><td class="ev-check"><pre>Review scope bounded to the change's blast radius (affected set, not whole repo)</pre></td><td class="ev-status ev-blank"><pre>☐ pass / ☐ fail</pre></td><td class="ev-notes"><pre>Not run by the implementer: `code-review` skill is not available in this sub-agent's tool set; Supervisor to run it. Blast radius for the reviewer: `src/server/app.ts` (new routes, `returnPath` replaces `startPath` and now also accepts `/ladders/<id>`), `src/client/App.tsx`, new `src/client/LadderView.tsx`, `src/shared/levels.ts`, `src/server/ladder-view.ts`, `migrations/0004_*`, `tests/migrate.test.ts` (hard-coded last-migration names), `e2e/serve.ts`, CI lists.</pre></td></tr>
+<tr><td class="ev-check"><pre>Full smoke suite still green (no regression)</pre></td><td class="ev-status ev-filled"><pre>☑ pass</pre></td><td class="ev-notes"><pre>`bun run ci:local` all steps passed, including the earlier sign-in and start-flow e2e.</pre></td></tr>
+<tr><td class="ev-check"><pre>**Companion score (easy-verifier)**</pre></td><td class="ev-status ev-blank"><pre>☐ pass / ☐ fail / ☐ N/A</pre></td><td class="ev-notes"><pre>[`overall` and `change_risk` as the tool returned them, the scope, the ref, and the absolute path of the verifier report after a literal `report:` label — e.g. "overall 86 (>= 80), change_risk pass, scope changes, ref `main...HEAD`, report: `/home/me/.easy-verifier-reports/kit/score_changes_20261028T0530Z.html`". The gate reads the path that follows `report:` and nothing else, so with no label, or a path that is absent, the row is unscored — write ☑ N/A instead. ☑ N/A with a reason when neither companion tool was run: the merge gate blocks on ☑ fail only, never on an absent or N/A row]</pre></td></tr>
+<tr><td class="ev-check"><pre>**UI: Visual regression (diff or verdict pasted)**</pre></td><td class="ev-status ev-filled"><pre>☑ pass</pre></td><td class="ev-notes"><pre>Screenshots at 360/768/1280 in `test-results/screenshots/` (git-ignored): `ladder-view-no-passes-*`, `ladder-view-passed-*`, `ladder-view-fallback-*`, `ladders-two-*`. Verdict by the implementer plus the Supervisor, who looked at the mobile and desktop images and found them correct; not a separate vision run. Baselines are committed in `e2e/baseline/` (`ladder-view-no-passes-*`, `ladder-view-passed-*`, `ladder-view-fallback-*`, `ladders-two-*`, each mobile/tablet/desktop). Verdict: no passes, 1280: header with badge `Unverified`, `Pinned to 6b41670`, both link-out buttons, L0 in an accent-bordered card with `Open now`, L1-L4 muted with lock icon and `Locked — pass L<n-1> first`. Passed, 360 and 1280: L0/L1 `Passed`, L2 open, L3/L4 locked, 300+ char unbroken URL wraps inside the card. My ladders at 768: two rows with repo name and `Open ladder`.</pre></td></tr>
+<tr><td class="ev-check"><pre>**UI: Design-system compliance (tokens/colors/typography verified)**</pre></td><td class="ev-status ev-filled"><pre>☑ pass</pre></td><td class="ev-notes"><pre>`check-tokens: 0 color literals outside src/client/tokens.css`; Playwright computed-style checks in `e2e/ladder-view.e2e.ts` match `tokens.css` for open/locked/passed card colors, badge (size/weight/family/border), level title/goal type, `.levels` gap, card padding, `main` max-width. axe 0 serious/critical on all 4 ladder-view states, the 404 page, the load-error page and My ladders (axe-core 4.14.0 via `@axe-core/playwright` 4.14.0, exact pins, published 2026-10-05).</pre></td></tr>
+<tr><td class="ev-check"><pre>**UI: Responsiveness at target viewports**</pre></td><td class="ev-status ev-filled"><pre>☑ pass</pre></td><td class="ev-notes"><pre>360x740, 768x1024, 1280x800: `scrollWidth <= viewport` asserted for every screenshot; link-out buttons full width at 360 (asserted); at >= 1024 px the buttons sit beside the header.</pre></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="footer">
+  Task: T010 &nbsp;·&nbsp; Branch: <code>T010-ladder-view</code> &nbsp;·&nbsp; Generated: 2026-11-12T10:32:43.149696+00:00
+</div>
+
+</body>
+</html>

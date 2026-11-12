@@ -104,3 +104,4 @@ See `PROJECT_KANBAN.md`.
 
 | Date | Insight | Source Task |
 |------|---------|------------|
+| 2026-11-12 | Ladder unlock is one pure rule (`levelLockState`); passes arrive through an injected seam until T012. Gate 5 needs an attributed `npm run test` call in the task trace. | T010 |
