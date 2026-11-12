@@ -1,5 +1,5 @@
 # PROJECT_KANBAN.md
-**Last updated**: 2026-11-12 (Gate 1 waived; T003, T004, T005, T010, T011 Done; T015 Ready for Review; T006 Blocked on the owner's paid run)
+**Last updated**: 2026-11-12 (Gate 1 waived; T003, T004, T005, T010, T011, T015 Done; T006 Blocked on the owner's paid run)
 
 > Idea Ladder board (board mode `local`). Full context lives in `PROJECT_SPEC.md`.
 > The previous file was another project's Linear cache; it is archived at `docs/archive/easy-personal-board/`.
@@ -36,12 +36,12 @@
 ### In Progress
 
 ### Ready for Review
-- [ ] **T015** — Offline PWA (service worker cache), push reminders, export/import of progress | frontend-developer | C2 | Risk: Medium | P1 | Phase: v1 (Gate 1 waived by user 2026-11-12) | Started 2026-11-12: branch `T015-offline-pwa` | Ready for Review 2026-11-12 at 734baeb: code-review 0 P0/P1 open after the fix batch, security 0 findings, QA found and the fixes closed 1 P1 + 2 P2, migration-safety GO (dry-run N/A); real push delivery is the owner's manual check; waits for the auto verify and the merge
 
 ### Blocked
 - [ ] **T006** — Repo reader agent (3 read-only tools: list, read, search; step cap; token budget) picks core files; scored on golden set | backend-developer | C2 | Risk: Medium | P0 | Phase: v1 (Gate 1 waived by user 2026-11-12) | Started 2026-11-12: branch `T006-reader` | Verify FAIL 2026-11-12 (paid golden-set run AC 7 / SC 6 not done); fix batch committed, waiting on the owner's run | Moved to Blocked 2026-11-12 on the user's instruction so T010 can merge; branch `T006-reader` and `wt-t006` untouched; returns to In Progress when the owner runs the paid golden-set run or waives AC 7 / SC 6
 
 ### Done
+- [x] **T015** — Offline PWA (service worker cache), push reminders, export/import of progress | frontend-developer | C2 | Risk: Medium | P1 | Phase: v1 (Gate 1 waived by user 2026-11-12) | Started 2026-11-12: branch `T015-offline-pwa` | Done 2026-11-12: auto verify pass (session 64196178-692e-404e-8935-d32d82ea8c1b, commit 8220d62; the first run on 734baeb failed on a real stale-queue bug, fixed in 8220d62); code-review 0 P0/P1 open; security 0 findings; independent QA found and the fixes closed 1 P1 + 2 P2; migration-safety GO (dry-run N/A); real push delivery is the owner's manual check; merged 3f64cb8
 - [x] **T011** — Daily 5-minute review with FSRS (ts-fsrs 5.4.2), review log stored | frontend-developer | C2 | Risk: Medium | P0 | Phase: v1 (Gate 1 waived by user 2026-11-12) | Started 2026-11-12: branch `T011-daily-review` | Done 2026-11-12: auto verify pass (session 34f68f99-705e-43e5-8fdc-11be0dbfc8eb, commit 42909c3) + manual /verify PASS on the running app; code-review 0 P0/P1; security 0 findings; QA PASS; migration-safety GO (dry-run N/A accepted by the user); merged 9162b6a
 - [x] **T010** — Ladder view — L0–L4, locked levels, status unverified, link out to README/DeepWiki | frontend-developer | C2 | Risk: Low | P0 | Phase: v1 (Gate 1 waived by user 2026-11-12) | Started 2026-11-12: branch `T010-ladder-view` | Done 2026-11-12: auto verify pass (session 6da48ca5-e2ec-49cb-8cbd-41884726bf0d, commit ce131cd) + manual /verify PASS on the running app; code-review 0 P0/P1 (2 P2, 1 P3 open: lane label, locked text); merged 299a631
 - [x] **T005** — /start?url= → read repo with token, pin SHA, cache by repo+SHA, background job (Inngest), status page | backend-developer | C2 | Risk: Medium | P0 | Phase: v1 (Gate 1 waived by user 2026-11-12) | Started 2026-11-12: branch `T005-start-job` | Done 2026-11-12: auto verify pass (session 2be86b0e-bc7e-4351-a859-6ea093a20ae9, commit fdd8580); code-review 0 P0/P1; security P1 fixed, re-review GO; merged 6d9da64

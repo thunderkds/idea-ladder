@@ -106,3 +106,4 @@ See `PROJECT_KANBAN.md`.
 |------|---------|------------|
 | 2026-11-12 | Ladder unlock is one pure rule (`levelLockState`); passes arrive through an injected seam until T012. Gate 5 needs an attributed `npm run test` call in the task trace. | T010 |
 | 2026-11-12 | Review schedule is computed only on the server (`scheduleNext`, fuzz off) and every rating is an append-only log row, so the log replays to the stored card state; `reviewed_at` never goes before `last_review`. | T011 |
+| 2026-11-12 | Offline ratings sync through the same `rateCard` path as online ones (client `reviewedAt` only inside a 5-minute window); import never writes card state, only replays newer log rows, so the log always replays to the stored state. | T015 |

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Delivery Report — T015 — T015-offline-pwa</title>
+<style>
+  :root {
+    --bg:        #0a0a12;
+    --surface:   #111128;
+    --surface2:  #16162e;
+    --border:    #1e1e42;
+    --text:      #e2e2f0;
+    --muted:     #6b6b9a;
+    --cyan:      #00d4ff;
+    --green:     #00ff88;
+    --amber:     #ffb800;
+    --purple:    #a855f7;
+    --cyan-dim:  rgba(0,212,255,.12);
+    --green-dim: rgba(0,255,136,.12);
+    --amber-dim: rgba(255,184,0,.12);
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    max-width: 980px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.5;
+  }
+  h1 { margin: 0; font-size: 1.25rem; color: #fff; letter-spacing: .02em; }
+  h2 { font-size: .8rem; color: var(--muted); margin: 0 0 .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; }
+
+  .header {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--cyan);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 0 24px rgba(0,212,255,.08), 0 4px 24px rgba(0,0,0,.5);
+  }
+  .header-meta { color: var(--muted); font-size: .85rem; margin-top: .3rem; }
+  .header-meta code { color: var(--cyan); background: var(--cyan-dim); padding: .1rem .4rem; border-radius: 4px; font-size: .8rem; }
+
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 16px rgba(0,0,0,.4);
+  }
+  .section-head { padding: .7rem 1.25rem; background: var(--surface2); border-bottom: 1px solid var(--border); }
+
+  /* ── BEFORE/AFTER SIDE BY SIDE ── */
+  .ba-wrap { display: flex; flex-wrap: wrap; gap: 1rem; padding: 1.25rem 1.5rem; }
+  .ba-col { flex: 1 1 320px; min-width: 0; }
+  .ba-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin-bottom: .5rem; }
+  .ba-before .ba-label { color: var(--amber); }
+  .ba-after  .ba-label  { color: var(--green); }
+  .ba-col pre {
+    background: #06060c; border: 1px solid var(--border); border-radius: 6px;
+    padding: .85rem; font-size: .8rem; white-space: pre-wrap; word-break: break-word;
+    margin: 0; max-height: 320px; overflow-y: auto; font-family: 'Cascadia Code', 'Fira Code', monospace;
+  }
+
+  .delta-box {
+    padding: 1.1rem 1.5rem; font-size: 1.05rem; font-weight: 600; color: #fff;
+    border-left: 3px solid var(--cyan); box-shadow: -6px 0 12px rgba(0,212,255,.08);
+  }
+  .delta-box::before { content: 'DELTA → '; color: var(--cyan); font-size: .78rem; letter-spacing: .05em; }
+
+  .witness-box { padding: 1rem 1.5rem; font-size: .85rem; color: #b0b0d0; }
+  .witness-box pre { white-space: pre-wrap; word-break: break-word; margin: 0; font-family: 'Cascadia Code', 'Fira Code', monospace; }
+
+  .no-demo-warning {
+    margin: 0 1.5rem 1rem; padding: .75rem 1rem; background: var(--amber-dim);
+    border: 1px solid rgba(255,184,0,.3); border-radius: 6px; color: var(--amber); font-size: .82rem;
+  }
+
+  /* ── EVIDENCE TABLE ── */
+  .evidence-summary {
+    padding: .9rem 1.5rem; font-size: 1rem; font-weight: 700; color: var(--green);
+    background: var(--green-dim); border-bottom: 1px solid var(--border);
+  }
+  .matrix-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: .6rem 1.25rem; font-size: .82rem; border-top: 1px solid var(--border); vertical-align: top; }
+  td pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-family: inherit; font-size: inherit; color: inherit; }
+  .ev-check pre { color: #cfcfe8; font-weight: 500; }
+  .ev-filled  { color: var(--green); }
+  .ev-blank   { color: var(--amber); }
+  .ev-n-a     { color: var(--muted); }
+  .ev-notes pre { color: #9090b8; }
+
+  .footer {
+    font-size: .72rem; color: var(--muted); text-align: center;
+    padding: 1rem 0 2rem; border-top: 1px solid var(--border); margin-top: .5rem;
+  }
+  code { font-family: 'Cascadia Code', 'Fira Code', monospace; background: var(--cyan-dim); color: var(--cyan); padding: .1rem .4rem; border-radius: 3px; font-size: .78rem; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Delivery Report — T015</h1>
+  <div class="header-meta">Branch: <code>T015-offline-pwa</code> &nbsp;·&nbsp; 2026-11-12</div>
+</div>
+
+
+
+<div class="section">
+  <div class="section-head"><h2>Before / After</h2></div>
+  <div class="ba-wrap">
+    <div class="ba-col ba-before">
+      <div class="ba-label">Before</div>
+      <pre>captured by backend-developer in `/home/thunderkds/workspace/pets/wt-t015` (branch `T015-offline-pwa`)
+at `8b897c4`, before any T015 implementation commit. No T015 test exists, none of the three dependencies is declared,
+and every PWA / settings / push / progress / offline-pack URL is a 404 for a signed-in learner (`octo`, stub GitHub).
+
+```
+$ date -u; git rev-parse --short HEAD
+2026-11-12T12:15:46Z
+8b897c4
+$ bun test -t "T015"
+bun test v1.4.3 (c6da4a4d3)
+
+error: regex "T015" matched 0 tests. Searched 13 files (skipping 174 tests) [116.00ms]
+$ grep -n "web-push\|\"idb\"\|\"zod\"" package.json
+exit=1
+```
+
+```
+$ bun run build && bun e2e/serve.ts      # ports 54400-54402, stopped after the capture
+$ date -u
+2026-11-12T12:16:07Z
+$ curl -s -L -c jar -b jar -o /dev/null -w "%{http_code} %{url_effective}\n" http://localhost:54401/auth/github
+200 http://localhost:54401/ladders
+$ curl -si -b jar http://localhost:54401/manifest.webmanifest | head -1
+HTTP/1.1 404 Not Found
+$ curl -si -b jar http://localhost:54401/sw.js | head -1
+HTTP/1.1 404 Not Found
+$ curl -si -b jar http://localhost:54401/settings | head -1
+HTTP/1.1 404 Not Found
+$ curl -si -b jar http://localhost:54401/api/push/status | head -1
+HTTP/1.1 404 Not Found
+$ curl -si -b jar http://localhost:54401/api/progress/export | head -1
+HTTP/1.1 404 Not Found
+$ curl -si -b jar http://localhost:54401/api/review/offline-pack | head -1
+HTTP/1.1 404 Not Found
+```</pre>
+    </div>
+    <div class="ba-col ba-after">
+      <div class="ba-label">After</div>
+      <pre>2026-11-12T13:36Z, worktree wt-t015 at 08b0fa4 (Supervisor run), same commands as BEFORE:
+
+```
+$ bun test -t "T015"
+ 59 pass
+ 173 filtered out
+ 0 fail
+ 446 expect() calls
+
+$ bunx playwright test --grep T015
+  17 passed (24.5s)
+
+$ grep -n 'web-push\|"idb"\|"zod"' package.json
+"idb": "8.0.4", "web-push": "3.6.7", "zod": "3.25.76"  (exact pins)
+```
+
+Real app, Supervisor drive on `bun e2e/serve.ts` (HEAD 08b0fa4): a real Chromium (persistent profile) pressed `Turn on reminders` on `/settings`: `POST /api/push/subscribe 200` for an endpoint on host `jmt17.google.com`, the page says "On: every day at 07:00 (Asia/Bangkok), only when cards are due.", it survives a reload, `Turn off reminders` sends `POST /api/push/unsubscribe 200`. Offline: after one online visit `/review` loads offline from the cached pack with the Offline banner; a rating is queued in IndexedDB; with the session expired the sync answers 401, the queue is kept and the page goes to `/`; after the same learner signs in again the rating is sent with its original idempotency key and the log has the row. With another account's cookie the sync answers `409 wrong-learner`, the queue stays, nothing is written. The independent QA also showed: manifest `application/manifest+json`, installable (`Page.getInstallabilityErrors` empty), ts-fsrs replay of the log equals card_states for every card after offline sync, a doctored import file changed nothing but its one valid new row, the cron sent at the learner's local hour in Asia/Kolkata and Pacific/Kiritimati only with due cards.</pre>
+    </div>
+  </div>
+  <div class="delta-box">a learner can install the app, review their due cards with no network (ratings queue on the device and sync in order to the server, which recomputes every state with the same scheduler), get one daily push reminder at their chosen hour only when cards are due, and export and re-import their review progress without ever creating proof or unlocking a level, where before the app had no manifest, no service worker, no sync, no reminders and no export or import (all of `/manifest.webmanifest`, `/sw.js`, `/settings` and `/api/push/*`, `/api/progress/*`, `/api/review/offline-pack` returned 404).</div>
+</div>
+
+<div class="section">
+  <div class="section-head"><h2>Witness</h2></div>
+  <div class="witness-box"><pre>Derived from memory/event-trace/T015.jsonl: 503 tool-call record(s), 2026-11-12T12:06:19.130648+00:00 → 2026-11-12T15:02:21.995211+00:00 (session trace, not a claimed name)</pre></div>
+</div>
+
+<div class="section">
+  <div class="section-head"><h2>Evidence Completion</h2></div>
+  <div class="evidence-summary">9 / 10 filled, 1 N/A</div>
+  <div class="matrix-wrap">
+    <table>
+      <tbody>
+        <tr><td class="ev-check"><pre>**New test(s) cover Acceptance Criteria (file paths pasted)**</pre></td><td class="ev-status ev-filled"><pre>☑ pass</pre></td><td class="ev-notes"><pre>tests/offline-sync.test.ts (22: sync order, duplicates, client reviewedAt window at the exact boundaries, replay after offline batches, two devices, learnerId/409), tests/push.test.ts (8: subscribe validation, host allowlist incl. jmt17.google.com, unsubscribe isolation), tests/reminders.test.ts (9: local hour in a stored timezone incl. +5:30 and +14, only with due cards, 20 h gap, 404/410 deletion, VAPID unset), tests/progress.test.ts (12: export, import rules, wrong account 403, 413 before parsing, 400s with nothing written), tests/settings-page.test.ts (2), tests/migrate.test.ts `T015 0006_push_subscriptions`, tests/config.test.ts and tests/repo-config.test.ts (VAPID all-or-none), e2e/pwa.e2e.ts (17: manifest and worker, install offer, offline review with IndexedDB queue and ordered sync, 401 keeps the queue, sign-out syncs first, learnerId and 409, network drop mid-session, offline notice, reminders, export, import, 403 detail). `bun test -t T015` = 59 pass.</pre></td></tr>
+<tr><td class="ev-check"><pre>Verification command run</pre></td><td class="ev-status ev-filled"><pre>☑ pass</pre></td><td class="ev-notes"><pre>Supervisor run 2026-11-12T13:36Z at 08b0fa4: `bun install --frozen-lockfile` (no changes); `bun run typecheck` clean; `bun run lint` "Checked 76 files ... No fixes applied.", "check-tokens: 0 color literals outside src/client/tokens.css"; `bun test -t "T015"` = 59 pass, 0 fail, 446 expect() calls; `bunx playwright test --grep T015` = 17 passed (24.5s).</pre></td></tr>
+<tr><td class="ev-check"><pre>Negative cases hold</pre></td><td class="ev-status ev-filled"><pre>☑ pass</pre></td><td class="ev-notes"><pre>Backend mutation checks, 12 of 12 killed (each changed one place, the relevant test file failed, code restored, `git diff --stat` empty): reviewInstant dropped `client > last` (3 fail), `<=` to `<` (1 fail), `+ 1` ms (1 fail); import skip branches duplicate / notRateable / olderThanServer / futureTime removed (2, 1, 1, 1 fail); 404-only, 410-only and no-DELETE in the reminder (1 fail each). Fix batch: every fix test failed before the change (host: `Expected: true Received: false`; wrong learner: `Expected 409 Received 200`; detail bodies; frontend: 5 e2e failed before the fixes, e.g. `Expected pattern: /\/$/ Received: .../review`). Independent QA on the real app (qa-t015 scripts, HEAD 58f492e): AC 1-3 and 5-7 PASS with ts-fsrs replay matching card_states for every card (incl. 2006 rows); AC 4 FAILED once (the push host allowlist refused a real Chromium endpoint jmt17.google.com), fixed in 6821961 and re-verified by the Supervisor on a real Chromium: `POST /api/push/subscribe 200`, on survives a reload, off removes it, no console error. Also re-verified by the Supervisor on the real app: a 401 keeps the queue and the same learner's next sign-in syncs it with the same idempotency key; another account's session gets `409 wrong-learner`, nothing written, no alert, no retry loop; the network dropping mid-session continues offline and the queued key reaches the server.</pre></td></tr>
+<tr><td class="ev-check"><pre>verify</pre></td><td class="ev-status ev-filled"><pre>☑ pass</pre></td><td class="ev-notes"><pre>auto-run by hook, session 64196178-692e-404e-8935-d32d82ea8c1b, commit 8220d628f9b34a43df3be9c21118a47a24d58402, log .claude/verify-runs/T015-8220d628f9b3.log — pass</pre></td></tr>
+<tr><td class="ev-check"><pre>Review scope bounded to the change's blast radius (affected set, not whole repo)</pre></td><td class="ev-status ev-filled"><pre>☑ pass</pre></td><td class="ev-notes"><pre>code-review (reports/code-review_T015-offline-pwa_20261112T195706.html and the after-fixes report): 0 P0, 1 P1 (a 401 wiped the offline queue: fixed in d42f5e7, verified), 2 P2 (lane EXCEEDS 64 files / 4495 lines vs C2 14/500, raised to the Supervisor; T011 memory entry to update), 5 P3 left open; QA added P2 F3 (queue under another account: fixed 15cbba2 + 1ca469a) and F6 (network drop mid-session: fixed eed1705), P3 F4 (403/413 detail: fixed c39270d). security-review (reports/security-review_T015-offline-pwa_20261112T201520.html): 0 findings at confidence 8+. migration-safety on 0006_push_subscriptions: GO by hand (the backend agent had no Skill tool); the dry-run-on-production-data box is N/A (no production database, same as 0005). Skipped: T003-T011 code (unchanged except `rateCard`/`reviewInstant`), experiments/.</pre></td></tr>
+<tr><td class="ev-check"><pre>Full smoke suite still green (no regression)</pre></td><td class="ev-status ev-filled"><pre>☑ pass</pre></td><td class="ev-notes"><pre>`npm run test` at 08b0fa4: 232 pass, 0 fail, 1151 expect() calls, 18 files (baseline 174). `bun run test:e2e` (sign-in, start-flow, ladder-view, review, pwa): 45 passed (1.2m); T011's 11 review tests still pass.</pre></td></tr>
+<tr><td class="ev-check"><pre>**Companion score (easy-verifier)**</pre></td><td class="ev-status ev-n-a"><pre>☑ N/A</pre></td><td class="ev-notes"><pre>easy-verifier not installed; not run.</pre></td></tr>
+<tr><td class="ev-check"><pre>**UI: Visual regression (diff or verdict pasted)**</pre></td><td class="ev-status ev-filled"><pre>☑ pass</pre></td><td class="ev-notes"><pre>21 baselines e2e/baseline/pwa-*.png and settings-*.png (offline review front/back, install offer, offline /start, settings default, blocked, import error) at 360/768/1280; the frontend agent read each and wrote "matches spec" verdicts; independent QA read real-app screenshots at 375 and 1280 (offline review with banner, settings, offline settings, install offer, import error, offline /start): no layout problem. The fix batch changed no UI, so no baseline was re-taken.</pre></td></tr>
+<tr><td class="ev-check"><pre>**UI: Design-system compliance (tokens/colors/typography verified)**</pre></td><td class="ev-status ev-filled"><pre>☑ pass</pre></td><td class="ev-notes"><pre>Computed-style checks in e2e/pwa.e2e.ts: banner, offline notice, install offer, settings sections, buttons, select, h2 and main max-width resolve to tokens.css custom properties; manifest theme_color equals --color-accent and background_color --color-bg; `bun run lint` check-tokens: 0 color literals outside tokens.css; the icon generator reads its colors from tokens.css; text >= 16 px.</pre></td></tr>
+<tr><td class="ev-check"><pre>**UI: Responsiveness at target viewports**</pre></td><td class="ev-status ev-filled"><pre>☑ pass</pre></td><td class="ev-notes"><pre>360/768/1280 (and 375 by QA): every checked button, link, select and file input >= 44 x 44 px with >= 8 px gaps; scrollWidth <= viewport at 360, 768 and 1280 for every captured state; settings stack in one column; axe 0 serious/critical on offline front/back, install offer, offline start, settings default, blocked, import error, iOS hint, no-pack screen. ux-evaluate (baseline checks, applied by hand by the frontend agent): 9 pass.</pre></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="footer">
+  Task: T015 &nbsp;·&nbsp; Branch: <code>T015-offline-pwa</code> &nbsp;·&nbsp; Generated: 2026-11-12T15:02:22.256254+00:00
+</div>
+
+</body>
+</html>
