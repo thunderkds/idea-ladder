@@ -139,7 +139,7 @@ bun run eval -- --step core-files --subject repo-reader
 - caching tool results across runs beyond the repo + SHA file cache
 - model choice other than model A (the reader uses model A; a cheaper model is a T017 cost lever)
 
-1. Model A via the Vercel AI SDK Anthropic provider (e.g. `claude-sonnet-5-5`; the id comes from env `MODEL_A_ID`). Pin the AI SDK and provider to exact versions ≥ 2 weeks old.
+1. Model A via the Vercel AI SDK Anthropic provider, always the `api` back end: this tool loop does not run on the `claude-code` (subscription) back end, so this step needs `ANTHROPIC_API_KEY` (decision 2026-11-12) (e.g. `claude-sonnet-5-5`; the id comes from env `MODEL_A_ID`). Pin the AI SDK and provider to exact versions ≥ 2 weeks old.
 2. File access: list from the stored tree; read through the GitHub contents API at `sha` with the app token, cached per repo + SHA + path in Postgres so a retry re-reads nothing. `search` scans files already cached plus files ≤ 100 KB in the tree, capped at 50 matches.
 3. System prompt: pick the files a learner must read to explain how the core works; skip tests, vendored, generated and lock files unless they are the core. Repo text is wrapped as data, never as instructions.
 4. Wire the step into `ladder-generate` after `fetch-repo`; add migration for `core_files` and the file cache (run `Skill({ skill: "migration-safety" })`).

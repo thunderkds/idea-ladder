@@ -88,7 +88,7 @@ Supervisor recommendation: A (the only option that keeps L1 inside "GitHub-check
 | 4 | Negative: a branch or PR authored by another account, an open (unmerged) PR, a closed-unmerged PR, a private or missing repo, or a branch with only commits already in the pinned SHA → rejected with a reason code (`author-mismatch`, `pr-not-merged`, `not-found`, `no-new-commits`); nothing stored. Identity uses numeric ids, never commit email or display name. | NFR-003 "every artifact must belong to that GitHub account" |
 | 5 | GitHub 403/429 with `x-ratelimit-remaining: 0` → `RateLimitError` surfaced as HTTP 503 with `retryAt`; 404 → `not-found`; no partial artifact row, no evidence record. Calls use the app's own GitHub token (server env), never a token sent by the client. | NFR-009; MAIN_FLOW § 6 "own token" |
 | 6 | (Option A) `verifyL1RunLog(learner, ladder, url)` passes iff the gist or commit exists, its owner id = learner id, its creation time is after the nonce issue time, and its content contains the nonce issued for this learner + ladder. The explanation must have exactly 3 sentences (split on `.`, `!`, `?` followed by space or end) and ≤ 600 chars; it is stored, never scored by an LLM. A pass writes an evidence record (`test: "run-log"`) and unlocks L2. | L1 "log + 3-sentence explanation"; FR-008 |
-| 7 | No LLM call is reachable from any verifier (AI SDK client mocked to throw; all tests pass). All tests run offline from recorded GitHub fixtures. | NFR-002 |
+| 7 | No LLM call is reachable from any verifier (AI SDK client and `generate` mocked to throw; all tests pass). All tests run offline from recorded GitHub fixtures. | NFR-002 |
 
 ---
 
