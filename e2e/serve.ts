@@ -64,6 +64,42 @@ const seeded = {
   plain: await seedLadder("sindresorhus/p-map", "3".repeat(40), false),
 };
 
+// T011 seeds (e2e/review.e2e.ts). octo keeps no ladders (the sign-in e2e expects "No ladders yet"), so octo is the
+// "No cards yet" learner. `reviewer` has 3 New (due now) cards in open L0 and 2 in locked L1 (no passes). `waiter` has
+// one card already rated and due at a fixed future time: "Nothing due" with a next due time.
+const [reviewer] =
+  await sql`INSERT INTO users (github_id, github_login) VALUES (44, 'reviewer') RETURNING id::text AS id`;
+const [waiter] = await sql`INSERT INTO users (github_id, github_login) VALUES (45, 'waiter') RETURNING id::text AS id`;
+const seedCard = async (ladderId: string, level: string, front: string, back: string) =>
+  (
+    await sql`INSERT INTO review_cards (ladder_id, level, front, back) VALUES (${ladderId}, ${level}, ${front}, ${back}) RETURNING id::text AS id`
+  )[0].id as string;
+const reviewLadder = await seedLadder("tj/commander.js", "4".repeat(40), true, reviewer.id);
+const waiterLadder = await seedLadder("vercel/ms", "5".repeat(40), true, waiter.id);
+const WAITER_DUE = "2030-01-02T09:00:00.000Z";
+const reviewSeeds = {
+  reviewer: { githubId: 44, login: "reviewer" },
+  waiter: { githubId: 45, login: "waiter", nextDueAt: WAITER_DUE },
+  ladderId: reviewLadder,
+  openCards: [
+    await seedCard(reviewLadder, "L0", "What does a command's action handler receive?", "Its arguments, then options."),
+    await seedCard(reviewLadder, "L0", "Where are global options parsed?", "On the root program, before subcommands."),
+    await seedCard(reviewLadder, "L0", "What runs when no subcommand matches?", "The default command, if one is set."),
+  ],
+  lockedCards: [
+    await seedCard(reviewLadder, "L1", "Locked card one", "Hidden until L0 is passed."),
+    await seedCard(reviewLadder, "L1", "Locked card two", "Hidden until L0 is passed."),
+  ],
+  waiterCard: await seedCard(waiterLadder, "L0", "What does ms('1h') return?", "3600000."),
+};
+/** Back to the seeded review state: every rating forgotten (TRUNCATE: the log rejects DELETE), waiter's card due later. */
+async function resetReview() {
+  await sql`TRUNCATE review_log, card_states`;
+  await sql`INSERT INTO card_states (learner_id, card_id, due, stability, difficulty, elapsed_days, scheduled_days, learning_steps, reps, lapses, state, last_review)
+    VALUES (${waiter.id}, ${reviewSeeds.waiterCard}, ${WAITER_DUE}, 10, 5, 0, 10, 0, 1, 0, 2, '2029-12-23T09:00:00Z')`;
+}
+await resetReview();
+
 const stub = startGithubStub({
   user: { id: 42, login: "octo" },
   clientId: "e2e-client-id",
@@ -131,6 +167,8 @@ Bun.serve({
   fetch(req) {
     const url = new URL(req.url);
     if (url.pathname === "/ladders") return Response.json(seeded);
+    if (url.pathname === "/review-seeds") return Response.json(reviewSeeds);
+    if (url.pathname === "/reset-review") return resetReview().then(() => new Response("ok"));
     if (url.pathname === "/set-user") {
       stub.setUser({ id: Number(url.searchParams.get("id")), login: url.searchParams.get("login") ?? "octo" });
       return new Response("ok");

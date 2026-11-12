@@ -48,16 +48,16 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass / ☐ fail | [test file path(s) — required before Done] |
-| Verification command run | ☐ pass / ☐ fail | [paste actual output] |
-| Negative cases hold | ☐ pass / ☐ fail | [paste the red run against the prior content, or the mutation diff (`git diff --stat`, non-empty) before each verdict] |
-| verify | ☐ pass / ☐ fail / ☐ N/A | [leave it: the auto verify hook writes this row, with its run record. If you ran /verify yourself, tick pass and make the whole Notes cell "/verify by the user, session <id>, commit <sha>" (the full 40-character commit). The merge gate counts no other row, even with the word "pass" in it] |
-| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
-| Full smoke suite still green (no regression) | ☐ pass / ☐ fail | |
-| **Companion score (easy-verifier)** | ☐ pass / ☐ fail / ☐ N/A | [`overall` and `change_risk` as the tool returned them, the scope, the ref, and the absolute path of the verifier report after a literal `report:` label — e.g. "overall 86 (>= 80), change_risk pass, scope changes, ref `main...HEAD`, report: `/home/me/.easy-verifier-reports/kit/score_changes_20261028T0530Z.html`". The gate reads the path that follows `report:` and nothing else, so with no label, or a path that is absent, the row is unscored — write ☑ N/A instead. ☑ N/A with a reason when neither companion tool was run: the merge gate blocks on ☑ fail only, never on an absent or N/A row] |
-| **UI: Visual regression (diff or verdict pasted)** | ☐ pass / ☐ fail / ☐ N/A | [screenshot path or LLM verdict — required for UI tasks, Hard-Stop Gate 6] |
-| **UI: Design-system compliance (tokens/colors/typography verified)** | ☐ pass / ☐ fail / ☐ N/A | [method used + output] |
-| **UI: Responsiveness at target viewports** | ☐ pass / ☐ fail / ☐ N/A | [viewports tested, any overflow findings] |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | tests/review-scheduler.test.ts (6: ts-fsrs 5.4.2 pin, all 4 ratings from all 4 card states equal the library, manual rejected); tests/review-api.test.ts (23: AC 1, 2, 3, 6, 7, queue order and caps, due exactly now, locked level, idempotency incl. concurrent, two tabs, 401/404/400, /review page and return target, reviewed_at never moves back, elapsed_ms cap); tests/migrate.test.ts `T011 0005_review` (up/down/up with rows, checks, append-only trigger, FK); e2e/review.e2e.ts (11: AC 4, 5, 6, keyboard, SC 4 fake clock 4:59/5:01, 401, queue error, Start review links, 1 real-server end to end). `bun test -t T011` = 31 pass. |
+| Verification command run | ☑ pass | Supervisor run 2026-11-12T11:35Z at 1aee88d: `bun install --frozen-lockfile` (no changes); `bun run typecheck` clean; `bun run lint` "Checked 58 files ... No fixes applied.", "check-tokens: 0 color literals outside src/client/tokens.css"; `bun test -t "T011"` = 31 pass, 0 fail, 199 expect() calls; `bunx playwright test --grep T011` = 11 passed (2.5m). |
+| Negative cases hold | ☑ pass | Mutation runs (each made at least one T011 test fail, code restored after): backend `<=` to `<` on the queue; no lock filter in the queue; no ownership or lock check on rating; no append-only trigger; no FOR UPDATE; no duplicate answer; fix batch: `at = now` instead of max(now, last_review) -> `Expected: 2026-11-01T09:00:00.000Z Received: 2026-11-01T08:59:00.000Z`, and elapsed cap -> `-   86400000, +   1e+308`. Frontend: `timeUp = false` -> SC 4 `Expected "Session done" Received "Review"`; a new key per attempt -> AC 6 failed. Independent QA (real server, own scripts): AC 1-7 and 25 probes PASS; log replay with ts-fsrs matched stored card_states for every card (3 match, 0 mismatch, incl. a card rated 11 times); UPDATE/DELETE on review_log rejected; one P2 found (reviewed_at backwards under the row-lock wait) and fixed in 1aee88d. |
+| verify | ☑ pass | auto-run by hook, session 34f68f99-705e-43e5-8fdc-11be0dbfc8eb, commit 42909c3caa10dac0fd0e864dffbde43d68f1781b, log .claude/verify-runs/T011-42909c3caa10.log — pass |
+| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☑ pass | code-review (reports/code-review_T011-daily-review_20261112T182251.html): scope src/server/review.ts, scheduler.ts, app.ts, src/shared/review.ts, src/client/Review.tsx, App.tsx, LadderView.tsx, styles.css, migrations/0005, tests, e2e; 0 P0, 0 P1, 2 P2 (entry point name fixed in the guide; lane EXCEEDS 33 files/1805 lines vs C2 14/500, 15 are PNG baselines, raised to the Supervisor), 5 P3 left open. security-review (reports/security-review_T011-daily-review_*.html): 0 findings at confidence 8+. migration-safety on 0005_review: GO; the dry-run-on-production-data box accepted as N/A by the user (no production database), recorded in memory/decisions.md. Skipped: T003-T010 code (unchanged), experiments/. |
+| Full smoke suite still green (no regression) | ☑ pass | `npm run test` at 1aee88d: 174 pass, 0 fail, 700 expect() calls, 13 files (baseline 143). `bun run test:e2e` (all specs: sign-in, start-flow, ladder-view, review): 28 passed (3.1m). |
+| **Companion score (easy-verifier)** | ☑ N/A | easy-verifier not installed; not run. |
+| **UI: Visual regression (diff or verdict pasted)** | ☑ pass | Baselines e2e/baseline/review-{front,back,empty,no-cards,session-end}-{mobile,tablet,desktop}.png (15). Frontend agent read each and wrote LLM-vision verdicts "matches spec" at 360/768/1280 (one card, readable question, answer hidden until Show answer, 4 buttons Again/Hard/Good/Easy, timer visible; empty and session-end text present, no layout break). Independent QA read real-app screenshots at 375 and 1280 (qa-t011/ in the session scratchpad): same verdict. Known cosmetic P3: heavy focus outline on the revealed answer. |
+| **UI: Design-system compliance (tokens/colors/typography verified)** | ☑ pass | Playwright computed-style checks: body, card, question, level label, timer, Show answer and the 4 rating buttons resolve to tokens.css custom properties; `bun run lint` check-tokens: 0 color literals outside tokens.css; body/answer text 16px; font stack = T010's system-ui stack; rating buttons 146x44 (768/1280) and 80x44 (375/360), gap 8px. QA measured the same on the real app. |
+| **UI: Responsiveness at target viewports** | ☑ pass | 360/375/768/1280: scrollWidth equals the viewport (360 at 360, 375 at 375, 768, 1280); 4 buttons in one row at every width; card centred with max width 640 on tablet and desktop; a 120-char unbroken string and long front/back text wrap at 360 (QA longtext run); axe 0 serious/critical on card front/back, rate-error, Nothing due, No cards yet, Session done, queue-error, My ladders and ladder view with Start review. ux-evaluate (frontend agent, baseline checks only): 8 pass, 1 fail (older) = My ladders has no primary action (P3). |
 
 ---
 
@@ -68,12 +68,57 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 > **before any implementation commit exists**; if it does not (docs, templates, skill-instruction
 > text), BEFORE is the **verbatim prior content** of what changed — a quoted excerpt, not a command.
 
-**BEFORE**: [pasted timestamped command output showing the thing absent/failing, captured before the
-first implementation commit] OR [verbatim excerpt of the prior content, for non-executable changes]
+**BEFORE**: captured by backend-developer in `/home/thunderkds/workspace/pets/wt-t011`, branch `T011-daily-review` at
+`ba14a6d`, before any T011 implementation commit.
 
-**AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
+```
+$ date -u; bun test -t "T011"
+2026-11-12T10:57:04Z
+bun test v1.4.3 (c6da4a4d3)
 
-**DELTA**: [one sentence — what a user can now do that they could not before]
+error: regex "T011" matched 0 tests. Searched 11 files (skipping 143 tests) [129.00ms]
+(exit code 1)
+
+$ date -u; grep -n "ts-fsrs" package.json
+2026-11-12T10:57:04Z
+(no output, grep exit=1)
+
+$ bun run build && bun e2e/serve.ts   # BEFORE state
+$ curl -si http://localhost:54401/api/review/queue   # signed out
+2026-11-12T10:57:41Z
+HTTP/1.1 404 Not Found
+$ curl -s -c jar -b jar -L -o /dev/null -w '%{http_code} %{url_effective}' http://localhost:54401/auth/github   # sign in as octo via the stub
+2026-11-12T10:57:41Z
+200 http://localhost:54401/ladders
+$ curl -s -b jar http://localhost:54401/api/me   # signed in
+{"login":"octo"}
+$ curl -si -b jar http://localhost:54401/api/review/queue   # signed in
+2026-11-12T10:57:41Z
+HTTP/1.1 404 Not Found
+$ curl -si -b jar http://localhost:54401/review   # signed in
+2026-11-12T10:57:41Z
+HTTP/1.1 404 Not Found
+```
+
+**AFTER**: 2026-11-12T11:35Z, worktree wt-t011 at 1aee88d (Supervisor run), same commands as BEFORE plus the real app:
+
+```
+$ bun test -t "T011"
+ 31 pass
+ 143 filtered out
+ 0 fail
+ 199 expect() calls
+
+$ bunx playwright test --grep T011
+  11 passed (2.5m)
+
+$ grep -n "ts-fsrs" package.json
+25:    "ts-fsrs": "5.4.2"
+```
+
+Real app (independent QA, `bun e2e/serve.ts`, signed in as `reviewer`): `GET /api/review/queue` -> cards 1, 2, 3 (all open L0), locked L1 cards 4 and 5 absent; `/review` shows `Card 1 of 3`; after a Good rating `{"state":"learning","duplicate":false}`, the same key again `duplicate:true`; signed out `/api/review/queue` -> 401; `/review` signed out -> 302 `/auth/github?next=%2Freview`; as `waiter` the page shows `Nothing due | Next review: Jan 2, 2030, 9:00 AM`; as `octo` `No cards yet`.
+
+**DELTA**: a signed-in learner can open `/review`, see the cards due from their unlocked levels one at a time, rate them Again/Hard/Good/Easy within a 5-minute session, and every rating is scheduled by ts-fsrs 5.4.2 on the server and stored as an append-only log row that replays to the same card state, where before `/review` and `/api/review/*` returned 404.
 
 **WITNESS**: [who ran it and when — derived from `memory/event-trace/Txxx.jsonl`, never the
 implementing agent alone]

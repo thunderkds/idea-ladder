@@ -26,6 +26,7 @@ import {
   RepoNotFoundError,
 } from "./github-repo.ts";
 import { getLadderView, ladderExists, listLadders, noPasses, type PassedLevels } from "./ladder-view.ts";
+import { checkRateRequest, rateCard, reviewQueue } from "./review.ts";
 import {
   checkUrl,
   type Enqueue,
@@ -42,7 +43,7 @@ const FAILED_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <body><main><h1>Sign-in failed</h1><p>GitHub sign-in did not complete. No account was changed.</p>
 <p><a href="/">Try again</a></p></main></body></html>`;
 
-/** Return target kept across GitHub sign-in: only a same-origin `/start?...` or `/ladders/<id>` path is ever stored or followed. */
+/** Return target kept across GitHub sign-in: only a same-origin `/start?...`, `/ladders/<id>` or `/review` path is ever stored or followed. */
 const RETURN_COOKIE = "il_return_to";
 // biome-ignore lint/suspicious/noControlCharactersInRegex: matching control characters is the point
 const CONTROL_CHARS = /[\x00-\x1f\x7f]/;
@@ -54,8 +55,9 @@ const safeDecode = (value: string) => {
   }
 };
 const LADDER_PATH = /^\/ladders\/[1-9][0-9]{0,17}$/;
+const REVIEW_PATH = "/review";
 function returnPath(value: string | undefined): string | undefined {
-  if (value && LADDER_PATH.test(value)) return value;
+  if (value && (LADDER_PATH.test(value) || value === REVIEW_PATH)) return value;
   if (!value || value.length > MAX_URL_LENGTH * 4 || !value.startsWith("/start?")) return undefined;
   if (CONTROL_CHARS.test(value) || CONTROL_CHARS.test(safeDecode(value))) return undefined;
   const url = new URL(value, "http://idea-ladder.invalid");
@@ -122,6 +124,8 @@ export function createApp(opts: {
     "/api/start",
     "/api/jobs/*",
     "/jobs/*",
+    REVIEW_PATH,
+    "/api/review/*",
   ]) {
     app.use(path, async (c, next) => {
       await next();
@@ -251,6 +255,28 @@ export function createApp(opts: {
   });
 
   app.get("/jobs/:jobId", async (c) => ((await currentUser(c)) ? c.html(await indexHtml()) : c.redirect("/", 302)));
+
+  app.get(REVIEW_PATH, async (c) =>
+    (await currentUser(c))
+      ? c.html(await indexHtml())
+      : c.redirect(`/auth/github?next=${encodeURIComponent(REVIEW_PATH)}`, 302),
+  );
+
+  // T011: the server owns the schedule; `now()` is the only review time.
+  app.get("/api/review/queue", async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    return c.json(await reviewQueue(sql, user.userId, new Date(now()), passedLevels));
+  });
+
+  app.post("/api/review/rate", async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const req = checkRateRequest(await c.req.json().catch(() => undefined));
+    if (!req) return c.json({ error: "invalid-request" }, 400);
+    const result = await rateCard(sql, user.userId, req, new Date(now()), passedLevels);
+    return result ? c.json(result) : c.json({ error: "not-found" }, 404);
+  });
 
   if (opts.inngestHandler) app.on(["GET", "POST", "PUT"], "/api/inngest", opts.inngestHandler);
 

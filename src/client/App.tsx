@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { LadderPage } from "./LadderView.tsx";
+import { ReviewPage } from "./Review.tsx";
 
 function Home() {
   return (
@@ -51,9 +52,14 @@ function Ladders() {
           {ladders.map((ladder) => (
             <li key={ladder.ladderId} className="ladder-row">
               <span className="long-text">{ladder.repo}</span>
-              <a className="button button-quiet" href={`/ladders/${ladder.ladderId}`}>
-                Open ladder<span className="visually-hidden"> {ladder.repo}</span>
-              </a>
+              <span className="ladder-actions">
+                <a className="button button-quiet" href="/review">
+                  Start review
+                </a>
+                <a className="button button-quiet" href={`/ladders/${ladder.ladderId}`}>
+                  Open ladder<span className="visually-hidden"> {ladder.repo}</span>
+                </a>
+              </span>
             </li>
           ))}
         </ul>
@@ -175,6 +181,7 @@ function JobStatus({ jobId }: { jobId: string }) {
 export function App() {
   const path = window.location.pathname;
   if (path === "/ladders") return <Ladders />;
+  if (path === "/review") return <ReviewPage />;
   if (path.startsWith("/ladders/")) return <LadderPage ladderId={path.slice("/ladders/".length)} />;
   if (path.startsWith("/jobs/")) return <JobStatus jobId={path.slice("/jobs/".length)} />;
   const root = document.getElementById("root");
