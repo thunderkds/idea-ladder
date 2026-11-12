@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Code Review Report — T015-offline-pwa</title>
+<style>
+  :root {
+    --bg:        #0a0a12;
+    --surface:   #111128;
+    --surface2:  #16162e;
+    --border:    #1e1e42;
+    --border-glow: #2a2a6e;
+    --text:      #e2e2f0;
+    --muted:     #6b6b9a;
+    --cyan:      #00d4ff;
+    --green:     #00ff88;
+    --amber:     #ffb800;
+    --red:       #ff3b6b;
+    --purple:    #a855f7;
+    --cyan-dim:  rgba(0,212,255,.12);
+    --green-dim: rgba(0,255,136,.12);
+    --red-dim:   rgba(255,59,107,.12);
+    --amber-dim: rgba(255,184,0,.12);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.5;
+  }
+  h1 { margin: 0; font-size: 1.25rem; color: #fff; letter-spacing: .02em; }
+  h2 { font-size: .85rem; color: var(--muted); margin: 0 0 .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--cyan);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 0 24px rgba(0,212,255,.08), 0 4px 24px rgba(0,0,0,.5);
+  }
+  .header-meta { color: var(--muted); font-size: .85rem; margin-top: .3rem; }
+  .header-meta code { color: var(--cyan); background: var(--cyan-dim); padding: .1rem .4rem; border-radius: 4px; font-size: .8rem; }
+
+  /* ── OVERALL BADGE ── */
+  .badge { display: inline-block; padding: .3rem .9rem; border-radius: 999px; font-weight: 700; font-size: .8rem; letter-spacing: .05em; text-transform: uppercase; }
+  .badge-green  { background: var(--green-dim); color: var(--green); border: 1px solid rgba(0,255,136,.3); box-shadow: 0 0 8px rgba(0,255,136,.2); }
+  .badge-yellow { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(255,184,0,.3); box-shadow: 0 0 8px rgba(255,184,0,.2); }
+  .badge-red    { background: var(--red-dim);   color: var(--red);   border: 1px solid rgba(255,59,107,.3); box-shadow: 0 0 8px rgba(255,59,107,.2); }
+
+  /* ── SEVERITY BADGES ── */
+  .sev { display: inline-block; padding: .15rem .55rem; border-radius: 999px; font-weight: 700; font-size: .75rem; white-space: nowrap; letter-spacing: .04em; }
+  .sev-high { background: var(--red-dim);   color: var(--red);   border: 1px solid rgba(255,59,107,.25); }
+  .sev-med  { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(255,184,0,.25); }
+  .sev-low  { background: var(--cyan-dim);  color: var(--cyan);  border: 1px solid rgba(0,212,255,.25); }
+  .sev-info { background: rgba(168,85,247,.1); color: var(--purple); border: 1px solid rgba(168,85,247,.25); }
+
+  /* ── GAUGE CARDS ── */
+  .gauges { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+  .gauge-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+    transition: border-color .2s;
+  }
+  .gauge-card:hover { border-color: var(--border-glow); }
+  .gauge-label { font-size: .7rem; font-weight: 700; letter-spacing: .1em; color: var(--muted); text-transform: uppercase; margin-bottom: .5rem; }
+  .gauge-value { font-size: 2rem; font-weight: 700; margin-bottom: .6rem; font-variant-numeric: tabular-nums; }
+  .gauge-value-risk    { color: var(--red); text-shadow: 0 0 12px rgba(255,59,107,.5); }
+  .gauge-value-quality { color: var(--green); text-shadow: 0 0 12px rgba(0,255,136,.5); }
+  .gauge-value-effort  { color: var(--amber); text-shadow: 0 0 12px rgba(255,184,0,.5); }
+  .bar-bg   { background: var(--border); border-radius: 999px; height: 6px; overflow: hidden; }
+  .bar-fill { height: 6px; border-radius: 999px; }
+  .bar-risk    { background: linear-gradient(90deg, #ff3b6b, #ff006e); box-shadow: 0 0 8px rgba(255,59,107,.6); }
+  .bar-quality { background: linear-gradient(90deg, #00c96e, #00ff88); box-shadow: 0 0 8px rgba(0,255,136,.6); }
+  .bar-effort  { background: linear-gradient(90deg, #e0a000, #ffb800); box-shadow: 0 0 8px rgba(255,184,0,.6); }
+
+  /* ── SECTION CARD ── */
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 16px rgba(0,0,0,.4);
+  }
+  .section-head {
+    padding: .7rem 1.25rem;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ── TABLE ── */
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left;
+    padding: .6rem 1.25rem;
+    font-size: .72rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: .8rem 1.25rem;
+    font-size: .875rem;
+    border-top: 1px solid var(--border);
+    vertical-align: top;
+    color: var(--text);
+  }
+  tr:hover td { background: rgba(255,255,255,.02); }
+  td pre {
+    margin: 0;
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    font-size: .78rem;
+    background: #0d0d1f;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--cyan);
+    border-radius: 4px;
+    padding: .5rem .75rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: #b0c4ff;
+    line-height: 1.6;
+  }
+  td code {
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    background: var(--cyan-dim);
+    color: var(--cyan);
+    padding: .1rem .4rem;
+    border-radius: 3px;
+    font-size: .78rem;
+  }
+
+  /* ── PROSE ── */
+  .prose {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.5rem;
+    line-height: 1.8;
+    margin-bottom: 1.5rem;
+    font-size: .9rem;
+    color: #c0c0e0;
+    box-shadow: 0 2px 16px rgba(0,0,0,.4);
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    font-size: .72rem;
+    color: var(--muted);
+    text-align: center;
+    padding-bottom: 2rem;
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+    margin-top: .5rem;
+  }
+  .footer code { color: var(--purple); background: rgba(168,85,247,.1); padding: .1rem .4rem; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══════════════════════════════════════════════════════════ -->
+<div class="header">
+  <div>
+    <h1>Code Review</h1>
+    <div class="header-meta">
+      Branch: <code>T015-offline-pwa</code> &nbsp;·&nbsp; 2026-11-12
+    </div>
+  </div>
+  <span class="badge badge-yellow">Needs Attention</span>
+</div>
+
+<!-- ═══ DIMENSION GAUGES ═════════════════════════════════════════════════ -->
+<!--
+  OVERALL_CLASS  : green | yellow | red
+  OVERALL_LABEL  : e.g. "Healthy" | "Needs Attention" | "Critical"
+  RISK_SCORE     : integer 0–100 (higher = more risk)
+  QUALITY_SCORE  : integer 0–100 (higher = better quality)
+  EFFORT_SCORE   : integer 0–100 (higher = more adaptation work needed)
+-->
+<div class="gauges">
+  <div class="gauge-card">
+    <div class="gauge-label">Risk</div>
+    <div class="gauge-value gauge-value-risk">39%</div>
+    <div class="bar-bg"><div class="bar-fill bar-risk" style="width:39%"></div></div>
+  </div>
+  <div class="gauge-card">
+    <div class="gauge-label">Code Quality</div>
+    <div class="gauge-value gauge-value-quality">66%</div>
+    <div class="bar-bg"><div class="bar-fill bar-quality" style="width:66%"></div></div>
+  </div>
+  <div class="gauge-card">
+    <div class="gauge-label">Adaptation Effort</div>
+    <div class="gauge-value gauge-value-effort">30%</div>
+    <div class="bar-bg"><div class="bar-fill bar-effort" style="width:30%"></div></div>
+  </div>
+</div>
+
+<!-- ═══ FINDINGS TABLE ═══════════════════════════════════════════════════ -->
+<!--
+  Replace <tr>
+  <td><span class="sev sev-high">High P1</span></td>
+  <td><code>src/client/offline-store.ts</code></td>
+  <td>syncQueue (401 branch), signedOut()</td>
+  <td><pre>A 401 clears the whole offline store, queue included. A session that expires while ratings made offline are still unsynced (or a 401 from any API call such as /api/review/queue on the next online visit) silently destroys that learner's unsynced reviews; the guide treats unsynced ratings as the one thing that must survive (edge case: queued ratings are lost only if never synced). The same applies to Review.tsx and LadderView.tsx, which call signedOut() on a 401. Only an explicit sign-out should delete the queue. Confidence 85. Action: on a 401 clear the cached packs and the service-worker caches (no card text stays readable) but keep the queue and meta.learner, so the same learner's ratings sync after the next sign-in; add a test (queue survives a 401, then syncs after sign-in; another learner never sees or sends it).</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-med">Med P2</span></td>
+  <td><code>tasks/TASK_GUIDE_T015.md (lane_check)</code></td>
+  <td>—</td>
+  <td><pre>lane_check: C2, 64 files, 4495 lines, EXCEEDS (files 64 > 14; lines 4495 > 500); 19 of the files are PNG baselines, about 45 are source, tests, migrations and docs across a service worker, an IndexedDB sync client, a sync API, a push cron, an export/import and a settings screen. Confidence 100 on the numbers. Action: Supervisor to note that T015 was under-labelled (C2); warn-only, not a block.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-med">Med P2</span></td>
+  <td><code>memory/decisions.md (T011 entry), tests/review-api.test.ts</code></td>
+  <td>—</td>
+  <td><pre>T015 changes a T011 fact: the T011 memory entry says server time is the only review time; with client reviewedAt the stored time is the client's when it passes the window. The T011 test 'server time is the only reviewed_at; the client sends none' was narrowed to 'a client reviewedAt before the card's last review is ignored' (src/server/review.ts reviewInstant). Confidence 100. Action: update the T011 decisions entry in place in the post-merge memory pass.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low P3</span></td>
+  <td><code>src/server/app.ts</code></td>
+  <td>bodyLimit onError / tooLarge</td>
+  <td><pre>The 413 for an import over 5 MiB answers {error:"file-too-large"} without the plain `detail` string the contract promised; Settings.tsx falls back to a generic message. Rare, because the client refuses files over 5 MB before upload. Confidence 80. Action: add a detail string.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low P3</span></td>
+  <td><code>src/server/progress.ts</code></td>
+  <td>importProgress</td>
+  <td><pre>Each imported row costs about 8 queries (a state read plus rateCard, which re-checks mayRate and takes a transaction), run one after another; a 20 000-row file is a long request with no progress feedback. A cut-off import is safe (each row is its own transaction and a re-import skips the duplicates). Confidence 75. Action: note for T018 or batch per card.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low P3</span></td>
+  <td><code>src/server/reminders.ts</code></td>
+  <td>reminderTick</td>
+  <td><pre>The row is claimed (last_sent_at set) before the push is sent, so a transient failure (5xx, network) skips that day's reminder with no retry; the body's card count is capped at 50 because it counts the queue (QUEUE_LIMIT). Confidence 80. Action: accept for v1 and list as a known gap.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low P3</span></td>
+  <td><code>src/client/offline-store.ts, tests</code></td>
+  <td>upgrade()</td>
+  <td><pre>The guide's edge case 'IndexedDB schema version upgrade keeps queued ratings' is covered only by a versioned, add-only upgrade callback; no test opens a version-0 database with a queued rating and upgrades it. Confidence 80. Action: add the test when DB_VERSION first changes.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low P3</span></td>
+  <td><code>src/client/App.tsx, offline-store.ts</code></td>
+  <td>sign-out handler</td>
+  <td><pre>An explicit sign-out clears the queue without trying to sync it first, even when the device is online. Confidence 75. Action: when online, run refresh() before clearing.</pre></td>
+</tr>
+ with one <tr> per finding.
+  Severity class: sev-high | sev-med | sev-low | sev-info
+  Finding description goes inside <pre>...</pre> — do NOT HTML-escape manually;
+  wrap the text in <pre> and let the browser handle rendering safely.
+
+  Example row:
+  <tr>
+    <td><span class="sev sev-high">High</span></td>
+    <td><code>scripts/setup.sh</code></td>
+    <td>42–55</td>
+    <td><pre>Unquoted variable $TARGET_DIR in rm call — word-splitting can delete wrong path.</pre></td>
+  </tr>
+-->
+<div class="section">
+  <div class="section-head"><h2>Findings</h2></div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:90px">Severity</th>
+        <th style="width:200px">File</th>
+        <th style="width:80px">Lines</th>
+        <th>Finding</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+  <td><span class="sev sev-high">High P1</span></td>
+  <td><code>src/client/offline-store.ts</code></td>
+  <td>syncQueue (401 branch), signedOut()</td>
+  <td><pre>A 401 clears the whole offline store, queue included. A session that expires while ratings made offline are still unsynced (or a 401 from any API call such as /api/review/queue on the next online visit) silently destroys that learner's unsynced reviews; the guide treats unsynced ratings as the one thing that must survive (edge case: queued ratings are lost only if never synced). The same applies to Review.tsx and LadderView.tsx, which call signedOut() on a 401. Only an explicit sign-out should delete the queue. Confidence 85. Action: on a 401 clear the cached packs and the service-worker caches (no card text stays readable) but keep the queue and meta.learner, so the same learner's ratings sync after the next sign-in; add a test (queue survives a 401, then syncs after sign-in; another learner never sees or sends it).</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-med">Med P2</span></td>
+  <td><code>tasks/TASK_GUIDE_T015.md (lane_check)</code></td>
+  <td>—</td>
+  <td><pre>lane_check: C2, 64 files, 4495 lines, EXCEEDS (files 64 > 14; lines 4495 > 500); 19 of the files are PNG baselines, about 45 are source, tests, migrations and docs across a service worker, an IndexedDB sync client, a sync API, a push cron, an export/import and a settings screen. Confidence 100 on the numbers. Action: Supervisor to note that T015 was under-labelled (C2); warn-only, not a block.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-med">Med P2</span></td>
+  <td><code>memory/decisions.md (T011 entry), tests/review-api.test.ts</code></td>
+  <td>—</td>
+  <td><pre>T015 changes a T011 fact: the T011 memory entry says server time is the only review time; with client reviewedAt the stored time is the client's when it passes the window. The T011 test 'server time is the only reviewed_at; the client sends none' was narrowed to 'a client reviewedAt before the card's last review is ignored' (src/server/review.ts reviewInstant). Confidence 100. Action: update the T011 decisions entry in place in the post-merge memory pass.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low P3</span></td>
+  <td><code>src/server/app.ts</code></td>
+  <td>bodyLimit onError / tooLarge</td>
+  <td><pre>The 413 for an import over 5 MiB answers {error:"file-too-large"} without the plain `detail` string the contract promised; Settings.tsx falls back to a generic message. Rare, because the client refuses files over 5 MB before upload. Confidence 80. Action: add a detail string.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low P3</span></td>
+  <td><code>src/server/progress.ts</code></td>
+  <td>importProgress</td>
+  <td><pre>Each imported row costs about 8 queries (a state read plus rateCard, which re-checks mayRate and takes a transaction), run one after another; a 20 000-row file is a long request with no progress feedback. A cut-off import is safe (each row is its own transaction and a re-import skips the duplicates). Confidence 75. Action: note for T018 or batch per card.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low P3</span></td>
+  <td><code>src/server/reminders.ts</code></td>
+  <td>reminderTick</td>
+  <td><pre>The row is claimed (last_sent_at set) before the push is sent, so a transient failure (5xx, network) skips that day's reminder with no retry; the body's card count is capped at 50 because it counts the queue (QUEUE_LIMIT). Confidence 80. Action: accept for v1 and list as a known gap.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low P3</span></td>
+  <td><code>src/client/offline-store.ts, tests</code></td>
+  <td>upgrade()</td>
+  <td><pre>The guide's edge case 'IndexedDB schema version upgrade keeps queued ratings' is covered only by a versioned, add-only upgrade callback; no test opens a version-0 database with a queued rating and upgrades it. Confidence 80. Action: add the test when DB_VERSION first changes.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low P3</span></td>
+  <td><code>src/client/App.tsx, offline-store.ts</code></td>
+  <td>sign-out handler</td>
+  <td><pre>An explicit sign-out clears the queue without trying to sync it first, even when the device is online. Confidence 75. Action: when online, run refresh() before clearing.</pre></td>
+</tr>
+
+    </tbody>
+  </table>
+</div>
+
+<!-- ═══ SUMMARY PROSE ════════════════════════════════════════════════════ -->
+<!--
+  Replace code-review for T015 (branch T015-offline-pwa, HEAD 58f492e, 19 commits ahead of main, 65 files, +4461/-71). Scope: server (review.ts reviewInstant, offline.ts, progress.ts, push.ts, reminders.ts, app.ts routes, config.ts, main.ts, migration 0006), client (sw.js, manifest, pwa.ts, offline-store.ts, Review.tsx, Settings.tsx, offline.tsx, App.tsx, styles.css) and their tests and e2e. Checks reported by the agents and re-run before merge: npm run test 229 pass / 0 fail (baseline 174), typecheck and lint clean, full Playwright suite 40 passed (T015's 12 and T011's 11 included), 12 of 12 mutation checks on the sync window, the import skip rules and the 404/410 deletion killed. Migration-safety on 0006: GO (dry run N/A, no production database). Always-on reviewers found one P1: a 401 wipes the offline rating queue (data loss when a session expires). No P0. The push endpoint allowlist, the claim-before-send reminder and the import rule that never writes imported card states hold up on a read. Entry points exist (Export progress, Import progress, Turn on reminders in Settings.tsx; registerServiceWorker in main.tsx and pwa.ts). The pwa e2e test endpoint push.example is mocked, so the new host allowlist does not affect it. Startup-reads lines of the infrastructure, both backend and the frontend agents name PROJECT_SPEC.md, the TASK_GUIDE and the agent role guide. The independent QA run against the real app was still in progress when this report was written. 0 P0, 1 P1, 2 P2, 5 P3. No safe fix applied by the reviewer: the P1 touches client behaviour and goes to a fix batch. with the LLM's full narrative text.
+  Plain text is safe here; no HTML escaping needed for prose.
+-->
+<div class="prose">
+  code-review for T015 (branch T015-offline-pwa, HEAD 58f492e, 19 commits ahead of main, 65 files, +4461/-71). Scope: server (review.ts reviewInstant, offline.ts, progress.ts, push.ts, reminders.ts, app.ts routes, config.ts, main.ts, migration 0006), client (sw.js, manifest, pwa.ts, offline-store.ts, Review.tsx, Settings.tsx, offline.tsx, App.tsx, styles.css) and their tests and e2e. Checks reported by the agents and re-run before merge: npm run test 229 pass / 0 fail (baseline 174), typecheck and lint clean, full Playwright suite 40 passed (T015's 12 and T011's 11 included), 12 of 12 mutation checks on the sync window, the import skip rules and the 404/410 deletion killed. Migration-safety on 0006: GO (dry run N/A, no production database). Always-on reviewers found one P1: a 401 wipes the offline rating queue (data loss when a session expires). No P0. The push endpoint allowlist, the claim-before-send reminder and the import rule that never writes imported card states hold up on a read. Entry points exist (Export progress, Import progress, Turn on reminders in Settings.tsx; registerServiceWorker in main.tsx and pwa.ts). The pwa e2e test endpoint push.example is mocked, so the new host allowlist does not affect it. Startup-reads lines of the infrastructure, both backend and the frontend agents name PROJECT_SPEC.md, the TASK_GUIDE and the agent role guide. The independent QA run against the real app was still in progress when this report was written. 0 P0, 1 P1, 2 P2, 5 P3. No safe fix applied by the reviewer: the P1 touches client behaviour and goes to a fix batch.
+</div>
+
+<!-- ═══ FOOTER ═══════════════════════════════════════════════════════════ -->
+<!--
+  MODEL     : e.g. claude-sonnet-4-6
+  TASK_ID   : e.g. T001 (or "—" if not task-scoped)
+  TIMESTAMP : ISO-8601, e.g. 2026-06-18T14:30:22
+-->
+<div class="footer">
+  Model: <code>claude-sonnet-5-5</code> &nbsp;·&nbsp; Task: T015 &nbsp;·&nbsp; Generated: 2026-11-12T19:57:06
+</div>
+
+</body>
+</html>
