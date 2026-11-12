@@ -68,8 +68,41 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 > **before any implementation commit exists**; if it does not (docs, templates, skill-instruction
 > text), BEFORE is the **verbatim prior content** of what changed — a quoted excerpt, not a command.
 
-**BEFORE**: [pasted timestamped command output showing the thing absent/failing, captured before the
-first implementation commit] OR [verbatim excerpt of the prior content, for non-executable changes]
+**BEFORE**: captured by backend-developer in `/home/thunderkds/workspace/pets/wt-t015` (branch `T015-offline-pwa`)
+at `8b897c4`, before any T015 implementation commit. No T015 test exists, none of the three dependencies is declared,
+and every PWA / settings / push / progress / offline-pack URL is a 404 for a signed-in learner (`octo`, stub GitHub).
+
+```
+$ date -u; git rev-parse --short HEAD
+2026-11-12T12:15:46Z
+8b897c4
+$ bun test -t "T015"
+bun test v1.4.3 (c6da4a4d3)
+
+error: regex "T015" matched 0 tests. Searched 13 files (skipping 174 tests) [116.00ms]
+$ grep -n "web-push\|\"idb\"\|\"zod\"" package.json
+exit=1
+```
+
+```
+$ bun run build && bun e2e/serve.ts      # ports 54400-54402, stopped after the capture
+$ date -u
+2026-11-12T12:16:07Z
+$ curl -s -L -c jar -b jar -o /dev/null -w "%{http_code} %{url_effective}\n" http://localhost:54401/auth/github
+200 http://localhost:54401/ladders
+$ curl -si -b jar http://localhost:54401/manifest.webmanifest | head -1
+HTTP/1.1 404 Not Found
+$ curl -si -b jar http://localhost:54401/sw.js | head -1
+HTTP/1.1 404 Not Found
+$ curl -si -b jar http://localhost:54401/settings | head -1
+HTTP/1.1 404 Not Found
+$ curl -si -b jar http://localhost:54401/api/push/status | head -1
+HTTP/1.1 404 Not Found
+$ curl -si -b jar http://localhost:54401/api/progress/export | head -1
+HTTP/1.1 404 Not Found
+$ curl -si -b jar http://localhost:54401/api/review/offline-pack | head -1
+HTTP/1.1 404 Not Found
+```
 
 **AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
 
