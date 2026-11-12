@@ -47,9 +47,9 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass / ☐ fail | [test file path(s) — required before Done] |
-| Verification command run | ☐ pass / ☐ fail | [paste actual output] |
-| Negative cases hold | ☐ pass / ☐ fail | |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass (implementer; reviewer to confirm) | `tests/repo-reader.test.ts` (AC 1, 2, 3, 4, 6 usage, 8), `tests/pick-core-files.test.ts` (AC 5, AC 6), `tests/repo-reader-subject.test.ts` (AC 7 offline: report columns, baseline, verdicts), `tests/migrate.test.ts` § 0003_core_files (up/down/up, constraints), `tests/config.test.ts` (reader env). 2026-11-12T09:46:32Z: `bun test repo-reader pick-core-files` → ` 19 pass / 0 fail / Ran 19 tests across 3 files. [590.00ms]`; full `bun test` → ` 144 pass / 0 fail` |
+| Verification command run | ☐ pass / ☑ fail (partial: paid step not run) | `bun install --frozen-lockfile` ok; `bun run typecheck && bun run lint` → `tsc --noEmit` clean, `Checked 50 files ... No fixes applied.`, `check-tokens: 0 color literals`; `bun test repo-reader pick-core-files` → 19 pass 0 fail. `cd eval && bun run eval -- --step core-files --subject repo-reader` → `eval failed: subject "repo-reader" not found in src/subjects/: repo-reader needs ANTHROPIC_API_KEY, MODEL_A_ID, GITHUB_TOKEN (paid run on model A)` — no key in the implementer's environment; NO golden-set scores exist yet (SC 6 / AC 7 paid run open, owner action below). Note: the guide runs `bun run eval` from the repo root; the `eval` script lives in `eval/package.json`, so run it from `eval/`. |
+| Negative cases hold | ☑ pass | `read("../../etc/passwd")`, `read("/etc/passwd")`, `read("not-in-tree.ts")`, `src/../README.md`, `./README.md` → `error: path-not-in-tree`, readFile never called; binary/minified/LFS → `binary-file`/`minified-file`/`lfs-pointer`; list forever → 15 steps + 1 `toolChoice: none` call; invented paths dropped + logged, one repair, then `reader-invalid-output` (job failed, not retried); injection README + `write_file` call → tools stay `[list, read, search]`, output schema unchanged |
 | verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
 | Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
 | Full smoke suite still green (no regression) | ☐ pass / ☐ fail | |
@@ -81,9 +81,25 @@ eval failed: subject "repo-reader" not found in src/subjects/: Cannot find modul
 error: script "eval" exited with code 1
 ```
 
-**AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
+**AFTER**: captured 2026-11-12T09:46:32Z on `8ab6977` (implementer run; the paid golden-set run is still open):
 
-**DELTA**: [one sentence — what a user can now do that they could not before]
+```
+$ bun test repo-reader pick-core-files
+ 19 pass
+ 0 fail
+Ran 19 tests across 3 files. [590.00ms]
+
+$ cd eval && bun run eval -- --step core-files --subject repo-reader
+eval failed: subject "repo-reader" not found in src/subjects/: repo-reader needs ANTHROPIC_API_KEY, MODEL_A_ID, GITHUB_TOKEN (paid run on model A)
+error: script "eval" exited with code 1
+```
+
+Owner action for the paid run (SC 6 / AC 7), not done by the implementer:
+1. Add the real price of model A to `eval/prices.json` (key = the exact `MODEL_A_ID`, USD per 1M tokens: `input`, `output`, `cachedInput`, `source`, `checkedAt`). The subject and the server refuse to start without it.
+2. `cd eval && ANTHROPIC_API_KEY=... MODEL_A_ID=claude-sonnet-5-5 GITHUB_TOKEN=<read-only public token> bun run eval -- --step core-files --subject repo-reader`
+3. Paste the printed table (per-repo recall/precision, model calls, USD, hit limit; mean row; baseline mean recall; the three `Verdict` lines) here. File reads are live GitHub contents-API calls at each fixture's pinned SHA (no recorded file contents exist in the T004 fixtures).
+
+**DELTA**: a started ladder job now runs a second step, `pick-core-files`, that stores 3–10 ranked core files with reasons for the repo + SHA, and the eval can score the reader against the golden set once model A is paid for.
 
 **WITNESS**: [who ran it and when — derived from `memory/event-trace/Txxx.jsonl`, never the
 implementing agent alone]
