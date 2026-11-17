@@ -25,6 +25,7 @@
 - [Board mode local](decisions.md#2026-11-01--idea-ladder-uses-board-mode-local) — Linear config backed up; old cache archived; T-IDs
 - [T001 outcome](decisions.md#2026-11-01--v0-runs-as-experiments-only-option-b-narrowed) — key check alone fails (11.3% false-reject) → v1 needs 2nd check; proof + GitHub read keep
 - [Gate 5 trace gotcha](learnings.md#patterns) — hook counts `npm/pnpm test`, not `node --test`; `bun test` added 2026-11-12
+- [Concepts eval overlap is lexical](learnings.md#gotchas) — exact-slug Jaccard; T007 run 0.03 with sensible maps; read Missed/Extra
 - [claude-code needs CLAUDE_CONFIG_DIR](learnings.md#gotchas) — plain terminal = "Not logged in", 0 tokens; set `CLAUDE_CONFIG_DIR=~/.claude-hung2` for eval/server runs
 - [Source conflicts settled](decisions.md#2026-11-12--four-source-conflicts-settled-user) — user agreed to all 4 readings in docs/MAIN_FLOW.md § 5
 - [Phase plan T003–T030](decisions.md#2026-11-01--phase-plan-t003t030) — v1 19 tasks, v2 6, v3 5; each phase waits for its gate

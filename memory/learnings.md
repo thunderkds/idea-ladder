@@ -24,5 +24,8 @@
 
 ## Gotchas
 
+### 2026-11-17 — concepts eval overlap is exact-slug Jaccard, not a quality reading
+`eval/src/scorers.ts` scores concepts by Jaccard on slugs. The model paraphrases ("Publish/subscribe event emitter pattern" vs label `publish subscribe`), so a good map scores ~0: T007's golden run was 0.03 with 20/20 repos sensibly mapped. Read the Missed/Extra columns, not the mean; a semantic scorer is on the T007 cut list.
+
 ### 2026-11-17 — claude-code back end needs the login's CLAUDE_CONFIG_DIR
 The owner's subscription login lives in `CLAUDE_CONFIG_DIR=/home/thunderkds/.claude-hung2`, not `~/.claude`. Run from a plain terminal, the reader's child `claude -p` is "Not logged in" and every call fails with 0 tokens (T006 golden run 2026-11-17: 20/20 `reader-failed`, recall 0.00, invalid). Set `CLAUDE_CONFIG_DIR` for any `MODEL_A_BACKEND=claude-code` run outside a Claude Code session (eval, server). `reader-failed` now carries the CLI text (T006 bdeda6f).
