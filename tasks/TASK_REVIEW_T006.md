@@ -95,6 +95,20 @@ $ bun test claude-code-reader reader-mcp
 Ran 29 tests across 2 files. [1.91s]
 ```
 
+**BEFORE (AC 9 error-text slice)**: captured 2026-11-17T03:46:31Z on `904f50b` plus the uncommitted red tests (worktree `T006-reader`, before any src change):
+
+```
+$ bun test claude-code-reader
+(fail) pickCoreFilesClaudeCode (fake claude) > is_error carries the CLI's result text (a Not logged in run is not a reader miss) [15.53ms]
+  Expected to contain: "Not logged in · Please run /login"
+  Received: "reader-failed: claude reported an error (success)"
+(fail) pickCoreFilesClaudeCode (fake claude) > is_error result text is one line, cut to 200 chars [14.32ms]
+  Received: "ader-failed: claude reported an error (success)"
+ 16 pass
+ 2 fail
+Ran 18 tests across 1 file. [986.00ms]
+```
+
 **AFTER**: captured 2026-11-12T09:46:32Z on `8ab6977` (implementer run; the paid golden-set run is still open):
 
 ```

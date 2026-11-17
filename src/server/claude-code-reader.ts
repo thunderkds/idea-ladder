@@ -168,7 +168,13 @@ export async function pickCoreFilesClaudeCode(input: PickCoreFilesClaudeCodeInpu
       tokens.cacheRead += u.cache_read_input_tokens ?? 0;
       tokens.cacheCreation += u.cache_creation_input_tokens ?? 0;
       input.onUsage(usage);
-      if (out.is_error) throw new ReaderFailedError(`claude reported an error (${out.subtype})`, await hitLimit());
+      if (out.is_error) {
+        const why = out.result?.replace(/\s*\n\s*/g, " ").slice(0, 200);
+        throw new ReaderFailedError(
+          `claude reported an error (${out.subtype})${why ? `: ${why}` : ""}`,
+          await hitLimit(),
+        );
+      }
       const text = out.structured_output !== undefined ? JSON.stringify(out.structured_output) : (out.result ?? "");
       return { answer: parseAnswer(text), sessionId: out.session_id };
     };

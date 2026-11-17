@@ -281,6 +281,26 @@ describe("pickCoreFilesClaudeCode (fake claude)", () => {
     expect(usage).toHaveLength(1);
   });
 
+  test("is_error carries the CLI's result text (a Not logged in run is not a reader miss)", async () => {
+    await replies([
+      { stdout: result({ is_error: true, subtype: "success", result: "Not logged in · Please run /login" }), exit: 1 },
+    ]);
+    const err = await pick().run.catch((e) => e);
+    expect(err).toBeInstanceOf(ReaderFailedError);
+    expect(err.message).toContain("Not logged in · Please run /login");
+  });
+
+  test("is_error result text is one line, cut to 200 chars", async () => {
+    const long = `line one\nline two ${"x".repeat(300)}`;
+    await replies([{ stdout: result({ is_error: true, subtype: "success", result: long }), exit: 1 }]);
+    const err = await pick().run.catch((e) => e);
+    expect(err).toBeInstanceOf(ReaderFailedError);
+    const shown = err.message.slice(err.message.indexOf("): ") + 3);
+    expect(shown).toBe(long.replace(/\n/g, " ").slice(0, 200));
+    expect(shown).toHaveLength(200);
+    expect(err.message).not.toContain("\n");
+  });
+
   test("over the token budget -> hitLimit true, valid answer still returned", async () => {
     await replies([{ stdout: result({ structured_output: files(["src/index.ts", "src/util.ts", "README.md"]) }) }]);
     const out = await pick({ limits: { maxSteps: 15, tokenBudget: 1000 } }).run;
