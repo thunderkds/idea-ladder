@@ -117,3 +117,15 @@ Owner action for the paid run (SC 6 / AC 7), not done by the implementer:
 
 **WITNESS**: [who ran it and when — derived from `memory/event-trace/Txxx.jsonl`, never the
 implementing agent alone]
+
+## Auto decisions
+
+Mode: auto
+1. Count `github-rate-limited` reads per run and per repo in the AC 7 report (guide amended on main, 22dabd3) before any agent coded it — FACT: memory/decisions.md:76 "user answer 2026-11-17"; rule source CLAUDE.md:205
+2. Keep and finish the 2026-11-12 session's uncommitted red tests (`tests/claude-code-reader.test.ts`, `tests/reader-mcp.test.ts`, `tests/support/fake-claude.ts`), never discard them — FACT: memory/decisions.md:76 "user answer 2026-11-17" (was flagged for review; the user reviewed and accepted it)
+3. The golden-set run (AC 7) uses the `claude-code` back end on the owner's subscription, no API key — FACT: memory/decisions.md:76 "user answer 2026-11-17"; the run itself waits for the user's go-ahead (see Paused)
+4. T007 guide aligned with T006 as built (migration 0007, `mapping`/`mapped` status, `model-a.ts`, `usd: null` on claude-code), main d4a0300 — RULE: Supervisor owns guides; read-only check by an Explore agent, findings spot-checked against `migrations/` and `src/server/app.ts:61`
+Paused: the golden-set run (AC 7) — the QA spawn that runs it with the owner's `gh` token on the owner's Claude subscription was denied by the permission classifier on 2026-11-17; it needs the user's go-ahead
+Checks: tests `bun run typecheck && bun run lint && bun test` — 308 pass / 0 fail, eval 77 pass / 0 fail on 3868745 (re-run by the Supervisor); reviews code-review + security-review on 72a0e3c (main ea107f1) — no P0; real run `bun run eval -- --step core-files --subject repo-reader` — not yet run
+Memory: memory/decisions.md — 2026-11-17 T006 auto decisions 1–3 accepted by the user; memory/MEMORY.md — index line for it
+Not done: golden-set run (AC 7); auto verify; merge and push (allowed under [admin] only after the auto verify passes)
