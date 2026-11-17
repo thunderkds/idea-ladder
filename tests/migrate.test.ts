@@ -26,12 +26,14 @@ const T0005 = ["card_states", "review_cards", "review_log"];
 const T0006 = ["push_subscriptions"];
 const ALL = [
   "card_states",
+  "core_files",
   "generation_job_waiters",
   "generation_jobs",
   "ladder_levels",
   "ladders",
   "push_subscriptions",
   "repo_confidence",
+  "repo_file_cache",
   "repo_snapshots",
   "review_cards",
   "review_log",
@@ -75,6 +77,7 @@ describe("migrations (AC 1)", () => {
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0006_push_subscriptions");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0005_review");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0004_ladder_levels");
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0003_core_files");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0002_start_jobs");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0001_init");
     expect(await tables(db.sql)).toEqual([]);
@@ -82,6 +85,7 @@ describe("migrations (AC 1)", () => {
     expect(await migrateUp(db.sql)).toEqual([
       "0001_init",
       "0002_start_jobs",
+      "0003_core_files",
       "0004_ladder_levels",
       "0005_review",
       "0006_push_subscriptions",
@@ -90,6 +94,7 @@ describe("migrations (AC 1)", () => {
   });
 
   test("down on an empty schema is a no-op", async () => {
+    await migrateDown(db.sql, undefined, ALLOW_DOWN);
     await migrateDown(db.sql, undefined, ALLOW_DOWN);
     await migrateDown(db.sql, undefined, ALLOW_DOWN);
     await migrateDown(db.sql, undefined, ALLOW_DOWN);
@@ -171,10 +176,12 @@ describe("0002_start_jobs (T005)", () => {
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0006_push_subscriptions");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0005_review");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0004_ladder_levels");
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0003_core_files");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0002_start_jobs");
     expect(await tables(db.sql)).toEqual(T0001);
     expect(await migrateUp(db.sql)).toEqual([
       "0002_start_jobs",
+      "0003_core_files",
       "0004_ladder_levels",
       "0005_review",
       "0006_push_subscriptions",
@@ -201,6 +208,90 @@ describe("0002_start_jobs (T005)", () => {
       (async () =>
         await db.sql`INSERT INTO generation_jobs (repo_full_name, commit_sha, status) VALUES ('a/b', ${SHA}, 'done')`)(),
     ).rejects.toThrow(/check/i);
+  });
+});
+
+describe("0003_core_files (T006)", () => {
+  const SHA = "6b41670516ed8e8b738612f60491995470aa63b3";
+  const snapshot = (repo: string) => db.sql`
+    INSERT INTO repo_snapshots (repo_full_name, commit_sha, default_branch, archived, readme, topics, languages,
+      dep_files, open_issues, good_first_issues, tree, tree_truncated)
+    VALUES (${repo}, ${SHA}, 'main', false, '', '[]'::jsonb, '{}'::jsonb, '[]'::jsonb, 0, 0, '[]'::jsonb, false)`;
+  const pick = (rank: number, path: string, reason = "core") =>
+    db.sql`INSERT INTO core_files (repo_full_name, commit_sha, rank, path, reason) VALUES ('a/b', ${SHA}, ${rank}, ${path}, ${reason})`;
+  const rejects = (q: () => Promise<unknown>, re: RegExp) => expect((async () => await q())()).rejects.toThrow(re);
+
+  test("up / down / up with rows present; jobs in the new statuses go back to fetched", async () => {
+    await migrateUp(db.sql);
+    await db.sql`TRUNCATE repo_snapshots, generation_jobs CASCADE`;
+    await snapshot("a/b");
+    await pick(1, "src/index.ts");
+    await db.sql`INSERT INTO repo_file_cache (repo_full_name, commit_sha, path, content) VALUES ('a/b', ${SHA}, 'src/index.ts', 'x')`;
+    await db.sql`INSERT INTO generation_jobs (repo_full_name, commit_sha, status) VALUES ('a/b', ${SHA}, 'picked')`;
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0006_push_subscriptions");
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0005_review");
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0004_ladder_levels");
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0003_core_files");
+    expect(await tables(db.sql)).toEqual(
+      ALL.filter(
+        (t) =>
+          t !== "core_files" &&
+          t !== "repo_file_cache" &&
+          t !== "ladder_levels" &&
+          !T0005.includes(t) &&
+          !T0006.includes(t),
+      ),
+    );
+    expect((await db.sql`SELECT status FROM generation_jobs`).map((r: { status: string }) => r.status)).toEqual([
+      "fetched",
+    ]);
+    expect(await migrateUp(db.sql)).toEqual([
+      "0003_core_files",
+      "0004_ladder_levels",
+      "0005_review",
+      "0006_push_subscriptions",
+    ]);
+    expect(await tables(db.sql)).toEqual(ALL);
+  });
+
+  test("rank 1-10, reason 1-300 chars, one rank and one path per repo + SHA; cache paths stay in the repo", async () => {
+    await migrateUp(db.sql);
+    await db.sql`TRUNCATE repo_snapshots, generation_jobs CASCADE`;
+    await snapshot("a/b");
+    await pick(1, "a.ts");
+    await rejects(() => pick(1, "b.ts"), /duplicate|unique/i);
+    await rejects(() => pick(2, "a.ts"), /duplicate|unique/i);
+    await rejects(() => pick(11, "c.ts"), /check/i);
+    await rejects(() => pick(3, "d.ts", ""), /check/i);
+    await rejects(() => pick(3, "d.ts", "r".repeat(301)), /check/i);
+    await rejects(
+      () =>
+        pick(3, "d.ts")
+          .then(() => db.sql`DELETE FROM core_files WHERE rank = 3`)
+          .then(
+            () =>
+              db.sql`INSERT INTO core_files (repo_full_name, commit_sha, rank, path, reason) VALUES ('x/y', ${SHA}, 1, 'a', 'r')`,
+          ),
+      /foreign key/i,
+    );
+    for (const path of ["../etc/passwd", "/etc/passwd", "a/../b", "./a"]) {
+      await rejects(
+        () => db.sql`INSERT INTO repo_file_cache (repo_full_name, commit_sha, path) VALUES ('a/b', ${SHA}, ${path})`,
+        /check/i,
+      );
+    }
+    // cache content: at most 1,048,576 characters (readFile keeps at most 1 MB)
+    await db.sql`INSERT INTO repo_file_cache (repo_full_name, commit_sha, path, content) VALUES ('a/b', ${SHA}, 'max.txt', ${"x".repeat(1048576)})`;
+    await rejects(
+      () =>
+        db.sql`INSERT INTO repo_file_cache (repo_full_name, commit_sha, path, content) VALUES ('a/b', ${SHA}, 'over.txt', ${"x".repeat(1048577)})`,
+      /check/i,
+    );
+    await rejects(
+      () => db.sql`INSERT INTO generation_jobs (repo_full_name, commit_sha, status) VALUES ('a/b', ${SHA}, 'done')`,
+      /check/i,
+    );
+    await db.sql`INSERT INTO generation_jobs (repo_full_name, commit_sha, status) VALUES ('a/b', ${SHA}, 'picking')`;
   });
 });
 

@@ -54,7 +54,7 @@ const STATUS_TOKENS: [string, string, string][] = [
 const JOB_URL = /\/jobs\/[0-9a-f-]{36}$/;
 const heading = (page: Page) => page.getByRole("heading", { level: 1 });
 
-test("SC 7: signed out /start?url=lukeed/dset -> sign-in -> /jobs/:id shows Queued, Reading the repo, Done", async ({
+test("SC 7: signed out /start?url=lukeed/dset -> sign-in -> /jobs/:id shows Queued, Reading the repo, Picking core files, Done", async ({
   page,
 }) => {
   await page.goto("/start?url=https://github.com/lukeed/dset");
@@ -64,7 +64,13 @@ test("SC 7: signed out /start?url=lukeed/dset -> sign-in -> /jobs/:id shows Queu
   await expect(heading(page)).toHaveText("Reading the repo", { timeout: 10_000 });
   await expectTokens(page, STATUS_TOKENS);
   await shootAll(page, "job-running");
+  // T006: the pick-core-files step (job status picking) shows its own text.
+  await expect(heading(page)).toHaveText("Picking core files", { timeout: 15_000 });
+  await expect(page.locator(".status-detail")).toHaveText("This page updates by itself.");
+  await expectTokens(page, STATUS_TOKENS);
+  await shootAll(page, "job-picking");
   await expect(heading(page)).toHaveText("Done", { timeout: 15_000 });
+  await expect(page.locator(".status-detail")).toHaveText("The repo is read and its core files are picked.");
   await expectTokens(page, STATUS_TOKENS);
   await shootAll(page, "job-done");
 

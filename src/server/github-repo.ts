@@ -58,6 +58,8 @@ export class GitHubError extends Error {
 }
 
 const SHA = /^[0-9a-f]{40}$/;
+/** readFile reads at most this many bytes of a file; the rest is never downloaded. */
+export const MAX_FILE_BYTES = 1024 * 1024;
 const FULL_NAME_SHAPE = /^[A-Za-z0-9-]{1,39}\/[A-Za-z0-9._-]{1,100}$/;
 /** owner/name; "." and ".." match the shape but would walk the API path. */
 const FULL_NAME = {
@@ -138,6 +140,40 @@ export function githubRepoClient(opts: { baseUrl: string; token: string; fetch?:
         typeof commit.html_url === "string" ? new URL(commit.html_url).pathname.split("/").slice(1) : [];
       const canonical = owner && name && FULL_NAME.test(`${owner}/${name}`) ? `${owner}/${name}` : requested;
       return { fullName: canonical.toLowerCase(), sha: commit.sha };
+    },
+
+    /**
+     * T006: one file's text at a pinned SHA (contents API, raw media type), or null for a binary file
+     * (a NUL byte anywhere in the bytes read). Only the first 1 MB is downloaded and kept: the reader shows at
+     * most 400 lines per call.
+     */
+    async readFile(fullName: string, sha: string, path: string): Promise<string | null> {
+      if (!FULL_NAME.test(fullName)) throw new Error(`expected owner/name, got: ${fullName}`);
+      if (!SHA.test(sha)) throw new Error(`expected a 40-hex sha, got: ${sha}`);
+      const segments = path.split("/");
+      if (segments.some((p) => p === "" || p === "." || p === ".."))
+        throw new Error(`expected a repo path, got: ${path}`);
+      const apiPath = `/repos/${fullName}/contents/${segments.map(encodeURIComponent).join("/")}?ref=${sha}`;
+      const res = await get(apiPath, "application/vnd.github.raw+json");
+      if (!res.ok) throw new GitHubError(res.status, apiPath);
+      const chunks: Uint8Array[] = [];
+      let size = 0;
+      const body = res.body?.getReader();
+      try {
+        while (body && size < MAX_FILE_BYTES) {
+          const { done, value } = await body.read();
+          if (done) break;
+          chunks.push(value);
+          size += value.length;
+        }
+      } catch {
+        throw new GitHubError(0, apiPath); // the connection broke mid-body: transient
+      } finally {
+        await body?.cancel().catch(() => {});
+      }
+      const bytes = Buffer.concat(chunks).subarray(0, MAX_FILE_BYTES);
+      if (bytes.includes(0)) return null;
+      return new TextDecoder().decode(bytes);
     },
 
     /** Reads one repo at a pinned SHA. All-or-nothing: any error throws, no partial snapshot. 6 calls. */

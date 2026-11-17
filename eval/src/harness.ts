@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { scoreConcepts, scoreCoreFiles } from "./scorers.ts";
 import type { Fixture, GoldenEntry } from "./schema.ts";
-import type { Subject } from "./subject.ts";
+import type { MeasuredSubject, Subject } from "./subject.ts";
 
 export const REPORTS_DIR = join(import.meta.dir, "..", "reports");
 
@@ -10,11 +10,22 @@ export type Step = "core-files" | "concepts";
 export const STEPS: readonly Step[] = ["core-files", "concepts"];
 
 interface RowBase { fullName: string; tier: string; predicted: string[]; missed: string[]; extra: string[]; error?: string }
-export interface CoreFilesRow extends RowBase { recall: number; precision: number }
+export interface CoreFilesRow extends RowBase { recall: number; precision: number; modelCalls?: number; usd?: number | null; tokens?: number; hitLimit?: boolean; githubRateLimited?: number }
 export interface ConceptsRow extends RowBase { overlap: number }
 
 interface ReportBase { subject: string; generatedAt: string }
-export interface CoreFilesReport extends ReportBase { step: "core-files"; rows: CoreFilesRow[]; mean: { recall: number; precision: number } }
+export interface CoreFilesReport extends ReportBase {
+  step: "core-files";
+  rows: CoreFilesRow[];
+  /** `usd: null`: at least one run was on the subscription (claude-code); `tokens` is then the mean tokens. */
+  mean: { recall: number; precision: number; usd?: number | null; tokens?: number; modelCalls?: number };
+  /** Runs stopped by a step cap or token budget (subjects with run stats only). */
+  hitLimitRuns?: number;
+  /** Sum of the rows' `githubRateLimited` (subjects with run stats only). */
+  githubRateLimited?: number;
+  baseline?: { subject: string; meanRecall: number };
+  verdicts?: string[];
+}
 export interface ConceptsReport extends ReportBase { step: "concepts"; rows: ConceptsRow[]; mean: { overlap: number } }
 export type Report = CoreFilesReport | ConceptsReport;
 
@@ -49,13 +60,29 @@ export async function runEval(o: RunOptions & { step: Step }): Promise<Report> {
       error = (err as Error).message; // an error is a miss: scored as an empty prediction, reported on its row
     }
     const errField = error === undefined ? {} : { error };
-    if (step === "core-files") rows.push({ ...base, predicted, ...scoreCoreFiles(predicted, e.expectedCoreFiles), ...errField });
+    const stats = step === "core-files" ? (subject as Partial<MeasuredSubject>).runStats?.(e.fullName) : undefined;
+    if (step === "core-files") rows.push({ ...base, predicted, ...scoreCoreFiles(predicted, e.expectedCoreFiles), ...errField, ...stats });
     else rows.push({ ...base, predicted, ...scoreConcepts(predicted, e.expectedConcepts), ...errField });
   }
 
   if (step === "core-files") {
     const r = rows as CoreFilesRow[];
-    return { step, subject: subject.name, generatedAt, rows: r, mean: { recall: mean(r.map((x) => x.recall)), precision: mean(r.map((x) => x.precision)) } };
+    const withStats = r.filter((x) => x.usd !== undefined);
+    const subscription = withStats.some((x) => x.usd === null);
+    const statsPart = withStats.length === 0 ? {} : {
+      ...(subscription
+        ? { usd: null, tokens: mean(withStats.map((x) => x.tokens ?? 0)) }
+        : { usd: mean(withStats.map((x) => x.usd ?? 0)) }),
+      modelCalls: mean(withStats.map((x) => x.modelCalls ?? 0)),
+    };
+    return {
+      step, subject: subject.name, generatedAt, rows: r,
+      mean: { recall: mean(r.map((x) => x.recall)), precision: mean(r.map((x) => x.precision)), ...statsPart },
+      ...(withStats.length === 0 ? {} : {
+        hitLimitRuns: withStats.filter((x) => x.hitLimit).length,
+        githubRateLimited: withStats.reduce((n, x) => n + (x.githubRateLimited ?? 0), 0),
+      }),
+    };
   }
   const r = rows as ConceptsRow[];
   return { step, subject: subject.name, generatedAt, rows: r, mean: { overlap: mean(r.map((x) => x.overlap)) } };
@@ -67,9 +94,15 @@ const cell = (xs: string[]) => (xs.length === 0 ? "" : xs.map((x) => `\`${x}\``)
 export function renderMarkdown(report: Report): string {
   const lines = [`# Eval: ${report.step} · subject ${report.subject}`, "", `Generated ${report.generatedAt} · ${report.rows.length} repos`, ""];
   if (report.step === "core-files") {
-    lines.push("| Repo | Tier | Recall | Precision | Missed | Extra |", "|---|---|---|---|---|---|");
-    for (const r of report.rows) lines.push(`| ${r.fullName} | ${r.tier} | ${f(r.recall)} | ${f(r.precision)} | ${cell(r.missed)} | ${cell(r.extra)}${r.error ? ` (error: ${r.error})` : ""} |`);
-    lines.push(`| **mean** | | ${f(report.mean.recall)} | ${f(report.mean.precision)} | | |`);
+    const st = report.mean.usd !== undefined;
+    const usd = (u: number | null | undefined, tokens: number | undefined) =>
+      u === undefined ? "" : u === null ? `n/a (subscription), ${Math.round(tokens ?? 0)} tokens` : u.toFixed(4);
+    const statCells = (r: CoreFilesRow) => (st ? ` ${r.modelCalls ?? ""} | ${usd(r.usd, r.tokens)} | ${r.hitLimit ? "yes" : ""} | ${r.githubRateLimited ?? 0} |` : "");
+    lines.push(`| Repo | Tier | Recall | Precision | Missed | Extra |${st ? " Model calls | USD | Hit limit | GitHub rate-limited |" : ""}`, `|---|---|---|---|---|---|${st ? "---|---|---|---|" : ""}`);
+    for (const r of report.rows) lines.push(`| ${r.fullName} | ${r.tier} | ${f(r.recall)} | ${f(r.precision)} | ${cell(r.missed)} | ${cell(r.extra)}${r.error ? ` (error: ${r.error})` : ""} |${statCells(r)}`);
+    lines.push(`| **mean** | | ${f(report.mean.recall)} | ${f(report.mean.precision)} | | |${st ? ` ${f(report.mean.modelCalls ?? 0)} | ${usd(report.mean.usd, report.mean.tokens)} | ${report.hitLimitRuns} of ${report.rows.length} | ${report.githubRateLimited ?? 0} |` : ""}`);
+    if (report.baseline) lines.push("", `Baseline \`${report.baseline.subject}\` mean recall: ${f(report.baseline.meanRecall)}`);
+    if (report.verdicts?.length) lines.push("", ...report.verdicts.map((v) => `- ${v}`));
   } else {
     lines.push("| Repo | Tier | Overlap | Missed | Extra |", "|---|---|---|---|---|");
     for (const r of report.rows) lines.push(`| ${r.fullName} | ${r.tier} | ${f(r.overlap)} | ${cell(r.missed)} | ${cell(r.extra)}${r.error ? ` (error: ${r.error})` : ""} |`);

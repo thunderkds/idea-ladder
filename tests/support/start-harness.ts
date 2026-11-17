@@ -30,6 +30,8 @@ export async function startHarness(extraEnv: Record<string, string> = {}) {
     GITHUB_CLIENT_SECRET: "test-client-secret",
     GITHUB_APP_TOKEN: "test-app-token",
     SESSION_SECRET: SECRET,
+    ANTHROPIC_API_KEY: "sk-ant-test",
+    MODEL_A_ID: "test-model",
     NODE_ENV: "test",
     ...extraEnv,
   });

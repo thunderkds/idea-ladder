@@ -2,6 +2,7 @@
 // T005: the repo API replays recorded fixtures, and the Inngest function runs in-process through @inngest/test
 // (no Inngest dev server, no network). The real dev-server run is a manual check for the owner.
 import { InngestTestEngine } from "@inngest/test";
+import { wrapLanguageModel } from "ai";
 import { SQL } from "bun";
 import webpush from "web-push";
 import { createApp } from "../src/server/app.ts";
@@ -14,6 +15,7 @@ import { type PushTarget, reminderTick } from "../src/server/reminders.ts";
 import { adminUrl } from "../tests/support/db.ts";
 import { fixtureFetch, loadFixture, rateLimited, V0_REPOS, type V0Repo } from "../tests/support/github-fixtures.ts";
 import { startGithubStub } from "../tests/support/github-stub.ts";
+import { testReader } from "../tests/support/mock-model.ts";
 
 export const APP_PORT = 54401;
 const STUB_PORT = 54400;
@@ -145,6 +147,8 @@ const config = loadConfig({
   GITHUB_CLIENT_SECRET: "e2e-client-secret",
   GITHUB_APP_TOKEN: "e2e-app-token",
   SESSION_SECRET: crypto.randomUUID() + crypto.randomUUID(),
+  ANTHROPIC_API_KEY: "sk-ant-test",
+  MODEL_A_ID: "test-model",
   GITHUB_OAUTH_BASE_URL: stub.url,
   GITHUB_API_BASE_URL: stub.url,
   NODE_ENV: "test",
@@ -163,6 +167,7 @@ const config = loadConfig({
 // Repo behaviour per e2e scenario (e2e/start-flow.e2e.ts).
 const QUEUE_DELAY_MS = 2_500; // the job shows "Queued" first
 const STEP_DELAY_MS = 6_000; // then "Reading the repo", long enough to screenshot
+const MODEL_DELAY_MS = 3_000; // per model call (2 calls): then "Picking core files", long enough to screenshot
 const HELD_REPO = "the-pocket/pocketflow"; // never picked up: stays "Queued"
 const RATE_LIMITED_REPO = "developit/mitt"; // fetch-repo hits the rate limit
 const RESET_EPOCH_S = Date.UTC(2030, 0, 1, 12) / 1000;
@@ -181,7 +186,21 @@ const github: GithubRepoClient = {
     return fixtureClient.fetchSnapshot(repo, sha);
   },
 };
-const fn = ladderGenerateFunction(createInngest(), { sql, github });
+const fakeReader = testReader();
+const slowReader = {
+  ...fakeReader,
+  model: wrapLanguageModel({
+    model: fakeReader.model as Parameters<typeof wrapLanguageModel>[0]["model"],
+    middleware: {
+      specificationVersion: "v3",
+      wrapGenerate: async ({ doGenerate }) => {
+        await Bun.sleep(MODEL_DELAY_MS);
+        return doGenerate();
+      },
+    },
+  }),
+};
+const fn = ladderGenerateFunction(createInngest(), { sql, github, reader: slowReader });
 
 const passedLevels: PassedLevels = async (ladderId) => (ladderId === seeded.klona ? ["L0", "L1"] : []);
 const app = createApp({

@@ -14,11 +14,31 @@ export type Config = {
   startMaxNewJobsPerHour: number;
   /** Public origin Inngest calls back; never derived from the request Host header. Required in production. */
   inngestServeOrigin?: string;
+  /** Model A for the repo reader: `claude-code` (default, the owner's subscription through `claude -p`) or `api`. */
+  modelABackend: ModelABackend;
+  /** Set and required only for `api`. Never logged. */
+  anthropicApiKey?: string;
+  /** Required for `api`; for `claude-code` an optional `--model` alias or id (unset = the CLI default). */
+  modelAId?: string;
+  readerMaxSteps: number;
+  readerTokenBudget: number;
   /** Web Push (VAPID) keys; absent = reminders off. Only `publicKey` ever reaches the client; the private key is never logged. */
   vapid?: { publicKey: string; privateKey: string; subject: string };
 };
 
+export type ModelABackend = "claude-code" | "api";
+
 export class ConfigError extends Error {}
+
+/** Upper bounds of the reader limits: a typo must not turn the step cap or the token budget into no limit. */
+export const READER_LIMIT_MAX = { steps: 50, tokens: 500_000 } as const;
+
+/** A positive integer up to `max`, or null. Shared with the eval subject (eval/src/repo-reader-subject.ts). */
+export function parsePositiveInt(raw: string, max: number): number | null {
+  if (!/^[1-9][0-9]*$/.test(raw)) return null;
+  const n = Number(raw);
+  return n <= max ? n : null;
+}
 
 const REQUIRED = [
   "DATABASE_URL",
@@ -27,11 +47,16 @@ const REQUIRED = [
   "GITHUB_APP_TOKEN",
   "SESSION_SECRET",
 ] as const;
+/** Required only with MODEL_A_BACKEND=api. */
+const REQUIRED_API = ["ANTHROPIC_API_KEY", "MODEL_A_ID"] as const;
 
 /** Validates the environment once at start, so a bad setup fails with variable names, not deep in OAuth code. */
 export function loadConfig(env: Record<string, string | undefined>): Config {
   const problems: string[] = [];
-  const missing = REQUIRED.filter((name) => !env[name]);
+  const modelABackend = (env.MODEL_A_BACKEND || "claude-code") as ModelABackend;
+  if (modelABackend !== "claude-code" && modelABackend !== "api")
+    problems.push("MODEL_A_BACKEND must be claude-code or api");
+  const missing = [...REQUIRED, ...(modelABackend === "api" ? REQUIRED_API : [])].filter((name) => !env[name]);
   if (missing.length) problems.push(`missing required environment variable(s): ${missing.join(", ")}`);
   if (env.SESSION_SECRET && env.SESSION_SECRET.length < 32)
     problems.push("SESSION_SECRET must be at least 32 characters");
@@ -53,6 +78,14 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
   const limitRaw = env.START_MAX_NEW_JOBS_PER_HOUR || "20";
   const startMaxNewJobsPerHour = /^[1-9][0-9]*$/.test(limitRaw) ? Number(limitRaw) : 0;
   if (!startMaxNewJobsPerHour) problems.push("START_MAX_NEW_JOBS_PER_HOUR must be a positive integer");
+  const positive = (name: string, fallback: string, max: number) => {
+    const n = parsePositiveInt(env[name] || fallback, max);
+    if (n !== null) return n;
+    problems.push(`${name} must be a positive integer at most ${max}`);
+    return 0;
+  };
+  const readerMaxSteps = positive("READER_MAX_STEPS", "15", READER_LIMIT_MAX.steps);
+  const readerTokenBudget = positive("READER_TOKEN_BUDGET", "80000", READER_LIMIT_MAX.tokens);
 
   if (env.NODE_ENV === "production") {
     if (env.INNGEST_DEV) problems.push("INNGEST_DEV must not be set in production");
@@ -91,6 +124,11 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     port,
     secureCookies: env.NODE_ENV !== "development" && env.NODE_ENV !== "test",
     startMaxNewJobsPerHour,
+    modelABackend,
+    ...(modelABackend === "api" ? { anthropicApiKey: env.ANTHROPIC_API_KEY } : {}),
+    ...(env.MODEL_A_ID ? { modelAId: env.MODEL_A_ID } : {}),
+    readerMaxSteps,
+    readerTokenBudget,
     ...(inngestServeOrigin ? { inngestServeOrigin } : {}),
     ...(vapid ? { vapid } : {}),
   };

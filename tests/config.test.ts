@@ -8,6 +8,8 @@ const valid = {
   GITHUB_CLIENT_SECRET: "csecret",
   GITHUB_APP_TOKEN: "app-token",
   SESSION_SECRET: "s".repeat(32),
+  ANTHROPIC_API_KEY: "sk-ant-test",
+  MODEL_A_ID: "test-model",
 };
 
 const prod = {
@@ -128,5 +130,53 @@ describe("loadConfig", () => {
     expect(loadConfig(prod).inngestServeOrigin).toBe("https://ladder.example");
     expect(loadConfig({ ...valid, NODE_ENV: "test" }).inngestServeOrigin).toBeUndefined();
     expect(() => loadConfig({ ...prod, INNGEST_SERVE_ORIGIN: "not a url" })).toThrow(/INNGEST_SERVE_ORIGIN/);
+  });
+
+  test("T006: model A and reader limits; defaults 15 steps / 80,000 tokens; bad limits are refused", () => {
+    const c = loadConfig({ ...valid, MODEL_A_BACKEND: "api" });
+    expect({ m: c.modelAId, k: c.anthropicApiKey, s: c.readerMaxSteps, b: c.readerTokenBudget }).toEqual({
+      m: "test-model",
+      k: "sk-ant-test",
+      s: 15,
+      b: 80_000,
+    });
+    expect(loadConfig({ ...valid, READER_MAX_STEPS: "8", READER_TOKEN_BUDGET: "20000" }).readerMaxSteps).toBe(8);
+    const { ANTHROPIC_API_KEY: _k, MODEL_A_ID: _m, ...noModel } = valid;
+    expect(() => loadConfig({ ...noModel, MODEL_A_BACKEND: "api" })).toThrow(/ANTHROPIC_API_KEY, MODEL_A_ID/);
+    expect(() => loadConfig({ ...valid, READER_MAX_STEPS: "0" })).toThrow(
+      /READER_MAX_STEPS must be a positive integer/,
+    );
+    expect(() => loadConfig({ ...valid, READER_TOKEN_BUDGET: "-5" })).toThrow(/READER_TOKEN_BUDGET/);
+    // upper bounds: a typo must not lift the cap or the budget
+    expect(loadConfig({ ...valid, READER_MAX_STEPS: "50", READER_TOKEN_BUDGET: "500000" }).readerMaxSteps).toBe(50);
+    expect(() => loadConfig({ ...valid, READER_MAX_STEPS: "51" })).toThrow(/READER_MAX_STEPS must be .* at most 50/);
+    expect(() => loadConfig({ ...valid, READER_TOKEN_BUDGET: "500001" })).toThrow(/at most 500000/);
+  });
+
+  test("model A back end: claude-code (default) needs no API key; api needs the key and the model id", () => {
+    const { ANTHROPIC_API_KEY: _k, MODEL_A_ID: _m, ...noModel } = valid;
+    const sub = loadConfig(noModel);
+    expect(sub.modelABackend).toBe("claude-code");
+    expect(sub.anthropicApiKey).toBeUndefined();
+    expect(sub.modelAId).toBeUndefined();
+    expect(loadConfig({ ...noModel, MODEL_A_BACKEND: "claude-code", MODEL_A_ID: "sonnet" }).modelAId).toBe("sonnet");
+    const api = loadConfig({ ...valid, MODEL_A_BACKEND: "api" });
+    expect({ b: api.modelABackend, m: api.modelAId, k: api.anthropicApiKey }).toEqual({
+      b: "api",
+      m: "test-model",
+      k: "sk-ant-test",
+    });
+    expect(() => loadConfig({ ...noModel, MODEL_A_BACKEND: "api", MODEL_A_ID: "m" })).toThrow(/ANTHROPIC_API_KEY/);
+    expect(() => loadConfig({ ...valid, MODEL_A_BACKEND: "api", MODEL_A_ID: "" })).toThrow(/MODEL_A_ID/);
+    expect(() => loadConfig({ ...valid, MODEL_A_BACKEND: "openai" })).toThrow(
+      /MODEL_A_BACKEND must be claude-code or api/,
+    );
+    // the key's value never reaches an error message
+    try {
+      loadConfig({ ...valid, MODEL_A_BACKEND: "bogus", SESSION_SECRET: "short" });
+    } catch (err) {
+      expect(err).toBeInstanceOf(ConfigError);
+      expect(String(err)).not.toContain("sk-ant-test");
+    }
   });
 });

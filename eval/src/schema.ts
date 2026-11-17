@@ -68,6 +68,7 @@ export const CostLineSchema = z.object({
   inputTokens: z.number().int().nonnegative(),
   outputTokens: z.number().int().nonnegative(),
   cachedInputTokens: z.number().int().nonnegative(),
-  usd: z.number().nonnegative(),
+  /** null: the call ran on the Claude subscription (claude-code back end) and has no per-call price. Never 0 for that. */
+  usd: z.number().nonnegative().nullable(),
 });
 export type CostLine = z.infer<typeof CostLineSchema>;

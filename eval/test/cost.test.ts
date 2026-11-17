@@ -51,6 +51,32 @@ describe("logStepCost (AC 6)", () => {
   });
 });
 
+describe("logStepCost on the claude-code back end (T006 AC 9)", () => {
+  test("logs usd: null (never 0), no price needed, even for an unpriced model id", () => {
+    const line = logStepCost(
+      { ...base, model: "sonnet", inputTokens: 500, outputTokens: 20, backend: "claude-code" },
+      { prices, logDir },
+    );
+    expect(line.usd).toBeNull();
+    const [logged] = readCostLog("run-1", logDir);
+    expect(logged).toMatchObject({ model: "sonnet", inputTokens: 500, outputTokens: 20, usd: null });
+  });
+
+  test("the api back end (explicit or default) still refuses an unpriced model", () => {
+    expect(() => logStepCost({ ...base, model: "sonnet", backend: "api" }, { prices, logDir })).toThrow(UnknownModelPriceError);
+    expect(() => logStepCost({ ...base, model: "sonnet" }, { prices, logDir })).toThrow(UnknownModelPriceError);
+  });
+
+  test("summaries: a step with subscription calls has usd null, priced steps keep their sum", () => {
+    logStepCost({ ...base, step: "pick-core-files", backend: "claude-code", inputTokens: 5 }, { prices, logDir });
+    logStepCost({ ...base, inputTokens: 1_000_000 }, { prices, logDir });
+    const s = summarizeRun(readCostLog("run-1", logDir));
+    expect(s.byStep["pick-core-files"]?.usd).toBeNull();
+    expect(s.byStep.mapper?.usd).toBe(3);
+    expect(s.totalUsd).toBeNull();
+  });
+});
+
 describe("logStepCost negatives (AC 7)", () => {
   test("unknown model throws UnknownModelPriceError and writes nothing", () => {
     expect(() => logStepCost({ ...base, model: "not-in-table", inputTokens: 5 }, { prices, logDir })).toThrow(UnknownModelPriceError);

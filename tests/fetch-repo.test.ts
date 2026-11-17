@@ -13,6 +13,7 @@ import {
   rateLimited,
   V0_REPOS,
 } from "./support/github-fixtures.ts";
+import { testReader } from "./support/mock-model.ts";
 
 let db: Awaited<ReturnType<typeof createTestDatabase>>;
 let fixtures: Fixture[];
@@ -43,7 +44,7 @@ async function newJob(repo: string, sha: string): Promise<string> {
 function engine(jobId: string, override?: Override) {
   const gh = fixtureFetch(fixtures, override);
   const github = githubRepoClient({ baseUrl: "https://api.github.com", token: "test-token", fetch: gh.impl });
-  const fn = ladderGenerateFunction(createInngest(), { sql: db.sql, github });
+  const fn = ladderGenerateFunction(createInngest(), { sql: db.sql, github, reader: testReader() });
   const t = new InngestTestEngine({
     function: fn,
     events: [{ name: LADDER_GENERATE_EVENT, data: { ...DSET, jobId } }],
@@ -105,10 +106,10 @@ describe("Inngest function ladder-generate, step fetch-repo (AC 5)", () => {
     });
     const statuses: string[] = [];
     const { result, ctx } = await t.execute();
-    expect(result).toMatchObject({ status: "fetched" });
-    expect(ctx.step.run.mock.calls.map((c) => c[0])).toEqual(["fetch-repo"]);
+    expect(result).toMatchObject({ status: "picked" });
+    expect(ctx.step.run.mock.calls.map((c) => c[0])).toEqual(["fetch-repo", "pick-core-files"]);
     expect(statuses).toEqual(["running"]);
-    expect((await jobRow(jobId)).status).toBe("fetched");
+    expect((await jobRow(jobId)).status).toBe("picked");
     expect(gh.calls.length).toBe(6);
     expect(gh.calls.every((p) => p.startsWith("/repos/lukeed/dset"))).toBe(true);
 
@@ -187,7 +188,7 @@ describe("fetch-repo: other GitHub answers", () => {
         ? Response.json({ ...JSON.parse(entry.body), archived: true }, { headers: entry.headers })
         : undefined,
     );
-    expect((await t.execute()).result).toMatchObject({ status: "fetched" });
+    expect((await t.execute()).result).toMatchObject({ status: "picked" });
     const [snap] = await db.sql`SELECT archived FROM repo_snapshots WHERE repo_full_name = 'lukeed/dset'`;
     expect(snap.archived).toBe(true);
   });
@@ -196,10 +197,10 @@ describe("fetch-repo: other GitHub answers", () => {
     const jobId = await newJob(DSET.repo, DSET.sha);
     const gh = fixtureFetch(fixtures);
     const github = githubRepoClient({ baseUrl: "https://api.github.com", token: "t", fetch: gh.impl });
-    const fn = ladderGenerateFunction(createInngest(), { sql: db.sql, github });
+    const fn = ladderGenerateFunction(createInngest(), { sql: db.sql, github, reader: testReader() });
     const forged = { repo: "developit/mitt", sha: V0_REPOS["developit/mitt"], jobId };
     const t = new InngestTestEngine({ function: fn, events: [{ name: LADDER_GENERATE_EVENT, data: forged }] });
-    expect((await t.execute()).result).toMatchObject({ status: "fetched" });
+    expect((await t.execute()).result).toMatchObject({ status: "picked" });
     expect(gh.calls.every((p) => p.startsWith("/repos/lukeed/dset"))).toBe(true);
     const rows = await db.sql`SELECT repo_full_name, commit_sha FROM repo_snapshots`;
     expect(rows.map((r: { repo_full_name: string; commit_sha: string }) => [r.repo_full_name, r.commit_sha])).toEqual([
@@ -210,7 +211,7 @@ describe("fetch-repo: other GitHub answers", () => {
   test("an event for an unknown job id stores nothing", async () => {
     const gh = fixtureFetch(fixtures);
     const github = githubRepoClient({ baseUrl: "https://api.github.com", token: "t", fetch: gh.impl });
-    const fn = ladderGenerateFunction(createInngest(), { sql: db.sql, github });
+    const fn = ladderGenerateFunction(createInngest(), { sql: db.sql, github, reader: testReader() });
     const data = { ...DSET, jobId: "00000000-0000-4000-8000-000000000000" };
     const t = new InngestTestEngine({ function: fn, events: [{ name: LADDER_GENERATE_EVENT, data }] });
     const run = await t.execute();
@@ -321,8 +322,8 @@ describe("retry (AC 8, NFR-005)", () => {
     // Inngest retries the failed step alone. (Not re-sending the event is startLadder's job, tested in
     // start-ladder.test.ts: only the inserting caller enqueues.)
     const retry = await t.execute();
-    expect(retry.result).toMatchObject({ status: "fetched" });
-    expect((await jobRow(jobId)).status).toBe("fetched");
+    expect(retry.result).toMatchObject({ status: "picked" });
+    expect((await jobRow(jobId)).status).toBe("picked");
     expect(await snapshotCount()).toBe(1);
     expect(gh.calls.filter((p) => p === "/repos/lukeed/dset/languages").length).toBe(2);
   });
@@ -332,6 +333,7 @@ describe("retry (AC 8, NFR-005)", () => {
     const fn = ladderGenerateFunction(createInngest(), {
       sql: db.sql,
       github: githubRepoClient({ baseUrl: "https://api.github.com", token: "t", fetch: fixtureFetch(fixtures).impl }),
+      reader: testReader(),
     });
     expect(fn.opts.retries).toBe(3);
     await failJobAfterRetries(fn, jobId);

@@ -1,9 +1,12 @@
+import { createAnthropic } from "@ai-sdk/anthropic";
 import { SQL } from "bun";
 import { serve } from "inngest/hono";
+import { loadPrices } from "../../eval/src/cost.ts";
 import { createApp } from "./app.ts";
 import { ConfigError, loadConfig } from "./config.ts";
+import { readerCostLogger } from "./cost-wiring.ts";
 import { githubRepoClient } from "./github-repo.ts";
-import { createInngest, LADDER_GENERATE_EVENT, ladderGenerateFunction } from "./ladder-generate.ts";
+import { createInngest, LADDER_GENERATE_EVENT, ladderGenerateFunction, type ReaderDeps } from "./ladder-generate.ts";
 import { noPasses } from "./ladder-view.ts";
 import { reminderFunction, webPushSender } from "./reminders.ts";
 
@@ -16,7 +19,35 @@ try {
   process.exit(1);
 }
 
+// API back end: every model call is priced by logStepCost; fail at start, not after a paid call, when model A has no price.
+if (config.modelABackend === "api" && !Object.hasOwn(loadPrices(), config.modelAId as string)) {
+  console.error(`Invalid configuration: MODEL_A_ID "${config.modelAId}" has no price in eval/prices.json`);
+  process.exit(1);
+}
+
 const sql = new SQL(config.databaseUrl);
+const limits = { maxSteps: config.readerMaxSteps, tokenBudget: config.readerTokenBudget };
+const logCost = readerCostLogger();
+// claude-code (default): `claude -p` on the subscription; its MCP server reads GitHub with the app token.
+// api: the Anthropic provider, explicit base URL (never an ANTHROPIC_BASE_URL from the environment).
+const reader: ReaderDeps =
+  config.modelABackend === "claude-code"
+    ? {
+        backend: "claude-code",
+        modelId: config.modelAId,
+        githubToken: config.githubAppToken,
+        githubApiBaseUrl: config.githubApiBaseUrl,
+        limits,
+        logCost,
+      }
+    : {
+        backend: "api",
+        model: createAnthropic({ apiKey: config.anthropicApiKey, baseURL: "https://api.anthropic.com/v1" })(
+          config.modelAId as string,
+        ),
+        limits,
+        logCost,
+      };
 const github = githubRepoClient({ baseUrl: config.githubApiBaseUrl, token: config.githubAppToken });
 const inngest = createInngest();
 // T015: reminders are off (the tick does nothing) unless all three VAPID variables are set.
@@ -38,7 +69,7 @@ const app = createApp({
   },
   inngestHandler: serve({
     client: inngest,
-    functions: [ladderGenerateFunction(inngest, { sql, github }), reminders],
+    functions: [ladderGenerateFunction(inngest, { sql, github, reader }), reminders],
     // Never derive the callback origin from the request Host header (required in production by loadConfig).
     ...(config.inngestServeOrigin ? { serveOrigin: config.inngestServeOrigin } : {}),
   }),
