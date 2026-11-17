@@ -3,6 +3,7 @@
 // Repo text is untrusted data: it reaches the model only inside tool results, wrapped and labelled as data.
 import { generateText, type LanguageModel, type LanguageModelUsage, type ModelMessage, stepCountIs, tool } from "ai";
 import { z } from "zod";
+import { RateLimitError } from "./github-repo.ts";
 
 export const PICK_CORE_FILES_STEP = "pick-core-files";
 export const READER_DEFAULTS = { maxSteps: 15, tokenBudget: 80_000 } as const;
@@ -39,6 +40,8 @@ export type PickResult = {
   /** Model calls made: loop steps + final answer call + repair call. */
   modelCalls: number;
   toolCalls: number;
+  /** Tool calls that failed with `github-rate-limited` (an unauthenticated or exhausted token); 0 when none. */
+  githubRateLimited: number;
   /** The loop stopped at the step cap or the token budget, not on its own. */
   hitLimit: boolean;
   /** input + output + cacheRead + cacheCreation over every model call (what the token budget counts). */
@@ -306,6 +309,11 @@ export async function pickCoreFiles(input: PickCoreFilesInput): Promise<PickResu
   if (usageError) throw usageError.error;
   messages.push(...loop.response.messages);
   const toolCalls = loop.steps.reduce((n, s) => n + s.toolCalls.length, 0);
+  // A rate-limited GitHub read is a tool error the model sees; the loop goes on, so count them from the steps.
+  const githubRateLimited = loop.steps.reduce(
+    (n, st) => n + st.content.filter((c) => c.type === "tool-error" && c.error instanceof RateLimitError).length,
+    0,
+  );
   const hitLimit = loop.finishReason === "tool-calls";
 
   /** One more call, tools defined (Anthropic needs them for the tool history) but the model may not call one. */
@@ -358,6 +366,7 @@ export async function pickCoreFiles(input: PickCoreFilesInput): Promise<PickResu
     coreFiles: final.data.coreFiles,
     modelCalls,
     toolCalls,
+    githubRateLimited,
     hitLimit,
     totalTokens,
     tokens: split,

@@ -61,7 +61,9 @@ afterAll(() => {
   }
 });
 
-const replies = (r: { stdout: string; exit?: number; sleepMs?: number; toolCalls?: number; holdPipes?: boolean }[]) =>
+const replies = (
+  r: { stdout: string; exit?: number; sleepMs?: number; toolCalls?: number; holdPipes?: boolean; rateLimited?: number }[],
+) =>
   writeFile(join(rec, "replies.json"), JSON.stringify(r));
 const calls = async () =>
   (await readFile(join(rec, "calls.jsonl"), "utf8"))
@@ -295,5 +297,19 @@ describe("pickCoreFilesClaudeCode (fake claude)", () => {
     await rm(join(rec, "calls.jsonl"));
     await replies([{ stdout: answer, toolCalls: 14 }]);
     expect(await pick().run).toMatchObject({ hitLimit: false, toolCalls: 14 });
+  });
+
+  test("github-rate-limited tool errors are counted on the result, across the repair run; 0 when none", async () => {
+    const answer = result({ structured_output: files(["src/index.ts", "src/util.ts", "README.md"]) });
+    await replies([{ stdout: answer, toolCalls: 3 }]);
+    expect(await pick().run).toMatchObject({ githubRateLimited: 0, toolCalls: 3 });
+    await rm(join(rec, "calls.jsonl"));
+    await replies([
+      { stdout: result({ structured_output: files(["src/index.ts"]) }), toolCalls: 3, rateLimited: 2 },
+      { stdout: answer, toolCalls: 4, rateLimited: 1 },
+    ]);
+    expect(await pick().run).toMatchObject({ githubRateLimited: 3, toolCalls: 4 });
+    const [first] = await calls();
+    expect(first.mcp.mcpServers.reader.env.READER_RATE_LIMITED_FILE).toStartWith(first.cwd);
   });
 });

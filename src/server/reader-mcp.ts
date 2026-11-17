@@ -3,7 +3,7 @@
 // as the API back end, so path checks, read bounds and injection hygiene are identical. The step cap lives here:
 // this Claude Code build has no --max-turns, so after READER_MAX_STEPS tool calls every call is refused. The repair
 // run starts a new server with READER_CALLS_START (the first run's count): the cap is per reader invocation.
-import { readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { z } from "zod";
 import { githubRepoClient, RateLimitError } from "./github-repo.ts";
@@ -45,6 +45,7 @@ export function createReaderMcp(
   maxSteps: number,
   onCall: (calls: number) => void = () => {},
   start = 0,
+  onRateLimited: () => void = () => {},
 ) {
   const tools = createReaderTools(ctx.tree, readFile, { treeTruncated: ctx.treeTruncated });
   const names = Object.keys(tools) as (keyof typeof tools)[];
@@ -69,11 +70,13 @@ export function createReaderMcp(
     } catch (err) {
       // A GitHub transport error: the model sees a tool error, the operator sees the cause on stderr.
       console.error(JSON.stringify({ event: "reader-mcp-read-failed", repo: ctx.fullName, error: String(err) }));
-      if (err instanceof RateLimitError)
+      if (err instanceof RateLimitError) {
+        onRateLimited();
         return text(
           "error: github-rate-limited (unauthenticated GitHub reads allow 60 requests per hour; GITHUB_TOKEN raises it): answer with what you have seen",
           true,
         );
+      }
       return text("error: read-failed (GitHub error; try another file)", true);
     }
   }
@@ -137,12 +140,15 @@ if (import.meta.main) {
     : (path) => (github as ReturnType<typeof githubRepoClient>).readFile(ctx.fullName, ctx.sha, path);
   // READER_CALLS_FILE: the tool-call count, for the parent reader (steps used, cap hit).
   const callsFile = env.READER_CALLS_FILE;
+  const rateLimitedFile = env.READER_RATE_LIMITED_FILE;
   const server = createReaderMcp(
     ctx,
     readFile,
     maxSteps,
     (n) => callsFile && writeFileSync(callsFile, String(n)),
     start,
+    // READER_RATE_LIMITED_FILE: one line per github-rate-limited tool error, counted by the parent reader.
+    () => rateLimitedFile && appendFileSync(rateLimitedFile, "1\n"),
   );
   const send = (r: Response, then?: () => void) => process.stdout.write(`${JSON.stringify(r)}\n`, then);
 

@@ -110,6 +110,7 @@ export async function pickCoreFilesClaudeCode(input: PickCoreFilesClaudeCodeInpu
     };
     const contextFile = join(dir, "context.json");
     const callsFile = join(dir, "calls");
+    const rateLimitedFile = join(dir, "rate-limited");
     const mcpConfig = join(dir, "mcp.json");
     await writeFile(contextFile, JSON.stringify(context), { mode: 0o600 });
     // READER_CALLS_START: the repair run's server continues the first run's count (one cap per invocation).
@@ -127,6 +128,7 @@ export async function pickCoreFilesClaudeCode(input: PickCoreFilesClaudeCodeInpu
                 READER_MAX_STEPS: String(input.limits.maxSteps),
                 READER_CALLS_FILE: callsFile,
                 READER_CALLS_START: String(start),
+                READER_RATE_LIMITED_FILE: rateLimitedFile,
                 ...(input.githubToken ? { GITHUB_TOKEN: input.githubToken } : {}),
                 ...(input.githubApiBaseUrl ? { GITHUB_API_BASE_URL: input.githubApiBaseUrl } : {}),
               },
@@ -141,6 +143,9 @@ export async function pickCoreFilesClaudeCode(input: PickCoreFilesClaudeCodeInpu
     const tokens: TokenCounts = { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 };
     let modelCalls = 0;
     const toolCalls = async () => Number((await readFile(callsFile, "utf8").catch(() => "0")) || 0);
+    // One line per github-rate-limited tool error, appended by the MCP server (both runs share the file).
+    const githubRateLimited = async () =>
+      (await readFile(rateLimitedFile, "utf8").catch(() => "")).split("\n").filter(Boolean).length;
     const hitLimit = async () => (await toolCalls()) >= input.limits.maxSteps || totalTokens > input.limits.tokenBudget;
 
     const run = async (prompt: string, resume?: string) => {
@@ -202,6 +207,7 @@ export async function pickCoreFilesClaudeCode(input: PickCoreFilesClaudeCodeInpu
       coreFiles: final.data.coreFiles as CoreFile[],
       modelCalls,
       toolCalls: await toolCalls(),
+      githubRateLimited: await githubRateLimited(),
       hitLimit: limited,
       totalTokens,
       tokens,

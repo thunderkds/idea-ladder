@@ -1,5 +1,6 @@
 // T006 AC 9: the stdio MCP server `claude -p` uses on the claude-code back end, spoken to over real pipes.
 import { afterEach, describe, expect, test } from "bun:test";
+import { existsSync } from "node:fs";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -210,6 +211,40 @@ describe("reader MCP server (claude-code back end)", () => {
       expect(seen.length).toBeGreaterThan(0);
       expect(seen[0]?.path).toContain("src/index.ts");
       expect(seen[0]?.auth).toBe("Bearer gh-tok");
+      s.proc.kill();
+    } finally {
+      stub.stop(true);
+    }
+  });
+
+  test("a rate-limited GitHub read is a github-rate-limited tool error and one line in READER_RATE_LIMITED_FILE", async () => {
+    const stub = Bun.serve({
+      hostname: "127.0.0.1",
+      port: 0,
+      fetch: () =>
+        new Response("rate limited", {
+          status: 403,
+          headers: { "x-ratelimit-remaining": "0", "x-ratelimit-reset": "2000000000" },
+        }),
+    });
+    try {
+      const dir = await mkdtemp(join(tmpdir(), "il-mcp-rl-"));
+      dirs.push(dir);
+      const rlFile = join(dir, "rate-limited");
+      const live: ReaderContext = { fullName: ctx.fullName, sha: ctx.sha, tree: ctx.tree };
+      const s = await start(
+        15,
+        { GITHUB_API_BASE_URL: `http://127.0.0.1:${stub.port}`, READER_RATE_LIMITED_FILE: rlFile },
+        live,
+      );
+      expect((await s.call("list", { path: "" })).isError).toBe(false);
+      expect(existsSync(rlFile)).toBe(false);
+      for (const path of ["src/index.ts", "README.md"]) {
+        const r = await s.call("read", { path });
+        expect(r.isError).toBe(true);
+        expect(r.text).toStartWith("error: github-rate-limited");
+      }
+      expect(await readFile(rlFile, "utf8")).toBe("1\n1\n");
       s.proc.kill();
     } finally {
       stub.stop(true);

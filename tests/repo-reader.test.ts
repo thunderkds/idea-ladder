@@ -11,6 +11,7 @@ import {
   ReaderInvalidOutputError,
   type TreeEntry,
 } from "../src/server/repo-reader.ts";
+import { RateLimitError } from "../src/server/github-repo.ts";
 import { answer, scriptedModel, toolResults } from "./support/mock-model.ts";
 
 const SHA = "a".repeat(40);
@@ -322,6 +323,26 @@ describe("output validation (AC 2)", () => {
     const model = scriptedModel((call) => ({ text: call === 0 ? long : answer(THREE) }));
     expect((await run(s, model)).coreFiles.length).toBe(3);
     expect(model.doGenerateCalls.length).toBe(2);
+  });
+});
+
+describe("github-rate-limited reads (AC 7)", () => {
+  test("rate-limited reads are counted on the result; a plain read error and no error are not", async () => {
+    const readFile = async (path: string) => {
+      if (path === "src/index.ts") throw new RateLimitError(new Date(2_000_000_000_000));
+      if (path === "src/util.ts") throw new Error("boom");
+      return "x";
+    };
+    const reads = ["src/index.ts", "src/emitter.ts", "src/index.ts", "src/util.ts"];
+    const limited = scriptedModel((call) =>
+      call < reads.length
+        ? { tools: [{ name: "read", input: { path: reads[call] } }] }
+        : { text: answer(THREE) },
+    );
+    const s = setup();
+    expect((await run({ ...s, readFile }, limited)).githubRateLimited).toBe(2);
+    const clean = scriptedModel((call) => (call === 0 ? { tools: [{ name: "list", input: { path: "" } }] } : { text: answer(THREE) }));
+    expect((await run(setup(), clean)).githubRateLimited).toBe(0);
   });
 });
 

@@ -81,6 +81,20 @@ eval failed: subject "repo-reader" not found in src/subjects/: Cannot find modul
 error: script "eval" exited with code 1
 ```
 
+**BEFORE (AC 7 rate-limit slice)**: captured 2026-11-17T03:24:28Z on `72a0e3c` plus the uncommitted red tests (worktree `T006-reader`, before any src change):
+
+```
+$ bun test claude-code-reader reader-mcp
+(fail) pickCoreFilesClaudeCode (fake claude) > github-rate-limited tool errors are counted on the result, across the repair run; 0 when none [15.64ms]
+  (received result has no githubRateLimited field; toMatchObject at tests/claude-code-reader.test.ts:305)
+(fail) reader MCP server (claude-code back end) > a rate-limited GitHub read is a github-rate-limited tool error and one line in READER_RATE_LIMITED_FILE [91.05ms]
+  ENOENT: no such file or directory, open '/tmp/il-mcp-rl-jnBtLk/rate-limited'
+ 27 pass
+ 2 fail
+ 138 expect() calls
+Ran 29 tests across 2 files. [1.91s]
+```
+
 **AFTER**: captured 2026-11-12T09:46:32Z on `8ab6977` (implementer run; the paid golden-set run is still open):
 
 ```
