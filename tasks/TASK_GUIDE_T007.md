@@ -69,11 +69,11 @@ LLM call, structured)". § Sequence: ladder generation: "10 Workflow→LLMs map 
 |---|----------------------|-----------------------|
 | 1 | `mapConcepts({ snapshot, coreFiles, confidence })` makes exactly 1 model A call through the `generate` function with a zod schema: `{ concepts: [{ name (2–60 chars), slug, reason (≤ 300 chars), basis: string[] }] }` with 3–6 items. `slug` is derived in code (lower-case, `-`-joined), not trusted from the model. | 3 to 6 concepts; 1 LLM call, structured |
 | 2 | Every `basis` entry is a core-file path from T006 or one of `readme`, `topics`, `languages`, `depFiles`; any other value is dropped. A concept left with an empty `basis` is dropped; fewer than 3 concepts left → one retry, then step fails `mapper-invalid-output`. | grounded mapping |
-| 3 | Inngest step `map-concepts` runs after `pick-core-files`, stores `repo_concepts` for the repo + SHA, carries `fallbackToConcepts` from the T005 confidence result, logs cost via `logStepCost` with `step: "map-concepts"`, and on retry re-runs only itself. | fall back to concept-only ladders; durable steps |
+| 3 | Inngest step `map-concepts` runs after `pick-core-files`, stores `repo_concepts` for the repo + SHA, carries `fallbackToConcepts` from the T005 confidence result, logs cost via `logStepCost` with `step: "map-concepts"` (through the `CostEntry` / `readerCostLogger` path with `backend`, so the claude-code back end logs `usd: null`), and on retry re-runs only itself. It reads `core_files` ordered by `rank`. Job status moves `picked` → `mapping` → `mapped`; `mapper-invalid-output` or retries exhausted fail a job in `picked`/`mapping`. | fall back to concept-only ladders; durable steps |
 | 4 | Learner edit: `PUT /api/ladders/:ladderId/concepts` (signed in) stores a per-learner list in `learner_concepts`. The shared `repo_concepts` rows are unchanged. `GET` returns the learner's list if one exists, else the shared list. | learner can edit; cache shared by repo + SHA |
 | 5 | Negative / boundary: saving 2 or 7 concepts, an empty or > 60-char name, or duplicate slugs → `422` with the field named; the screen shows the error next to the field and keeps the learner's input. | 3 to 6 concepts |
 | 6 | The screen `/ladders/:ladderId/concepts` lists the concepts with their reason, lets the learner rename, remove and add (keyboard reachable, labelled inputs), and `Save concepts` persists; reload shows the saved list. A banner reads `Low confidence: this ladder uses concepts only` when `fallbackToConcepts` is true. | learner can edit; fall back flag visible |
-| 7 | Golden set: `bun run eval -- --step concepts --subject concept-mapper` reports mean concept overlap vs T004 labels and mean cost per call for all 20 repos (reported, no threshold: wrong mapping is cheap to fix). | Compare concept maps on the golden set |
+| 7 | Golden set: `bun run eval -- --step concepts --subject concept-mapper` reports mean concept overlap vs T004 labels, mean tokens per call, and mean usd per call on the `api` back end only (`null` on `claude-code`, never 0) for all 20 repos (reported, no threshold: wrong mapping is cheap to fix). | Compare concept maps on the golden set |
 
 ---
 
@@ -157,8 +157,9 @@ bun run eval -- --step concepts --subject concept-mapper
 
 1. Input to the prompt: README (first 6,000 chars), topics, languages, dependency names, and the T006 core-file paths + reasons. Repo text is data, not instructions.
 2. Model A through a `generate({ schema, prompt })` function with two back ends chosen by env `MODEL_A_BACKEND`: `claude-code` (headless `claude -p` on the owner's Claude subscription, only while the owner is the only person who starts generations) and `api` (AI SDK with `MODEL_A_ID`). This task creates `generate`; T008 and T014 reuse it. Temperature low (`api` only); one call, one retry on schema failure. Tests mock `generate`. (Decision 2026-11-12.)
-3. Migration (`Skill({ skill: "migration-safety" })`): `repo_concepts` keyed by repo + SHA; `learner_concepts` keyed by `(user_id, ladder_id)`.
-4. Server validation is the source of truth; the screen mirrors the same rules (3–6, 2–60 chars, unique slug).
+3. Migration `0007_concepts` (`Skill({ skill: "migration-safety" })`; never 0003, which T006 owns): `repo_concepts` keyed by repo + SHA with FK to `repo_snapshots(repo_full_name, commit_sha)` like `core_files`; `learner_concepts` keyed by `(user_id, ladder_id)`, `ladder_id` → `ladders(id)` and `user_id` → `users(id)`, both ON DELETE CASCADE; widen the `generation_jobs.status` CHECK with `mapping` and `mapped`.
+4. Model A `generate({schema, prompt})` lives in a new `src/server/model-a.ts` with both back ends. For `claude-code`, extract a generic spawn from T006's private `runClaude` (`src/server/claude-code-reader.ts`): keep `childEnv`, `--tools ""`, `--setting-sources ""`, `--restricted`, `--json-schema`, `--output-format json`, the timeout + process-group kill, `ReaderNotInstalledError`; drop the MCP config and `--allowedTools`. Parse `structured_output ?? result` and `usage` as the reader does. Config already has `modelABackend`, `modelAId`, `anthropicApiKey`. Extend `ladder-generate`'s `Deps` with a model A dep (not `reader.limits`) and wire it in `src/server/main.ts`. The final `return step.run("pick-core-files", ...)` becomes a `picked` check followed by `step.run("map-concepts", ...)`.
+5. Server validation is the source of truth; the screen mirrors the same rules (3–6, 2–60 chars, unique slug).
 
 ---
 
@@ -180,7 +181,11 @@ bun run eval -- --step concepts --subject concept-mapper
 | app server module for the concept mapper (layout set by T003) | `mapConcepts`, schema, slug |
 | `ladder-generate` Inngest function | add step `map-concepts` |
 | routes `GET`/`PUT /api/ladders/:ladderId/concepts`, page `/ladders/:ladderId/concepts` | learner edit |
-| new migration | `repo_concepts`, `learner_concepts` |
+| `migrations/0007_concepts.{up,down}.sql` | `repo_concepts`, `learner_concepts`, status CHECK + `mapping`/`mapped` |
+| `src/server/model-a.ts` (new) | `generate` with `api` and `claude-code` back ends |
+| `src/server/ladder-generate.ts` | `Deps` model A dep; step chain; `failJob` / `onFailure` cover `picked`/`mapping` |
+| `src/server/main.ts` | wire the model A dep |
+| `src/server/app.ts` | `LADDER_PATH` also accepts `/ladders/:id/concepts` (sign-in return target) |
 | `eval/src/subjects/concept-mapper.ts` | golden-set subject |
 | tests (bun test + Playwright) | AC 1–7 |
 | `tasks/TASK_REVIEW_T007.md` | Evidence (reviewer) |
@@ -193,13 +198,13 @@ bun run eval -- --step concepts --subject concept-mapper
 | `PRD.md`, `PROJECT_SPEC.md`, `PROJECT_KANBAN.md`, `BRAINSTORMING_LOG.md`, `memory/**` | Supervisor-owned |
 | `experiments/**` | throwaway spikes |
 | `eval/golden/**`, `eval/src/score*` | T004's oracle |
-| T005/T006 step logic (`fetch-repo`, `pick-core-files`) | owned by those tasks; only append a step |
+| bodies of `fetchRepo` and `pickCoreFilesStep` | owned by T005/T006; you may edit `failJob`, `onFailure`, the step chain and the status CHECK |
 
 ---
 
 ## Test Plan
 
-bun test with the AI SDK mock model for schema, basis filtering, retry and slug rules; integration tests on a test DB for per-learner edits; Playwright e2e for the edit screen and the UI section screenshots at 360/768/1280 px. Real run: golden-set eval (AC 7) and one live `/start` on `developit/mitt` showing concepts on the edit screen.
+bun test on both back ends (`scriptedModel` in `tests/support/mock-model.ts` for `api`, `tests/support/fake-claude.ts` for `claude-code`) for schema, basis filtering, retry and slug rules; integration tests on a test DB for per-learner edits; Playwright e2e for the edit screen and the UI section screenshots at 360/768/1280 px. Real run: golden-set eval (AC 7) and one live `/start` on `developit/mitt` showing concepts on the edit screen.
 
 ---
 
