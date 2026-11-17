@@ -1,5 +1,5 @@
 # PROJECT_KANBAN.md
-**Last updated**: 2026-11-12 (Gate 1 waived; T003, T004, T005, T010, T011, T015 Done; T006 In Progress (claude-code back end); T006 Blocked on the owner's paid run)
+**Last updated**: 2026-11-12 (Gate 1 waived; T003, T004, T005, T010, T011, T015 Done; T006 Ready for Review (golden run PASS 2026-11-17))
 
 > Idea Ladder board (board mode `local`). Full context lives in `PROJECT_SPEC.md`.
 > The previous file was another project's Linear cache; it is archived at `docs/archive/easy-personal-board/`.
@@ -34,9 +34,9 @@
 - [ ] **T029** — "Learn what's trending" weekly pick | backend-developer | C1 | Risk: Low | P2 | Phase: v3 (after Gate 3)
 
 ### In Progress
-- [ ] **T006** — Repo reader agent (3 read-only tools: list, read, search; step cap; token budget) picks core files; scored on golden set | backend-developer | C2 | Risk: Medium | P0 | Phase: v1 (Gate 1 waived by user 2026-11-12) | Started 2026-11-12: branch `T006-reader` | Verify FAIL 2026-11-12 (paid golden-set run AC 7 / SC 6 not done); fix batch committed, waiting on the owner's run | Restarted 2026-11-12: user decision (the Claude subscription is the default model A back end, the API key is optional) adds AC 9, the `claude-code` back end for the reader; branch `T006-reader` first merges main | 2026-11-17: AC 7 rate-limit count done (e9f3c43, 3868745; 308 + 77 tests green); T007 guide aligned (d4a0300); golden-set run paused for the user's go-ahead (uses `gh` token + Claude subscription)
 
 ### Ready for Review
+- [ ] **T006** — Repo reader agent (3 read-only tools: list, read, search; step cap; token budget) picks core files; scored on golden set | backend-developer | C2 | Risk: Medium | P0 | Phase: v1 (Gate 1 waived by user 2026-11-12) | Started 2026-11-12: branch `T006-reader` | Verify FAIL 2026-11-12 (paid golden-set run AC 7 / SC 6 not done); fix batch committed, waiting on the owner's run | Restarted 2026-11-12: user decision (the Claude subscription is the default model A back end, the API key is optional) adds AC 9, the `claude-code` back end for the reader; branch `T006-reader` first merges main | 2026-11-17: AC 7 rate-limit count done (e9f3c43, 3868745; 308 + 77 tests green); T007 guide aligned (d4a0300); golden-set run paused for the user's go-ahead (uses `gh` token + Claude subscription) | 2026-11-17: golden-set run (owner, bdeda6f) mean recall 0.79 PASS, 0 of 20 hit limit PASS; first run invalid (not logged in); to Ready for Review, auto verify started
 
 ### Blocked
 
