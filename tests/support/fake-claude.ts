@@ -32,7 +32,8 @@ appendFileSync(
 const replies = JSON.parse(readFileSync(join(recordDir, "replies.json"), "utf8")) as Reply[];
 const reply = replies[Math.min(n, replies.length - 1)] as Reply;
 if (reply.toolCalls !== undefined) writeFileSync(mcp.mcpServers.reader.env.READER_CALLS_FILE, String(reply.toolCalls));
-if (reply.rateLimited) appendFileSync(mcp.mcpServers.reader.env.READER_RATE_LIMITED_FILE, "1\n".repeat(reply.rateLimited));
+if (reply.rateLimited)
+  appendFileSync(mcp.mcpServers.reader.env.READER_RATE_LIMITED_FILE, "1\n".repeat(reply.rateLimited));
 // holdPipes: ignore SIGTERM and leave a grandchild holding stdout/stderr (as a stuck MCP server child would).
 if (reply.holdPipes) {
   process.on("SIGTERM", () => {});

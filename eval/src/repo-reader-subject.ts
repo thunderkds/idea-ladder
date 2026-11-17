@@ -60,7 +60,7 @@ export function createRepoReaderSubject(deps: RepoReaderDeps): MeasuredSubject {
   return {
     name: "repo-reader",
     async coreFiles(fx) {
-      const s: RunStats = { modelCalls: 0, usd: 0, hitLimit: false, tokens: 0 };
+      const s: RunStats = { modelCalls: 0, usd: 0, hitLimit: false, tokens: 0, githubRateLimited: 0 };
       stats.set(fx.fullName, s);
       const common = { repo: fx.fullName, sha: fx.sha, tree: fx.tree, treeTruncated: fx.treeTruncated, limits: deps.limits };
       const onUsage = (u: CallUsage) => {
@@ -88,6 +88,7 @@ export function createRepoReaderSubject(deps: RepoReaderDeps): MeasuredSubject {
       // claude-code: one onUsage per `claude -p` run; model calls are the turns the CLI reports.
       if ("claudeCode" in deps) s.modelCalls = result.modelCalls;
       s.hitLimit = result.hitLimit;
+      s.githubRateLimited = result.githubRateLimited;
       return result.coreFiles.map((f) => f.path);
     },
     runStats: (fullName) => stats.get(fullName),

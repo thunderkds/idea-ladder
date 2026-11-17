@@ -62,9 +62,15 @@ afterAll(() => {
 });
 
 const replies = (
-  r: { stdout: string; exit?: number; sleepMs?: number; toolCalls?: number; holdPipes?: boolean; rateLimited?: number }[],
-) =>
-  writeFile(join(rec, "replies.json"), JSON.stringify(r));
+  r: {
+    stdout: string;
+    exit?: number;
+    sleepMs?: number;
+    toolCalls?: number;
+    holdPipes?: boolean;
+    rateLimited?: number;
+  }[],
+) => writeFile(join(rec, "replies.json"), JSON.stringify(r));
 const calls = async () =>
   (await readFile(join(rec, "calls.jsonl"), "utf8"))
     .split("\n")

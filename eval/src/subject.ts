@@ -1,7 +1,14 @@
 import type { Fixture } from "./schema.ts";
 
 /** `usd: null` = subscription run (claude-code back end): no per-call price; `tokens` then carries the size. */
-export interface RunStats { modelCalls: number; usd: number | null; hitLimit: boolean; tokens?: number }
+export interface RunStats {
+  modelCalls: number;
+  usd: number | null;
+  hitLimit: boolean;
+  tokens?: number;
+  /** `github-rate-limited` tool errors in the run: a rate-limited repo's recall is not a reader miss. */
+  githubRateLimited?: number;
+}
 
 /**
  * A pipeline step candidate that the harness can score. It reads only the recorded fixture (offline) and

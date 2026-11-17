@@ -10,7 +10,7 @@ export type Step = "core-files" | "concepts";
 export const STEPS: readonly Step[] = ["core-files", "concepts"];
 
 interface RowBase { fullName: string; tier: string; predicted: string[]; missed: string[]; extra: string[]; error?: string }
-export interface CoreFilesRow extends RowBase { recall: number; precision: number; modelCalls?: number; usd?: number | null; tokens?: number; hitLimit?: boolean }
+export interface CoreFilesRow extends RowBase { recall: number; precision: number; modelCalls?: number; usd?: number | null; tokens?: number; hitLimit?: boolean; githubRateLimited?: number }
 export interface ConceptsRow extends RowBase { overlap: number }
 
 interface ReportBase { subject: string; generatedAt: string }
@@ -21,6 +21,8 @@ export interface CoreFilesReport extends ReportBase {
   mean: { recall: number; precision: number; usd?: number | null; tokens?: number; modelCalls?: number };
   /** Runs stopped by a step cap or token budget (subjects with run stats only). */
   hitLimitRuns?: number;
+  /** Sum of the rows' `githubRateLimited` (subjects with run stats only). */
+  githubRateLimited?: number;
   baseline?: { subject: string; meanRecall: number };
   verdicts?: string[];
 }
@@ -76,7 +78,10 @@ export async function runEval(o: RunOptions & { step: Step }): Promise<Report> {
     return {
       step, subject: subject.name, generatedAt, rows: r,
       mean: { recall: mean(r.map((x) => x.recall)), precision: mean(r.map((x) => x.precision)), ...statsPart },
-      ...(withStats.length === 0 ? {} : { hitLimitRuns: withStats.filter((x) => x.hitLimit).length }),
+      ...(withStats.length === 0 ? {} : {
+        hitLimitRuns: withStats.filter((x) => x.hitLimit).length,
+        githubRateLimited: withStats.reduce((n, x) => n + (x.githubRateLimited ?? 0), 0),
+      }),
     };
   }
   const r = rows as ConceptsRow[];
@@ -92,10 +97,10 @@ export function renderMarkdown(report: Report): string {
     const st = report.mean.usd !== undefined;
     const usd = (u: number | null | undefined, tokens: number | undefined) =>
       u === undefined ? "" : u === null ? `n/a (subscription), ${Math.round(tokens ?? 0)} tokens` : u.toFixed(4);
-    const statCells = (r: CoreFilesRow) => (st ? ` ${r.modelCalls ?? ""} | ${usd(r.usd, r.tokens)} | ${r.hitLimit ? "yes" : ""} |` : "");
-    lines.push(`| Repo | Tier | Recall | Precision | Missed | Extra |${st ? " Model calls | USD | Hit limit |" : ""}`, `|---|---|---|---|---|---|${st ? "---|---|---|" : ""}`);
+    const statCells = (r: CoreFilesRow) => (st ? ` ${r.modelCalls ?? ""} | ${usd(r.usd, r.tokens)} | ${r.hitLimit ? "yes" : ""} | ${r.githubRateLimited ?? 0} |` : "");
+    lines.push(`| Repo | Tier | Recall | Precision | Missed | Extra |${st ? " Model calls | USD | Hit limit | GitHub rate-limited |" : ""}`, `|---|---|---|---|---|---|${st ? "---|---|---|---|" : ""}`);
     for (const r of report.rows) lines.push(`| ${r.fullName} | ${r.tier} | ${f(r.recall)} | ${f(r.precision)} | ${cell(r.missed)} | ${cell(r.extra)}${r.error ? ` (error: ${r.error})` : ""} |${statCells(r)}`);
-    lines.push(`| **mean** | | ${f(report.mean.recall)} | ${f(report.mean.precision)} | | |${st ? ` ${f(report.mean.modelCalls ?? 0)} | ${usd(report.mean.usd, report.mean.tokens)} | ${report.hitLimitRuns} of ${report.rows.length} |` : ""}`);
+    lines.push(`| **mean** | | ${f(report.mean.recall)} | ${f(report.mean.precision)} | | |${st ? ` ${f(report.mean.modelCalls ?? 0)} | ${usd(report.mean.usd, report.mean.tokens)} | ${report.hitLimitRuns} of ${report.rows.length} | ${report.githubRateLimited ?? 0} |` : ""}`);
     if (report.baseline) lines.push("", `Baseline \`${report.baseline.subject}\` mean recall: ${f(report.baseline.meanRecall)}`);
     if (report.verdicts?.length) lines.push("", ...report.verdicts.map((v) => `- ${v}`));
   } else {

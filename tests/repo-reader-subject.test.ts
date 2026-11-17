@@ -9,6 +9,7 @@ import { loadFixture, loadGolden } from "../eval/src/golden.ts";
 import { renderMarkdown, runEval } from "../eval/src/harness.ts";
 import { createRepoReaderSubject, readerLimitsFromEnv, THRESHOLDS, verdicts } from "../eval/src/repo-reader-subject.ts";
 import baselineReadme from "../eval/src/subjects/baseline-readme.ts";
+import { RateLimitError } from "../src/server/github-repo.ts";
 import { answer, scriptedModel } from "./support/mock-model.ts";
 
 const repos = loadGolden().slice(0, 3);
@@ -44,19 +45,61 @@ describe("repo-reader eval subject (AC 7, offline with a mock model)", () => {
     expect(report.rows.length).toBe(3);
     for (const r of report.rows) {
       expect(r.error).toBeUndefined();
-      expect(r).toMatchObject({ modelCalls: 1, usd: 0.0045, hitLimit: false });
+      expect(r).toMatchObject({ modelCalls: 1, usd: 0.0045, hitLimit: false, githubRateLimited: 0 });
       expect(r.recall).toBeGreaterThan(0);
     }
     expect(report.mean.usd).toBeCloseTo(0.0045, 10);
     expect(report.mean.modelCalls).toBe(1);
     expect(report.hitLimitRuns).toBe(0);
+    expect(report.githubRateLimited).toBe(0);
     expect(logged).toEqual(repos.map((r) => `${r.fullName}:test-model:100+10`));
     const md = renderMarkdown(report);
-    expect(md).toContain("| Model calls | USD | Hit limit |");
+    expect(md).toContain("| Model calls | USD | Hit limit | GitHub rate-limited |");
     expect(md).toContain("0 of 3");
     expect(md).toContain("Baseline `baseline-readme` mean recall:");
     expect(md).toContain("Verdict mean recall:");
     expect(md).toContain("Verdict runs that hit the step cap or budget: PASS (0 of 3; needs <= 4)");
+  });
+
+  test("github-rate-limited reads are reported per repo and as a total, so a rate-limited repo is not read as a reader miss", async () => {
+    const [first, second] = repos;
+    if (!first || !second) throw new Error("no golden repos");
+    const blobs = (name: string) =>
+      loadFixture(name)
+        .tree.filter((t) => t.type === "blob")
+        .map((t) => t.path);
+    const model = scriptedModel((call, options) => {
+      const user = JSON.stringify(options.prompt);
+      const entry = [first, second].find((r) => user.includes(`Repository ${r.fullName} `));
+      if (!entry) throw new Error("unknown repo in prompt");
+      const path = blobs(entry.fullName)[0] as string;
+      const done = user.includes("tool-result");
+      return done || call % 3 === 2
+        ? {
+            text: answer(
+              blobs(entry.fullName)
+                .slice(0, 3)
+                .map((p) => ({ path: p })),
+            ),
+          }
+        : { tools: [{ name: "read", input: { path } }] };
+    });
+    const subject = createRepoReaderSubject({
+      model,
+      limits: { maxSteps: 15, tokenBudget: 80_000 },
+      // Only the first repo is rate limited.
+      readFile: (fx) => async () => {
+        if (fx.fullName === first.fullName) throw new RateLimitError(new Date(2_000_000_000_000));
+        return "x";
+      },
+      logCost: () => 0.001,
+    });
+    const report = await runEval({ step: "core-files", subject, repos: [first, second], loadFixture });
+    expect(report.rows.map((r) => r.githubRateLimited)).toEqual([1, 0]);
+    expect(report.githubRateLimited).toBe(1);
+    const md = renderMarkdown(report);
+    expect(md).toContain("| GitHub rate-limited |");
+    expect(md.split("\n").find((l) => l.startsWith("| **mean**"))).toEndWith("| 1 |"); // the total
   });
 
   test("verdicts apply the pre-registered thresholds: recall >= 0.60 AND >= baseline + 0.10; <= 4 limit hits", () => {
