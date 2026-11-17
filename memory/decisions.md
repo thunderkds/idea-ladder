@@ -76,6 +76,12 @@
 **Why**: user answer 2026-11-17 ("accept"), given to the Supervisor's choice "Accept the decisions / Debate them / Drop auto mode".
 **Files**: tasks/TASK_REVIEW_T006.md, tasks/TASK_GUIDE_T006.md
 
+### 2026-11-17 — T006 merged: repo reader on two back ends, golden-set recall 0.79
+**Decision**: Merged `T006-reader` into main (cd46679). Step `pick-core-files` in `ladder-generate` stores 3–10 ranked `core_files` (migration 0003) per repo + SHA; job statuses gain `picking`/`picked`. Model A back ends behind `MODEL_A_BACKEND`: `claude-code` (default; headless `claude -p` + stdio MCP server `reader-mcp.ts` with exactly list/read/search, `--tools ""`, `--strict-mcp-config`, `--restricted`, step cap enforced in the MCP server, `usd: null`) and `api` (AI SDK tool loop, `ANTHROPIC_API_KEY`). Runs report `githubRateLimited`; `reader-failed` carries the CLI's result text (Inngest logs only; learners see the code `reader-error`).
+**Why**: golden-set run 2026-11-17T04:03Z on bdeda6f (owner): mean recall 0.79 (needs ≥ 0.60 and ≥ baseline 0.06 + 0.10) PASS, 0 of 20 hit limit PASS, mean 4.45 model calls / 8,033 tokens per run; auto verify pass on 45a96dc; delta code-review 0 P0/P1 (2 P3).
+**Known gaps (left open)**: a throwing run loses its `githubRateLimited` count; an auth `is_error` ("Not logged in") is retried 3 times before `reader-error` (0 tokens each; T018 hardening list). Reader misses are mostly test files the golden labels count as core; usual extra is `package.json`/`README.md` (input for T007/T008 prompts).
+**Files**: src/server/repo-reader.ts, src/server/claude-code-reader.ts, src/server/reader-mcp.ts, src/server/ladder-generate.ts, src/server/cost-wiring.ts, src/server/config.ts, migrations/0003_core_files.up.sql, eval/src/repo-reader-subject.ts, eval/src/subjects/repo-reader.ts
+
 ## Infrastructure
 
 ### 2026-11-01 — Idea Ladder uses board mode local

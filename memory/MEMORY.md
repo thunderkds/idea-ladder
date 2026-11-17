@@ -38,3 +38,4 @@
 - [T015 merged](decisions.md#2026-11-12--t015-merged-offline-pwa-ordered-sync-push-reminders-progress-export-and-import) — offline PWA + ordered sync + push cron + export/import (migration 0006); decided-for-you list and known gaps; gotchas in learnings
 - [T006 claude-code back end](decisions.md#2026-11-12--t006-reader-gets-a-claude-code-back-end-user-correction-subscription-default-api-key-optional) — user correction: subscription default, API key optional; T006 restarted with AC 9; the audit's API-only note reversed
 - [T006 auto decisions accepted](decisions.md#2026-11-17--t006-auto-decisions-13-accepted-by-the-user) — user accepted 1–3 (AC 7 rate-limit count, keep old red tests, subscription run); golden-set run still waits for go-ahead
+- [T006 merged](decisions.md#2026-11-17--t006-merged-repo-reader-on-two-back-ends-golden-set-recall-079) — pick-core-files + core_files (0003); claude-code default via MCP list/read/search; recall 0.79 PASS; gaps for T018
