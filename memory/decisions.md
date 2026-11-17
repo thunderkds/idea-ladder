@@ -71,6 +71,11 @@
 **Why**: user answer 2026-11-12 ("I remember we update the solution to the claude subscription, the API key is optional"; chose "Add claude-code back end"). Open risk carried from the stack decision: check Anthropic's current terms before relying on the subscription beyond the owner's own use (T018 switches production to `api`).
 **Files**: tasks/TASK_GUIDE_T006.md, PROJECT_KANBAN.md, src/server/repo-reader.ts, src/server/config.ts, eval/src/subjects/repo-reader.ts
 
+### 2026-11-17 — T006 auto decisions 1–3 accepted by the user
+**Decision**: The user accepted all three T006 auto-mode decisions as written: (1) add the `github-rate-limited` count to AC 7 before any agent codes it; (2) keep and finish the 2026-11-12 session's uncommitted red tests rather than discard them; (3) the golden-set run uses the `claude-code` back end on the owner's subscription, no API key. The run itself still waits for the user's separate go-ahead (it uses the owner's `gh` token and subscription quota; the permission classifier denied a QA spawn for it).
+**Why**: user answer 2026-11-17 ("accept"), given to the Supervisor's choice "Accept the decisions / Debate them / Drop auto mode".
+**Files**: tasks/TASK_REVIEW_T006.md, tasks/TASK_GUIDE_T006.md
+
 ## Infrastructure
 
 ### 2026-11-01 — Idea Ladder uses board mode local
