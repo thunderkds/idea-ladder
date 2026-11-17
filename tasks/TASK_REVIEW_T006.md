@@ -36,9 +36,10 @@ Mode: auto
 2. <what was decided> — FACT: <path>:<line> "<quoted text>"
 3. <what was decided> — DEBATED: <option> (Advocate 1: <its proposal>; Advocate 2: <its proposal>) ⚠ decided for you — please review
 4. <what was decided> — SAFER OPTION: <why> ⚠ decided for you — please review
-Paused: <only when a stop that stays paused the task: which one, and why>
+5. The 2026-11-17T03:42:50Z golden-set run (20/20 `reader-failed`, 0 tokens, recall 0.00) is an invalid run, not a threshold verdict: the child `claude` ran without the owner's `CLAUDE_CONFIG_DIR` and was not logged in (Supervisor probe printed `"is_error": true, "subtype": "success", "result": "Not logged in · Please run /login"`); fixed the hidden message in bdeda6f; the run is redone with `CLAUDE_CONFIG_DIR` set — FACT: eval/reports/core-files-20261117T034250Z.md:8 "reader-failed: claude reported an error (success)"
+Paused: the valid golden-set run (AC 7) — the owner re-runs it in their terminal with `CLAUDE_CONFIG_DIR=/home/thunderkds/.claude-hung2`; the Supervisor's own run with the owner's `gh` token was denied by the permission classifier on 2026-11-17
 Checks: tests `<command>` — <result>; reviews <skill — result>; real run `<command>` — printed `<what it printed>` (auto-checked, not /verify)
-Memory: <each entry the memory pass wrote, as `file — entry` | nothing new>
+Memory: <each entry the memory pass wrote, as `file — entry` | nothing new>; memory/learnings.md — Gotchas: eval outside the session needs CLAUDE_CONFIG_DIR
 Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | /verify (yours)>
 
 -->
@@ -139,7 +140,8 @@ Mode: auto
 2. Keep and finish the 2026-11-12 session's uncommitted red tests (`tests/claude-code-reader.test.ts`, `tests/reader-mcp.test.ts`, `tests/support/fake-claude.ts`), never discard them — FACT: memory/decisions.md:76 "user answer 2026-11-17" (was flagged for review; the user reviewed and accepted it)
 3. The golden-set run (AC 7) uses the `claude-code` back end on the owner's subscription, no API key — FACT: memory/decisions.md:76 "user answer 2026-11-17"; the run itself waits for the user's go-ahead (see Paused)
 4. T007 guide aligned with T006 as built (migration 0007, `mapping`/`mapped` status, `model-a.ts`, `usd: null` on claude-code), main d4a0300 — RULE: Supervisor owns guides; read-only check by an Explore agent, findings spot-checked against `migrations/` and `src/server/app.ts:61`
-Paused: the golden-set run (AC 7) — the QA spawn that runs it with the owner's `gh` token on the owner's Claude subscription was denied by the permission classifier on 2026-11-17; it needs the user's go-ahead
-Checks: tests `bun run typecheck && bun run lint && bun test` — 308 pass / 0 fail, eval 77 pass / 0 fail on 3868745 (re-run by the Supervisor); reviews code-review + security-review on 72a0e3c (main ea107f1) — no P0; real run `bun run eval -- --step core-files --subject repo-reader` — not yet run
-Memory: memory/decisions.md — 2026-11-17 T006 auto decisions 1–3 accepted by the user; memory/MEMORY.md — index line for it
+5. The 2026-11-17T03:42:50Z golden-set run (20/20 `reader-failed`, 0 tokens, recall 0.00) is an invalid run, not a threshold verdict: the child `claude` ran without the owner's `CLAUDE_CONFIG_DIR` and was not logged in (Supervisor probe printed `"is_error": true, "subtype": "success", "result": "Not logged in · Please run /login"`); fixed the hidden message in bdeda6f; the run is redone with `CLAUDE_CONFIG_DIR` set — FACT: eval/reports/core-files-20261117T034250Z.md:8 "reader-failed: claude reported an error (success)"
+Paused: the valid golden-set run (AC 7) — the owner re-runs it in their terminal with `CLAUDE_CONFIG_DIR=/home/thunderkds/.claude-hung2`; the Supervisor's own run with the owner's `gh` token was denied by the permission classifier on 2026-11-17
+Checks: tests `bun run typecheck && bun run lint && bun test` — 310 pass / 0 fail, eval 77 pass / 0 fail on bdeda6f (re-run by the Supervisor); reviews code-review + security-review on 72a0e3c (main ea107f1) — no P0; real run `bun run eval -- --step core-files --subject repo-reader` — first run 2026-11-17T03:42:50Z invalid (Not logged in, decision 5); valid run pending
+Memory: memory/decisions.md — 2026-11-17 T006 auto decisions 1–3 accepted by the user; memory/MEMORY.md — index line for it; memory/learnings.md — Gotchas: eval outside the session needs CLAUDE_CONFIG_DIR
 Not done: golden-set run (AC 7); auto verify; merge and push (allowed under [admin] only after the auto verify passes)
