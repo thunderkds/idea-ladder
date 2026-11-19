@@ -17,6 +17,7 @@ import {
   signInUser,
 } from "./auth.ts";
 import type { Config } from "./config.ts";
+import { evidencePassedLevels } from "./evidence.ts";
 import { authorizeUrl, fetchGithubUser } from "./github.ts";
 import {
   GitHubError,
@@ -26,8 +27,9 @@ import {
   RepoEmptyError,
   RepoNotFoundError,
 } from "./github-repo.ts";
-import { getLadderView, ladderExists, listLadders, noPasses, type PassedLevels } from "./ladder-view.ts";
+import { getLadderView, ladderExists, listLadders, type PassedLevels } from "./ladder-view.ts";
 import { checkConceptsBody, getConcepts, putConcepts } from "./learner-concepts.ts";
+import { startMcqAttempt, submitMcqAttempt } from "./mcq-test.ts";
 import { offlinePack, syncRatings } from "./offline.ts";
 import { exportProgress, importProgress, MAX_IMPORT_BYTES, parseProgressFile } from "./progress.ts";
 import { checkSubscribe, isEndpoint, pushStatus, subscribe, unsubscribe } from "./push.ts";
@@ -97,7 +99,7 @@ export function createApp(opts: {
   github?: GithubRepoClient;
   /** Sends ladder/generate.requested. Default: none configured, so /start answers queue-unavailable. */
   enqueue?: Enqueue;
-  /** Levels a learner has passed on a ladder. Default: none (T012 supplies the real one). */
+  /** Levels a learner has passed on a ladder. Default: the levels with an evidence record (T012). */
   passedLevels?: PassedLevels;
   /** Inngest serve handler, mounted at /api/inngest. */
   inngestHandler?: (c: Context) => Promise<Response>;
@@ -109,7 +111,7 @@ export function createApp(opts: {
     (async () => {
       throw new Error("no Inngest client configured");
     });
-  const passedLevels = opts.passedLevels ?? noPasses;
+  const passedLevels = opts.passedLevels ?? evidencePassedLevels(sql);
   const now = opts.now ?? Date.now;
   const secret = config.sessionSecret;
   const cookieBase = { httpOnly: true, sameSite: "Lax", secure: config.secureCookies, path: "/" } as const;
@@ -134,6 +136,7 @@ export function createApp(opts: {
     "/api/review/*",
     "/api/push/*",
     "/api/progress/*",
+    "/api/mcq-attempts/*",
     SETTINGS_PATH,
   ]) {
     app.use(path, async (c, next) => {
@@ -172,6 +175,35 @@ export function createApp(opts: {
     if ("field" in checked) return c.json(checked, 422);
     const saved = await putConcepts(sql, c.req.param("ladderId"), user.userId, checked.names);
     return saved === "ok" ? c.json({ ok: true }) : c.json({ error: saved }, 404);
+  });
+
+  // T012: the MCQ pass test. Keys never leave the server; only code scores; a pass writes the evidence record.
+  app.post("/api/ladders/:ladderId/levels/:level/mcq-attempts", async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const at = new Date(now());
+    const result = await startMcqAttempt(
+      sql,
+      user.userId,
+      c.req.param("ladderId"),
+      c.req.param("level"),
+      at,
+      passedLevels,
+    );
+    if (!("status" in result)) return c.json(result);
+    const { status, ...problem } = result;
+    return c.json(problem, status);
+  });
+
+  app.post("/api/mcq-attempts/:attemptId/submit", async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const body = (await c.req.json().catch(() => undefined)) as { answers?: unknown } | undefined;
+    if (!body || typeof body !== "object") return c.json({ error: "invalid-request" }, 400);
+    const result = await submitMcqAttempt(sql, user.userId, c.req.param("attemptId"), body.answers, new Date(now()));
+    if (!("status" in result)) return c.json(result);
+    const { status, ...problem } = result;
+    return c.json(problem, status);
   });
 
   // The client pages; an unknown id still gets the client (it draws the 404 page) with status 404.
