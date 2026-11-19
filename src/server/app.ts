@@ -59,7 +59,7 @@ const safeDecode = (value: string) => {
     return "\x00"; // malformed escapes: treat as hostile
   }
 };
-const LADDER_PATH = /^\/ladders\/[1-9][0-9]{0,17}$/;
+const LADDER_PATH = /^\/ladders\/[1-9][0-9]{0,17}(\/concepts)?$/;
 const REVIEW_PATH = "/review";
 const SETTINGS_PATH = "/settings";
 function returnPath(value: string | undefined): string | undefined {
