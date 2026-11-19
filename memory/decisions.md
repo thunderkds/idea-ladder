@@ -82,6 +82,12 @@
 **Known gaps (left open)**: a throwing run loses its `githubRateLimited` count; an auth `is_error` ("Not logged in") is retried 3 times before `reader-error` (0 tokens each; T018 hardening list). Reader misses are mostly test files the golden labels count as core; usual extra is `package.json`/`README.md` (input for T007/T008 prompts).
 **Files**: src/server/repo-reader.ts, src/server/claude-code-reader.ts, src/server/reader-mcp.ts, src/server/ladder-generate.ts, src/server/cost-wiring.ts, src/server/config.ts, migrations/0003_core_files.up.sql, eval/src/repo-reader-subject.ts, eval/src/subjects/repo-reader.ts
 
+### 2026-11-19 — T007 merged (rebuild): concept mapper on model A, learner concept edits
+**Decision**: Merged `T007-concept-mapper` into main (d7a6385). The first build was lost (never pushed), so T007 was rebuilt from its guide. Step `map-concepts` follows `pick-core-files`: one structured model A call through `generate` (src/server/model-a.ts, back ends `claude-code` default and `api`; T008 and T014 reuse it) maps the repo to 3–6 grounded concepts, stored in `repo_concepts` per repo + SHA (migration 0007); job statuses gain `mapping`/`mapped`, and `mapped` is now the final status the status page polls for. Learners edit their own list on `/ladders/:id/concepts` (`learner_concepts`, GET/PUT `/api/ladders/:ladderId/concepts`, 422 names the field); shared rows never change. Slugs: `+` → `-plus-`, `#` → `-sharp-`, hash suffix for non-Latin names. Eval: `cd eval && bun run eval -- --step concepts --subject concept-mapper` (no root script).
+**Why**: user "rebuild T007" (2026-11-19); code-review 0 P0, 1 P1 + 3 P2 fixed; migration-safety GO; auto verify pass on 8434607 (session 7623ab38-86e3-4868-9160-f7cb19f19a9b).
+**Known gaps (left open)**: golden-set run (AC 7) and a live `/start` are the owner's; the edit screen has no way in from a new repo until T008 saves ladder rows; focus stays on Save after a failed save; 6 P3 on the cut list (reports/code-review_T007-concept-mapper_20261119T081600.html); the status CHECK swap needs `NOT VALID` + `VALIDATE` at scale (T018); two T015 offline e2e tests fail on main before T007.
+**Files**: src/server/model-a.ts, src/server/concept-mapper.ts, src/server/learner-concepts.ts, src/server/ladder-generate.ts, src/server/main.ts, src/server/app.ts, src/shared/concepts.ts, src/client/Concepts.tsx, src/client/App.tsx, migrations/0007_concepts.up.sql, eval/src/concept-mapper-subject.ts, eval/src/harness.ts
+
 ## Infrastructure
 
 ### 2026-11-01 — Idea Ladder uses board mode local

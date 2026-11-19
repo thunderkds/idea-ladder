@@ -41,3 +41,4 @@
 - [T006 claude-code back end](decisions.md#2026-11-12--t006-reader-gets-a-claude-code-back-end-user-correction-subscription-default-api-key-optional) — user correction: subscription default, API key optional; T006 restarted with AC 9; the audit's API-only note reversed
 - [T006 auto decisions accepted](decisions.md#2026-11-17--t006-auto-decisions-13-accepted-by-the-user) — user accepted 1–3 (AC 7 rate-limit count, keep old red tests, subscription run); golden-set run still waits for go-ahead
 - [T006 merged](decisions.md#2026-11-17--t006-merged-repo-reader-on-two-back-ends-golden-set-recall-079) — pick-core-files + core_files (0003); claude-code default via MCP list/read/search; recall 0.79 PASS; gaps for T018
+- [T007 merged (rebuild)](decisions.md#2026-11-19--t007-merged-rebuild-concept-mapper-on-model-a-learner-concept-edits) — map-concepts + repo_concepts/learner_concepts (0007); model-a.ts generate for T008/T014; mapped is final; gaps listed
