@@ -1,0 +1,884 @@
+[
+  {
+    "id": "kl-01",
+    "kind": "numeric",
+    "question": "What is the gzip size, in bytes, of the klona/lite mode?",
+    "options": [
+      "354",
+      "240",
+      "451",
+      "501"
+    ],
+    "key": "354",
+    "chunk": "#### `klona/json`\n> **Size (gzip):** 240 bytes<br>\n> **Availability:** [CommonJS](https://unpkg.com/klona/json/index.js), [ES Module](https://unpkg.com/klona/json/index.mjs), [UMD](https://unpkg.com/klona/json/index.min.js)<br>\n> **Ability:** JSON data types\n\n```js\nimport { klona } from 'klona/json';\n```\n\n#### `klona/lite`\n> **Size (gzip):** 354 bytes<br>\n> **Availability:** [CommonJS](https://unpkg.com/klona/lite/index.js), [ES Module](https://unpkg.com/klona/lite/index.mjs), [UMD](https://unpkg.com/klona/lite/index.min.js)<br>\n> **Ability:** extends `klona/json` with support for custom class, Date, and RegExp\n\n```js\nimport { klona } from 'klona/lite';\n```\n\n#### `klona`\n> **Size (gzip):** 451 bytes<br>\n> **Availability:** [CommonJS](https://unpkg.com/klona/dist/index.js), [ES Module](https://unpkg.com/klona/dist/index.mjs), [UMD](https://unpkg.com/klona/dist/index.min.js)<br>\n> **Ability:** extends `klona/lite` with support for Map, Set, DataView, ArrayBuffer, TypedArray\n\n```js\nimport { klona } from 'klona';\n```\n\n#### `klona/full`\n> **Size (gzip):** 501 bytes<br>\n> **Availability:** [CommonJS](https://unpkg.com/klona/full/index.js), [ES Module](https://unpkg.com/klona/full/index.mjs), [UMD](https://unpkg.com/klona/full/index.min.js)<br>\n> **Ability:** extends `klona` with support for Symbol properties and non-enumerable properties",
+    "source": {
+      "repo": "lukeed/klona",
+      "path": "readme.md",
+      "sha": "e563341d88f433e74a9b4c3c0372d4ba55d2f79e"
+    }
+  },
+  {
+    "id": "kl-02",
+    "kind": "numeric",
+    "question": "What is the gzip size, in bytes, of the klona/json mode?",
+    "options": [
+      "354",
+      "240",
+      "451",
+      "501"
+    ],
+    "key": "240",
+    "chunk": "#### `klona/json`\n> **Size (gzip):** 240 bytes<br>\n> **Availability:** [CommonJS](https://unpkg.com/klona/json/index.js), [ES Module](https://unpkg.com/klona/json/index.mjs), [UMD](https://unpkg.com/klona/json/index.min.js)<br>\n> **Ability:** JSON data types\n\n```js\nimport { klona } from 'klona/json';\n```\n\n#### `klona/lite`\n> **Size (gzip):** 354 bytes<br>\n> **Availability:** [CommonJS](https://unpkg.com/klona/lite/index.js), [ES Module](https://unpkg.com/klona/lite/index.mjs), [UMD](https://unpkg.com/klona/lite/index.min.js)<br>\n> **Ability:** extends `klona/json` with support for custom class, Date, and RegExp\n\n```js\nimport { klona } from 'klona/lite';\n```\n\n#### `klona`\n> **Size (gzip):** 451 bytes<br>\n> **Availability:** [CommonJS](https://unpkg.com/klona/dist/index.js), [ES Module](https://unpkg.com/klona/dist/index.mjs), [UMD](https://unpkg.com/klona/dist/index.min.js)<br>\n> **Ability:** extends `klona/lite` with support for Map, Set, DataView, ArrayBuffer, TypedArray\n\n```js\nimport { klona } from 'klona';\n```\n\n#### `klona/full`\n> **Size (gzip):** 501 bytes<br>\n> **Availability:** [CommonJS](https://unpkg.com/klona/full/index.js), [ES Module](https://unpkg.com/klona/full/index.mjs), [UMD](https://unpkg.com/klona/full/index.min.js)<br>\n> **Ability:** extends `klona` with support for Symbol properties and non-enumerable properties",
+    "source": {
+      "repo": "lukeed/klona",
+      "path": "readme.md",
+      "sha": "e563341d88f433e74a9b4c3c0372d4ba55d2f79e"
+    }
+  },
+  {
+    "id": "kl-03",
+    "kind": "span",
+    "question": "Which mode adds support for Symbol properties and non-enumerable properties?",
+    "options": [
+      "klona/lite",
+      "klona/json",
+      "klona/full",
+      "klona"
+    ],
+    "key": "klona/full",
+    "chunk": "#### `klona/json`\n> **Size (gzip):** 240 bytes<br>\n> **Availability:** [CommonJS](https://unpkg.com/klona/json/index.js), [ES Module](https://unpkg.com/klona/json/index.mjs), [UMD](https://unpkg.com/klona/json/index.min.js)<br>\n> **Ability:** JSON data types\n\n```js\nimport { klona } from 'klona/json';\n```\n\n#### `klona/lite`\n> **Size (gzip):** 354 bytes<br>\n> **Availability:** [CommonJS](https://unpkg.com/klona/lite/index.js), [ES Module](https://unpkg.com/klona/lite/index.mjs), [UMD](https://unpkg.com/klona/lite/index.min.js)<br>\n> **Ability:** extends `klona/json` with support for custom class, Date, and RegExp\n\n```js\nimport { klona } from 'klona/lite';\n```\n\n#### `klona`\n> **Size (gzip):** 451 bytes<br>\n> **Availability:** [CommonJS](https://unpkg.com/klona/dist/index.js), [ES Module](https://unpkg.com/klona/dist/index.mjs), [UMD](https://unpkg.com/klona/dist/index.min.js)<br>\n> **Ability:** extends `klona/lite` with support for Map, Set, DataView, ArrayBuffer, TypedArray\n\n```js\nimport { klona } from 'klona';\n```\n\n#### `klona/full`\n> **Size (gzip):** 501 bytes<br>\n> **Availability:** [CommonJS](https://unpkg.com/klona/full/index.js), [ES Module](https://unpkg.com/klona/full/index.mjs), [UMD](https://unpkg.com/klona/full/index.min.js)<br>\n> **Ability:** extends `klona` with support for Symbol properties and non-enumerable properties",
+    "source": {
+      "repo": "lukeed/klona",
+      "path": "readme.md",
+      "sha": "e563341d88f433e74a9b4c3c0372d4ba55d2f79e"
+    }
+  },
+  {
+    "id": "kl-04",
+    "kind": "span",
+    "question": "Which mode extends klona/lite with support for Map, Set, DataView, ArrayBuffer and TypedArray?",
+    "options": [
+      "klona/full",
+      "klona/json",
+      "klona/lite",
+      "klona"
+    ],
+    "key": "klona",
+    "chunk": "#### `klona/json`\n> **Size (gzip):** 240 bytes<br>\n> **Availability:** [CommonJS](https://unpkg.com/klona/json/index.js), [ES Module](https://unpkg.com/klona/json/index.mjs), [UMD](https://unpkg.com/klona/json/index.min.js)<br>\n> **Ability:** JSON data types\n\n```js\nimport { klona } from 'klona/json';\n```\n\n#### `klona/lite`\n> **Size (gzip):** 354 bytes<br>\n> **Availability:** [CommonJS](https://unpkg.com/klona/lite/index.js), [ES Module](https://unpkg.com/klona/lite/index.mjs), [UMD](https://unpkg.com/klona/lite/index.min.js)<br>\n> **Ability:** extends `klona/json` with support for custom class, Date, and RegExp\n\n```js\nimport { klona } from 'klona/lite';\n```\n\n#### `klona`\n> **Size (gzip):** 451 bytes<br>\n> **Availability:** [CommonJS](https://unpkg.com/klona/dist/index.js), [ES Module](https://unpkg.com/klona/dist/index.mjs), [UMD](https://unpkg.com/klona/dist/index.min.js)<br>\n> **Ability:** extends `klona/lite` with support for Map, Set, DataView, ArrayBuffer, TypedArray\n\n```js\nimport { klona } from 'klona';\n```\n\n#### `klona/full`\n> **Size (gzip):** 501 bytes<br>\n> **Availability:** [CommonJS](https://unpkg.com/klona/full/index.js), [ES Module](https://unpkg.com/klona/full/index.mjs), [UMD](https://unpkg.com/klona/full/index.min.js)<br>\n> **Ability:** extends `klona` with support for Symbol properties and non-enumerable properties",
+    "source": {
+      "repo": "lukeed/klona",
+      "path": "readme.md",
+      "sha": "e563341d88f433e74a9b4c3c0372d4ba55d2f79e"
+    }
+  },
+  {
+    "id": "kl-05",
+    "kind": "paraphrase",
+    "question": "What kinds of data can the klona/json mode copy?",
+    "options": [
+      "only plain JSON values",
+      "any class instance, Map or Set",
+      "only Symbol properties",
+      "only typed arrays"
+    ],
+    "key": "only plain JSON values",
+    "chunk": "#### `klona/json`\n> **Size (gzip):** 240 bytes<br>\n> **Availability:** [CommonJS](https://unpkg.com/klona/json/index.js), [ES Module](https://unpkg.com/klona/json/index.mjs), [UMD](https://unpkg.com/klona/json/index.min.js)<br>\n> **Ability:** JSON data types\n\n```js\nimport { klona } from 'klona/json';\n```\n\n#### `klona/lite`\n> **Size (gzip):** 354 bytes<br>\n> **Availability:** [CommonJS](https://unpkg.com/klona/lite/index.js), [ES Module](https://unpkg.com/klona/lite/index.mjs), [UMD](https://unpkg.com/klona/lite/index.min.js)<br>\n> **Ability:** extends `klona/json` with support for custom class, Date, and RegExp\n\n```js\nimport { klona } from 'klona/lite';\n```\n\n#### `klona`\n> **Size (gzip):** 451 bytes<br>\n> **Availability:** [CommonJS](https://unpkg.com/klona/dist/index.js), [ES Module](https://unpkg.com/klona/dist/index.mjs), [UMD](https://unpkg.com/klona/dist/index.min.js)<br>\n> **Ability:** extends `klona/lite` with support for Map, Set, DataView, ArrayBuffer, TypedArray\n\n```js\nimport { klona } from 'klona';\n```\n\n#### `klona/full`\n> **Size (gzip):** 501 bytes<br>\n> **Availability:** [CommonJS](https://unpkg.com/klona/full/index.js), [ES Module](https://unpkg.com/klona/full/index.mjs), [UMD](https://unpkg.com/klona/full/index.min.js)<br>\n> **Ability:** extends `klona` with support for Symbol properties and non-enumerable properties",
+    "source": {
+      "repo": "lukeed/klona",
+      "path": "readme.md",
+      "sha": "e563341d88f433e74a9b4c3c0372d4ba55d2f79e"
+    }
+  },
+  {
+    "id": "kl-06",
+    "kind": "span",
+    "question": "What does a deep clone copy into a new instance, instead of references to them?",
+    "options": [
+      "references",
+      "values",
+      "keys",
+      "prototypes"
+    ],
+    "key": "values",
+    "chunk": "Unlike a \"shallow copy\" (eg, `Object.assign`), a \"deep clone\" recursively traverses a source input and copies its _values_ &mdash; instead of _references_ to its values &mdash; into a new instance of that input. The result is a structurally equivalent clone that operates independently of the original source and controls its own values.",
+    "source": {
+      "repo": "lukeed/klona",
+      "path": "readme.md",
+      "sha": "e563341d88f433e74a9b4c3c0372d4ba55d2f79e"
+    }
+  },
+  {
+    "id": "kl-07",
+    "kind": "span",
+    "question": "In which language does the word klona mean clone?",
+    "options": [
+      "Norwegian",
+      "Danish",
+      "Swedish",
+      "German"
+    ],
+    "key": "Swedish",
+    "chunk": "> **Why \"klona\"?** It's \"clone\" in Swedish.<br>\n> **What's with the sheep?** [Dolly](https://en.wikipedia.org/wiki/Dolly_(sheep)).",
+    "source": {
+      "repo": "lukeed/klona",
+      "path": "readme.md",
+      "sha": "e563341d88f433e74a9b4c3c0372d4ba55d2f79e"
+    }
+  },
+  {
+    "id": "kl-08",
+    "kind": "span",
+    "question": "Which sheep does the README point to?",
+    "options": [
+      "Shaun",
+      "Molly",
+      "Bella",
+      "Dolly"
+    ],
+    "key": "Dolly",
+    "chunk": "> **Why \"klona\"?** It's \"clone\" in Swedish.<br>\n> **What's with the sheep?** [Dolly](https://en.wikipedia.org/wiki/Dolly_(sheep)).",
+    "source": {
+      "repo": "lukeed/klona",
+      "path": "readme.md",
+      "sha": "e563341d88f433e74a9b4c3c0372d4ba55d2f79e"
+    }
+  },
+  {
+    "id": "kl-09",
+    "kind": "span",
+    "question": "Which command installs klona?",
+    "options": [
+      "npm install --save klona",
+      "npm install --save-dev klona",
+      "yarn add klona --dev",
+      "pnpm add klona --global"
+    ],
+    "key": "npm install --save klona",
+    "chunk": "$ npm install --save klona",
+    "source": {
+      "repo": "lukeed/klona",
+      "path": "readme.md",
+      "sha": "e563341d88f433e74a9b4c3c0372d4ba55d2f79e"
+    }
+  },
+  {
+    "id": "kl-10",
+    "kind": "span",
+    "question": "What does klona(input) return?",
+    "options": [
+      "a shallow copy of the input",
+      "a deep copy/clone of the input",
+      "a frozen reference to the input",
+      "a JSON string of the input"
+    ],
+    "key": "a deep copy/clone of the input",
+    "chunk": "### klona(input)\nReturns: `typeof input`\n\nReturns a deep copy/clone of the input.",
+    "source": {
+      "repo": "lukeed/klona",
+      "path": "readme.md",
+      "sha": "e563341d88f433e74a9b4c3c0372d4ba55d2f79e"
+    }
+  },
+  {
+    "id": "kl-11",
+    "kind": "span",
+    "question": "Which Node version ran the klona benchmarks?",
+    "options": [
+      "v14.15.0",
+      "v10.24.1",
+      "v12.18.3",
+      "v16.13.0"
+    ],
+    "key": "v12.18.3",
+    "chunk": "> Running Node v12.18.3",
+    "source": {
+      "repo": "lukeed/klona",
+      "path": "readme.md",
+      "sha": "e563341d88f433e74a9b4c3c0372d4ba55d2f79e"
+    }
+  },
+  {
+    "id": "kl-12",
+    "kind": "span",
+    "question": "Which benchmark category is like JSON but adds RegExp, Date and undefined values?",
+    "options": [
+      "DEFAULT",
+      "FULL",
+      "JSON",
+      "LITE"
+    ],
+    "key": "LITE",
+    "chunk": "* `JSON` – compares an array of objects comprised of JSON data types (`String`, `Number`, `null`, `Array`, `Object`)\n* `LITE` – like `JSON`, but adds `RegExp`, `Date` and `undefined` values\n* `DEFAULT` – object with `RegExp`, `Date`, `Array`, `Map`, `Set`, custom class, `Int8Array`, `DataView`, `Buffer` values\n* `FULL` – like `DEFAULT`, but adds `Symbol` and non-enumerable properties",
+    "source": {
+      "repo": "lukeed/klona",
+      "path": "readme.md",
+      "sha": "e563341d88f433e74a9b4c3c0372d4ba55d2f79e"
+    }
+  },
+  {
+    "id": "kl-13",
+    "kind": "paraphrase",
+    "question": "What does the FULL benchmark category add to the DEFAULT one?",
+    "options": [
+      "Symbol keys and hidden properties",
+      "typed arrays and buffers",
+      "maps and sets",
+      "dates and regular expressions"
+    ],
+    "key": "Symbol keys and hidden properties",
+    "chunk": "* `JSON` – compares an array of objects comprised of JSON data types (`String`, `Number`, `null`, `Array`, `Object`)\n* `LITE` – like `JSON`, but adds `RegExp`, `Date` and `undefined` values\n* `DEFAULT` – object with `RegExp`, `Date`, `Array`, `Map`, `Set`, custom class, `Int8Array`, `DataView`, `Buffer` values\n* `FULL` – like `DEFAULT`, but adds `Symbol` and non-enumerable properties",
+    "source": {
+      "repo": "lukeed/klona",
+      "path": "readme.md",
+      "sha": "e563341d88f433e74a9b4c3c0372d4ba55d2f79e"
+    }
+  },
+  {
+    "id": "kl-14",
+    "kind": "numeric",
+    "question": "How many bytes is dset, according to the Related list?",
+    "options": [
+      "120",
+      "160",
+      "304",
+      "489"
+    ],
+    "key": "160",
+    "chunk": "* [dlv](https://github.com/developit/dlv) – safely **read** from deep properties in 120 bytes\n* [dset](https://github.com/lukeed/dset) – safely **write** into deep properties in 160 bytes\n* [dequal](https://github.com/lukeed/dequal) – safely check for deep equality in 304 to 489 bytes",
+    "source": {
+      "repo": "lukeed/klona",
+      "path": "readme.md",
+      "sha": "e563341d88f433e74a9b4c3c0372d4ba55d2f79e"
+    }
+  },
+  {
+    "id": "kl-15",
+    "kind": "paraphrase",
+    "question": "What does dequal do?",
+    "options": [
+      "copies a value deeply",
+      "reads a deep property",
+      "checks whether two values are deeply equal",
+      "writes a deep property"
+    ],
+    "key": "checks whether two values are deeply equal",
+    "chunk": "* [dlv](https://github.com/developit/dlv) – safely **read** from deep properties in 120 bytes\n* [dset](https://github.com/lukeed/dset) – safely **write** into deep properties in 160 bytes\n* [dequal](https://github.com/lukeed/dequal) – safely check for deep equality in 304 to 489 bytes",
+    "source": {
+      "repo": "lukeed/klona",
+      "path": "readme.md",
+      "sha": "e563341d88f433e74a9b4c3c0372d4ba55d2f79e"
+    }
+  },
+  {
+    "id": "it-16",
+    "kind": "span",
+    "question": "What does itoa convert to decimal strings?",
+    "options": [
+      "floating point numbers",
+      "byte slices",
+      "big integers",
+      "integer primitives"
+    ],
+    "key": "integer primitives",
+    "chunk": "This crate provides a fast conversion of integer primitives to decimal strings.\nThe implementation comes straight from [libcore] but avoids the performance\npenalty of going through [`core::fmt::Formatter`].",
+    "source": {
+      "repo": "dtolnay/itoa",
+      "path": "README.md",
+      "sha": "9339ca99a43c550b5ee36e2afe524d1c90413461"
+    }
+  },
+  {
+    "id": "it-17",
+    "kind": "span",
+    "question": "Where does the itoa implementation come straight from?",
+    "options": [
+      "libcore",
+      "libstd",
+      "liballoc",
+      "libc"
+    ],
+    "key": "libcore",
+    "chunk": "This crate provides a fast conversion of integer primitives to decimal strings.\nThe implementation comes straight from [libcore] but avoids the performance\npenalty of going through [`core::fmt::Formatter`].",
+    "source": {
+      "repo": "dtolnay/itoa",
+      "path": "README.md",
+      "sha": "9339ca99a43c550b5ee36e2afe524d1c90413461"
+    }
+  },
+  {
+    "id": "it-18",
+    "kind": "span",
+    "question": "Which crate does the itoa README point to for printing floating point primitives?",
+    "options": [
+      "ryu",
+      "zmij",
+      "dtoa",
+      "lexical"
+    ],
+    "key": "zmij",
+    "chunk": "This crate provides a fast conversion of integer primitives to decimal strings.\nThe implementation comes straight from [libcore] but avoids the performance\npenalty of going through [`core::fmt::Formatter`].\n\nSee also [`zmij`] for printing floating point primitives.",
+    "source": {
+      "repo": "dtolnay/itoa",
+      "path": "README.md",
+      "sha": "9339ca99a43c550b5ee36e2afe524d1c90413461"
+    }
+  },
+  {
+    "id": "it-19",
+    "kind": "span",
+    "question": "Which method of Buffer formats the integer in the example?",
+    "options": [
+      "print",
+      "write",
+      "format",
+      "to_string"
+    ],
+    "key": "format",
+    "chunk": "let mut buffer = itoa::Buffer::new();\n    let printed = buffer.format(128u64);\n    assert_eq!(printed, \"128\");",
+    "source": {
+      "repo": "dtolnay/itoa",
+      "path": "README.md",
+      "sha": "9339ca99a43c550b5ee36e2afe524d1c90413461"
+    }
+  },
+  {
+    "id": "it-20",
+    "kind": "numeric",
+    "question": "Which integer does the example format?",
+    "options": [
+      "64",
+      "256",
+      "1024",
+      "128"
+    ],
+    "key": "128",
+    "chunk": "let mut buffer = itoa::Buffer::new();\n    let printed = buffer.format(128u64);\n    assert_eq!(printed, \"128\");",
+    "source": {
+      "repo": "dtolnay/itoa",
+      "path": "README.md",
+      "sha": "9339ca99a43c550b5ee36e2afe524d1c90413461"
+    }
+  },
+  {
+    "id": "it-21",
+    "kind": "span",
+    "question": "Which unit does the vertical axis of the benchmark chart show?",
+    "options": [
+      "nanoseconds",
+      "microseconds",
+      "operations per second",
+      "bytes"
+    ],
+    "key": "nanoseconds",
+    "chunk": "The [itoa-benchmark] compares this library and other Rust integer formatting\nimplementations across a range of integer sizes. The vertical axis in this chart\nshows nanoseconds taken by a single execution of\n`itoa::Buffer::new().format(value)` so a lower result indicates a faster\nlibrary.",
+    "source": {
+      "repo": "dtolnay/itoa",
+      "path": "README.md",
+      "sha": "9339ca99a43c550b5ee36e2afe524d1c90413461"
+    }
+  },
+  {
+    "id": "it-22",
+    "kind": "paraphrase",
+    "question": "What does a lower result in the chart mean?",
+    "options": [
+      "the library uses less memory",
+      "the library runs faster",
+      "the library has fewer features",
+      "the library compiles sooner"
+    ],
+    "key": "the library runs faster",
+    "chunk": "The [itoa-benchmark] compares this library and other Rust integer formatting\nimplementations across a range of integer sizes. The vertical axis in this chart\nshows nanoseconds taken by a single execution of\n`itoa::Buffer::new().format(value)` so a lower result indicates a faster\nlibrary.",
+    "source": {
+      "repo": "dtolnay/itoa",
+      "path": "README.md",
+      "sha": "9339ca99a43c550b5ee36e2afe524d1c90413461"
+    }
+  },
+  {
+    "id": "it-23",
+    "kind": "numeric",
+    "question": "Which version of itoa does the README put in the dependencies?",
+    "options": [
+      "0.4",
+      "2.0",
+      "1.0",
+      "1.1"
+    ],
+    "key": "1.0",
+    "chunk": "```toml\n[dependencies]\nitoa = \"1.0\"\n```\n\n<br>",
+    "source": {
+      "repo": "dtolnay/itoa",
+      "path": "README.md",
+      "sha": "9339ca99a43c550b5ee36e2afe524d1c90413461"
+    }
+  },
+  {
+    "id": "it-24",
+    "kind": "paraphrase",
+    "question": "Under which licenses may the crate be used?",
+    "options": [
+      "GPL only",
+      "BSD only",
+      "MIT only",
+      "Apache 2.0 or MIT, your choice"
+    ],
+    "key": "Apache 2.0 or MIT, your choice",
+    "chunk": "Licensed under either of <a href=\"LICENSE-APACHE\">Apache License, Version\n2.0</a> or <a href=\"LICENSE-MIT\">MIT license</a> at your option.",
+    "source": {
+      "repo": "dtolnay/itoa",
+      "path": "README.md",
+      "sha": "9339ca99a43c550b5ee36e2afe524d1c90413461"
+    }
+  },
+  {
+    "id": "sq-25",
+    "kind": "span",
+    "question": "What does Join put between the quoted arguments?",
+    "options": [
+      "a space",
+      "a comma",
+      "a newline",
+      "a tab"
+    ],
+    "key": "a space",
+    "chunk": "func Join(args ...string) string\n    Join quotes each argument and joins them with a space. If passed to\n    /bin/sh, the resulting string will be split back into the original\n    arguments.",
+    "source": {
+      "repo": "kballard/go-shellquote",
+      "path": "README",
+      "sha": "95032a82bc518f77982ea72343cc1ade730072f0"
+    }
+  },
+  {
+    "id": "sq-26",
+    "kind": "span",
+    "question": "Which program is the result of Join meant to be passed to?",
+    "options": [
+      "/bin/bash",
+      "/bin/sh",
+      "/bin/zsh",
+      "/usr/bin/env"
+    ],
+    "key": "/bin/sh",
+    "chunk": "func Join(args ...string) string\n    Join quotes each argument and joins them with a space. If passed to\n    /bin/sh, the resulting string will be split back into the original\n    arguments.",
+    "source": {
+      "repo": "kballard/go-shellquote",
+      "path": "README",
+      "sha": "95032a82bc518f77982ea72343cc1ade730072f0"
+    }
+  },
+  {
+    "id": "sq-27",
+    "kind": "span",
+    "question": "Which quoting style does Split not support?",
+    "options": [
+      "backslash-escapes",
+      "single-quotes",
+      "$''",
+      "double-quotes"
+    ],
+    "key": "$''",
+    "chunk": "Split splits a string according to /bin/sh's word-splitting rules. It\n    supports backslash-escapes, single-quotes, and double-quotes. Notably it\n    does not support the $'' style of quoting. It also doesn't attempt to\n    perform any other sort of expansion, including brace expansion, shell\n    expansion, or pathname expansion.",
+    "source": {
+      "repo": "kballard/go-shellquote",
+      "path": "README",
+      "sha": "95032a82bc518f77982ea72343cc1ade730072f0"
+    }
+  },
+  {
+    "id": "sq-28",
+    "kind": "span",
+    "question": "Which of these does Split support?",
+    "options": [
+      "brace expansion",
+      "shell expansion",
+      "pathname expansion",
+      "backslash-escapes"
+    ],
+    "key": "backslash-escapes",
+    "chunk": "Split splits a string according to /bin/sh's word-splitting rules. It\n    supports backslash-escapes, single-quotes, and double-quotes. Notably it\n    does not support the $'' style of quoting. It also doesn't attempt to\n    perform any other sort of expansion, including brace expansion, shell\n    expansion, or pathname expansion.",
+    "source": {
+      "repo": "kballard/go-shellquote",
+      "path": "README",
+      "sha": "95032a82bc518f77982ea72343cc1ade730072f0"
+    }
+  },
+  {
+    "id": "sq-29",
+    "kind": "span",
+    "question": "Which of these does Split not perform?",
+    "options": [
+      "pathname expansion",
+      "backslash-escapes",
+      "single-quotes",
+      "double-quotes"
+    ],
+    "key": "pathname expansion",
+    "chunk": "Split splits a string according to /bin/sh's word-splitting rules. It\n    supports backslash-escapes, single-quotes, and double-quotes. Notably it\n    does not support the $'' style of quoting. It also doesn't attempt to\n    perform any other sort of expansion, including brace expansion, shell\n    expansion, or pathname expansion.",
+    "source": {
+      "repo": "kballard/go-shellquote",
+      "path": "README",
+      "sha": "95032a82bc518f77982ea72343cc1ade730072f0"
+    }
+  },
+  {
+    "id": "sq-30",
+    "kind": "span",
+    "question": "Which error variable carries the message Unterminated backslash-escape?",
+    "options": [
+      "UnterminatedSingleQuoteError",
+      "UnterminatedEscapeError",
+      "UnterminatedDoubleQuoteError",
+      "UnterminatedQuoteError"
+    ],
+    "key": "UnterminatedEscapeError",
+    "chunk": "var (\n    UnterminatedSingleQuoteError = errors.New(\"Unterminated single-quoted string\")\n    UnterminatedDoubleQuoteError = errors.New(\"Unterminated double-quoted string\")\n    UnterminatedEscapeError      = errors.New(\"Unterminated backslash-escape\")\n)",
+    "source": {
+      "repo": "kballard/go-shellquote",
+      "path": "README",
+      "sha": "95032a82bc518f77982ea72343cc1ade730072f0"
+    }
+  },
+  {
+    "id": "sq-31",
+    "kind": "span",
+    "question": "What is the name of the Go package declared in the README?",
+    "options": [
+      "go-shellquote",
+      "kballard",
+      "shellquote",
+      "shellsplit"
+    ],
+    "key": "shellquote",
+    "chunk": "package shellquote\n    import \"github.com/kballard/go-shellquote\"",
+    "source": {
+      "repo": "kballard/go-shellquote",
+      "path": "README",
+      "sha": "95032a82bc518f77982ea72343cc1ade730072f0"
+    }
+  },
+  {
+    "id": "sq-32",
+    "kind": "paraphrase",
+    "question": "What is shellquote for?",
+    "options": [
+      "parsing JSON text",
+      "escaping HTML",
+      "expanding environment variables",
+      "joining and splitting strings the way sh does"
+    ],
+    "key": "joining and splitting strings the way sh does",
+    "chunk": "Shellquote provides utilities for joining/splitting strings using sh's\n    word-splitting rules.",
+    "source": {
+      "repo": "kballard/go-shellquote",
+      "path": "README",
+      "sha": "95032a82bc518f77982ea72343cc1ade730072f0"
+    }
+  },
+  {
+    "id": "tty-33",
+    "kind": "span",
+    "question": "Which function checks for a Cygwin or MSYS2 terminal?",
+    "options": [
+      "IsCygwinTerminal",
+      "IsTerminal",
+      "IsPty",
+      "IsMsys"
+    ],
+    "key": "IsCygwinTerminal",
+    "chunk": "if isatty.IsTerminal(os.Stdout.Fd()) {\n\t\tfmt.Println(\"Is Terminal\")\n\t} else if isatty.IsCygwinTerminal(os.Stdout.Fd()) {\n\t\tfmt.Println(\"Is Cygwin/MSYS2 Terminal\")\n\t} else {\n\t\tfmt.Println(\"Is Not Terminal\")\n\t}",
+    "source": {
+      "repo": "mattn/go-isatty",
+      "path": "README.md",
+      "sha": "c44dc0b9c702c76577fdb7898032969e0611efc2"
+    }
+  },
+  {
+    "id": "tty-34",
+    "kind": "span",
+    "question": "What does the example print when stdout is not a terminal?",
+    "options": [
+      "Is Terminal",
+      "Is Not Terminal",
+      "Is Cygwin/MSYS2 Terminal",
+      "Not a TTY"
+    ],
+    "key": "Is Not Terminal",
+    "chunk": "if isatty.IsTerminal(os.Stdout.Fd()) {\n\t\tfmt.Println(\"Is Terminal\")\n\t} else if isatty.IsCygwinTerminal(os.Stdout.Fd()) {\n\t\tfmt.Println(\"Is Cygwin/MSYS2 Terminal\")\n\t} else {\n\t\tfmt.Println(\"Is Not Terminal\")\n\t}",
+    "source": {
+      "repo": "mattn/go-isatty",
+      "path": "README.md",
+      "sha": "c44dc0b9c702c76577fdb7898032969e0611efc2"
+    }
+  },
+  {
+    "id": "tty-35",
+    "kind": "span",
+    "question": "Which command installs go-isatty?",
+    "options": [
+      "go install github.com/mattn/go-isatty",
+      "go mod add github.com/mattn/go-isatty",
+      "go get github.com/mattn/go-isatty",
+      "go get github.com/mattn/go-isatty/v2"
+    ],
+    "key": "go get github.com/mattn/go-isatty",
+    "chunk": "$ go get github.com/mattn/go-isatty",
+    "source": {
+      "repo": "mattn/go-isatty",
+      "path": "README.md",
+      "sha": "c44dc0b9c702c76577fdb7898032969e0611efc2"
+    }
+  },
+  {
+    "id": "tty-36",
+    "kind": "span",
+    "question": "Who gave the base idea for IsCygwinTerminal?",
+    "options": [
+      "mattn",
+      "Yasuhiro Matsumoto",
+      "go-iscygpty",
+      "k-takata"
+    ],
+    "key": "k-takata",
+    "chunk": "## Author\n\nYasuhiro Matsumoto (a.k.a mattn)\n\n## Thanks\n\n* k-takata: base idea for IsCygwinTerminal",
+    "source": {
+      "repo": "mattn/go-isatty",
+      "path": "README.md",
+      "sha": "c44dc0b9c702c76577fdb7898032969e0611efc2"
+    }
+  },
+  {
+    "id": "tty-37",
+    "kind": "span",
+    "question": "Under which license is go-isatty released?",
+    "options": [
+      "MIT",
+      "Apache-2.0",
+      "BSD-3-Clause",
+      "GPL-3.0"
+    ],
+    "key": "MIT",
+    "chunk": "## License\n\nMIT",
+    "source": {
+      "repo": "mattn/go-isatty",
+      "path": "README.md",
+      "sha": "c44dc0b9c702c76577fdb7898032969e0611efc2"
+    }
+  },
+  {
+    "id": "xid-38",
+    "kind": "numeric",
+    "question": "How many bytes is the machine identifier in an xid?",
+    "options": [
+      "4",
+      "3",
+      "2",
+      "5"
+    ],
+    "key": "3",
+    "chunk": "- 4-byte value representing the seconds since the Unix epoch,\n- 3-byte machine identifier,\n- 2-byte process id, and\n- 3-byte counter, starting with a random value.",
+    "source": {
+      "repo": "rs/xid",
+      "path": "README.md",
+      "sha": "34d39051ca0d70f40a8cd8c5491ef835e624b71d"
+    }
+  },
+  {
+    "id": "xid-39",
+    "kind": "span",
+    "question": "What does the 4-byte value of an xid represent?",
+    "options": [
+      "machine identifier",
+      "process id",
+      "seconds since the Unix epoch",
+      "counter"
+    ],
+    "key": "seconds since the Unix epoch",
+    "chunk": "- 4-byte value representing the seconds since the Unix epoch,\n- 3-byte machine identifier,\n- 2-byte process id, and\n- 3-byte counter, starting with a random value.",
+    "source": {
+      "repo": "rs/xid",
+      "path": "README.md",
+      "sha": "34d39051ca0d70f40a8cd8c5491ef835e624b71d"
+    }
+  },
+  {
+    "id": "xid-40",
+    "kind": "numeric",
+    "question": "How many unique ids per second and per host/process does xid guarantee?",
+    "options": [
+      "65,536",
+      "4,294,967,296",
+      "1,000,000",
+      "16,777,216"
+    ],
+    "key": "16,777,216",
+    "chunk": "- Size: 12 bytes (96 bits), smaller than UUID, larger than snowflake\n- Base32 hex encoded by default (20 chars when transported as printable string, still sortable)\n- Non configured, you don't need set a unique machine and/or data center id (configurable if needed)\n- K-ordered\n- Embedded time with 1 second precision\n- Unicity guaranteed for 16,777,216 (24 bits) unique ids per second and per host/process\n- Lock-free (i.e.: unlike UUIDv1 and v2)",
+    "source": {
+      "repo": "rs/xid",
+      "path": "README.md",
+      "sha": "34d39051ca0d70f40a8cd8c5491ef835e624b71d"
+    }
+  },
+  {
+    "id": "xid-41",
+    "kind": "numeric",
+    "question": "What precision does the embedded time of an xid have, in seconds?",
+    "options": [
+      "1",
+      "12",
+      "20",
+      "96"
+    ],
+    "key": "1",
+    "chunk": "- Size: 12 bytes (96 bits), smaller than UUID, larger than snowflake\n- Base32 hex encoded by default (20 chars when transported as printable string, still sortable)\n- Non configured, you don't need set a unique machine and/or data center id (configurable if needed)\n- K-ordered\n- Embedded time with 1 second precision\n- Unicity guaranteed for 16,777,216 (24 bits) unique ids per second and per host/process\n- Lock-free (i.e.: unlike UUIDv1 and v2)",
+    "source": {
+      "repo": "rs/xid",
+      "path": "README.md",
+      "sha": "34d39051ca0d70f40a8cd8c5491ef835e624b71d"
+    }
+  },
+  {
+    "id": "xid-42",
+    "kind": "numeric",
+    "question": "How many chars is the default string form of an xid?",
+    "options": [
+      "24",
+      "20",
+      "36",
+      "22"
+    ],
+    "key": "20",
+    "chunk": "- Size: 12 bytes (96 bits), smaller than UUID, larger than snowflake\n- Base32 hex encoded by default (20 chars when transported as printable string, still sortable)\n- Non configured, you don't need set a unique machine and/or data center id (configurable if needed)\n- K-ordered\n- Embedded time with 1 second precision\n- Unicity guaranteed for 16,777,216 (24 bits) unique ids per second and per host/process\n- Lock-free (i.e.: unlike UUIDv1 and v2)",
+    "source": {
+      "repo": "rs/xid",
+      "path": "README.md",
+      "sha": "34d39051ca0d70f40a8cd8c5491ef835e624b71d"
+    }
+  },
+  {
+    "id": "xid-43",
+    "kind": "paraphrase",
+    "question": "Why should you not use xid when unpredictable ids matter?",
+    "options": [
+      "it needs a central server",
+      "it only works on one host",
+      "the ids can be guessed",
+      "it is too slow"
+    ],
+    "key": "the ids can be guessed",
+    "chunk": "- Xid is dependent on the system time, a monotonic counter and so is not cryptographically secure. If unpredictability of IDs is important, you should not use Xids.",
+    "source": {
+      "repo": "rs/xid",
+      "path": "README.md",
+      "sha": "34d39051ca0d70f40a8cd8c5491ef835e624b71d"
+    }
+  },
+  {
+    "id": "xid-44",
+    "kind": "span",
+    "question": "Which environment variable sets the machine id of xid?",
+    "options": [
+      "XID_PROCESS_ID",
+      "XID_COUNTER",
+      "XID_SEED",
+      "XID_MACHINE_ID"
+    ],
+    "key": "XID_MACHINE_ID",
+    "chunk": "- MachineID can be set by the environmental variable `XID_MACHINE_ID` to allow fine tune control over the generation.",
+    "source": {
+      "repo": "rs/xid",
+      "path": "README.md",
+      "sha": "34d39051ca0d70f40a8cd8c5491ef835e624b71d"
+    }
+  },
+  {
+    "id": "xid-45",
+    "kind": "span",
+    "question": "Which call creates a new xid?",
+    "options": [
+      "xid.New()",
+      "guid.String()",
+      "xid.Generate()",
+      "guid.Machine()"
+    ],
+    "key": "xid.New()",
+    "chunk": "guid := xid.New()\n\nprintln(guid.String())\n// Output: 9m4e2mr0ui3e8a215n4g",
+    "source": {
+      "repo": "rs/xid",
+      "path": "README.md",
+      "sha": "34d39051ca0d70f40a8cd8c5491ef835e624b71d"
+    }
+  },
+  {
+    "id": "xid-46",
+    "kind": "paraphrase",
+    "question": "Why did xid not keep Base36?",
+    "options": [
+      "it is slower than base64",
+      "it is no standard, its size is unpredictable and it is not sortable",
+      "it needs padding",
+      "it is case sensitive"
+    ],
+    "key": "it is no standard, its size is unpredictable and it is not sortable",
+    "chunk": "Xid doesn't use base64 because case sensitivity and the 2 non alphanum chars may be an\nissue when transported as a string between various systems. Base36 wasn't retained either\nbecause 1/ it's not standard 2/ the resulting size is not predictable (not bit aligned)\nand 3/ it would not remain sortable.",
+    "source": {
+      "repo": "rs/xid",
+      "path": "README.md",
+      "sha": "34d39051ca0d70f40a8cd8c5491ef835e624b71d"
+    }
+  },
+  {
+    "id": "esr-47",
+    "kind": "span",
+    "question": "Which native function now replaces this package?",
+    "options": [
+      "String.escape()",
+      "RegExp.quote()",
+      "RegExp.escape()",
+      "RegExp.sanitize()"
+    ],
+    "key": "RegExp.escape()",
+    "chunk": "> [!TIP]\n> This is now available natively as [`RegExp.escape()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/escape).",
+    "source": {
+      "repo": "sindresorhus/escape-string-regexp",
+      "path": "readme.md",
+      "sha": "a7f7dabaf336bda98d2166848af15d9168b10bcf"
+    }
+  },
+  {
+    "id": "esr-48",
+    "kind": "paraphrase",
+    "question": "How much does the package escape?",
+    "options": [
+      "every character of the string",
+      "only whitespace",
+      "nothing inside a character class",
+      "as little as it can; the developer places the result at a safe position"
+    ],
+    "key": "as little as it can; the developer places the result at a safe position",
+    "chunk": "Only the minimal amount of escaping is done, and developers are expected to insert escaped strings at safe positions in a `RegExp`. This keeps the output simple and gives you the best results in most cases.",
+    "source": {
+      "repo": "sindresorhus/escape-string-regexp",
+      "path": "readme.md",
+      "sha": "a7f7dabaf336bda98d2166848af15d9168b10bcf"
+    }
+  },
+  {
+    "id": "esr-49",
+    "kind": "span",
+    "question": "Which package does the README suggest for fully context-aware escaping?",
+    "options": [
+      "regex",
+      "escape-string-regexp",
+      "RegExp.escape",
+      "xregexp"
+    ],
+    "key": "regex",
+    "chunk": "If fully context-aware escaping is needed, consider interpolating a string using the [`regex`](https://github.com/slevithan/regex#interpolating-escaped-strings) package.",
+    "source": {
+      "repo": "sindresorhus/escape-string-regexp",
+      "path": "readme.md",
+      "sha": "a7f7dabaf336bda98d2166848af15d9168b10bcf"
+    }
+  }
+]
