@@ -13,7 +13,8 @@ const OWNER = /^[A-Za-z0-9-]{1,39}$/;
 const NAME = /^[A-Za-z0-9._-]{1,100}$/;
 const HOSTS = new Set(["github.com", "www.github.com"]);
 
-function repoRef(owner: string | undefined, rawName: string | undefined): RepoRef {
+/** owner + name checked against GitHub's shapes (a trailing ".git" dropped); throws UnsupportedUrlError. */
+export function repoRef(owner: string | undefined, rawName: string | undefined): RepoRef {
   const name = rawName?.endsWith(".git") ? rawName.slice(0, -4) : rawName;
   // "." and ".." match NAME but would walk the API path.
   if (!owner || !name || !OWNER.test(owner) || !NAME.test(name) || name === "." || name === "..") {
