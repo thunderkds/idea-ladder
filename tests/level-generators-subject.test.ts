@@ -7,7 +7,6 @@ import {
   summarizeLadders,
 } from "../eval/src/level-generators-subject.ts";
 import type { LevelReport } from "../src/server/save-ladder.ts";
-import { mockEmbedder } from "./support/mock-embedder.ts";
 import { testModelA } from "./support/mock-model.ts";
 
 const totals = (usd: number | null, tokens = 10) => ({
@@ -90,7 +89,6 @@ describe("level-generators subject on mocks", () => {
     const logged: string[] = [];
     const subject = createLevelGeneratorsSubject({
       generate: testModelA().generate,
-      embedder: mockEmbedder(),
       readFile: async (_fx, path) => Array.from({ length: 80 }, (_, i) => `${path} line ${i + 1}`).join("\n"),
       coreFilesOf: () => ["src/index.ts"],
       conceptsOf: () => ["event emitter", "typescript generics", "map"],
@@ -112,13 +110,8 @@ describe("level-generators subject on mocks", () => {
     });
     expect(report.levels[1]?.dropped).toEqual({ duplicate: 2 });
     const steps = Object.keys(report.costByStep ?? {}).sort();
-    expect(steps).toEqual(
-      [
-        "check-and-dedupe",
-        "chunk-and-embed",
-        ...["L0", "L1", "L2", "L3", "L4"].map((l) => `generate-level-${l}`),
-      ].sort(),
-    );
+    // No model call outside the generators here (no regeneration), and none for chunking or dedupe.
+    expect(steps).toEqual(["L0", "L1", "L2", "L3", "L4"].map((l) => `generate-level-${l}`).sort());
     expect(Object.values(report.costByStep ?? {}).reduce((n, t) => n + t.calls, 0)).toBe(logged.length);
   });
 });

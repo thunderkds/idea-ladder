@@ -16,7 +16,6 @@ import { jobForLearner, startLadder } from "../src/server/start.ts";
 import { createTestDatabase } from "./support/db.ts";
 import { type Fixture, fixtureFetch, loadFixture, V0_REPOS } from "./support/github-fixtures.ts";
 import { drainInngestRuns } from "./support/inngest-drain.ts";
-import { mockEmbedder } from "./support/mock-embedder.ts";
 import { promptData, testModelA, testReader } from "./support/mock-model.ts";
 
 let db: Awaited<ReturnType<typeof createTestDatabase>>;
@@ -70,11 +69,7 @@ function failingModelA(fail?: (level: string) => Error | undefined): ModelADeps 
   };
 }
 
-function engine(
-  jobId: string,
-  modelA: ModelADeps,
-  opts: { costs?: CostEntry[]; embedder?: ReturnType<typeof mockEmbedder> } = {},
-) {
+function engine(jobId: string, modelA: ModelADeps, opts: { costs?: CostEntry[] } = {}) {
   const gh = fixtureFetch(fixtures, (path) => {
     const m = path.match(/^\/repos\/developit\/mitt\/contents\/([^?]+)\?ref=/);
     return m ? new Response(fileText(decodeURIComponent(m[1] as string))) : undefined;
@@ -85,7 +80,6 @@ function engine(
     github: githubRepoClient({ baseUrl: "https://api.github.com", token: "t", fetch: gh.impl }),
     reader: { ...testReader(), logCost: (e) => costs.push(e) },
     modelA,
-    embedder: opts.embedder ?? mockEmbedder(),
     // This job's cost entries per step (main.ts reads them from the job's cost log).
     stepCosts: () => {
       const byStep: Record<
@@ -204,8 +198,8 @@ async function seedChunk() {
   await db.sql`INSERT INTO repo_snapshots (repo_full_name, commit_sha, default_branch, archived, readme, topics, languages, dep_files, open_issues, good_first_issues, tree, tree_truncated)
     VALUES (${MITT.repo}, ${MITT.sha}, 'main', false, 'r', '[]'::jsonb, '{}'::jsonb, '[]'::jsonb, 0, 0, '[]'::jsonb, false)`;
   const [c] =
-    await db.sql`INSERT INTO chunks (repo_full_name, commit_sha, source, path, ordinal, start_line, end_line, text, embedding, embedding_model)
-    VALUES (${MITT.repo}, ${MITT.sha}, 'core', 'src/index.ts', 0, 1, 2, 't', ${`[${Array(1536).fill(0.1).join(",")}]`}::vector, 'm') RETURNING id::int AS id`;
+    await db.sql`INSERT INTO chunks (repo_full_name, commit_sha, source, path, ordinal, start_line, end_line, text)
+    VALUES (${MITT.repo}, ${MITT.sha}, 'core', 'src/index.ts', 0, 1, 2, 't') RETURNING id::int AS id`;
   return c.id as number;
 }
 
@@ -310,7 +304,7 @@ describe("step save-ladder in ladder-generate (AC 7, AC 8, SC 6, SC 7)", () => {
     const [{ report }] = await db.sql`SELECT report FROM generation_reports WHERE ladder_id = ${ladder.id}`;
     expect(report.levels.map((l: { level: string }) => l.level)).toEqual(["L0", "L1", "L2", "L3", "L4"]);
     expect(Object.keys(report.costByStep)).toEqual(
-      expect.arrayContaining(["map-concepts", "chunk-and-embed", ...LEVEL_STEPS, "check-and-dedupe"]),
+      expect.arrayContaining(["map-concepts", "pick-core-files", ...LEVEL_STEPS]),
     );
     expect((await db.sql`SELECT count(*)::int AS n FROM ladder_levels WHERE ladder_id = ${ladder.id}`)[0].n).toBe(5);
     // T005 AC 2: a second /start for this repo + SHA is now a cache hit (no new job).
@@ -343,7 +337,7 @@ describe("step save-ladder in ladder-generate (AC 7, AC 8, SC 6, SC 7)", () => {
     const results = first.ctx.step.run.mock.results;
     const ran = first.ctx.step.run.mock.calls.map((c) => c[0]);
     const memo = await Promise.all(
-      ["fetch-repo", "pick-core-files", "map-concepts", "chunk-and-embed"].map(async (id) => {
+      ["fetch-repo", "pick-core-files", "map-concepts", "chunk"].map(async (id) => {
         const value = await (results[ran.indexOf(id)] as { value?: unknown }).value;
         return { id, handler: async () => value };
       }),
@@ -396,15 +390,22 @@ describe("step save-ladder in ladder-generate (AC 7, AC 8, SC 6, SC 7)", () => {
 
   test("check-and-dedupe failing on every attempt: after the last retry the job fails check-and-dedupe-failed, no ladder", async () => {
     const jobId = await newJob();
-    const embedder = mockEmbedder();
-    const base = embedder.embedTexts;
-    let calls = 0;
-    // The first embedding call is chunk-and-embed's; every later one (check-and-dedupe's dedupe) fails transiently.
-    embedder.embedTexts = async (texts) => {
-      if (calls++ > 0) throw new Error("embeddings 503");
-      return await base(texts);
+    // Every generated key is wrong, so check-and-dedupe regenerates; the regeneration call (and every retry) fails.
+    const base = failingModelA();
+    const modelA: ModelADeps = {
+      backend: "api",
+      generate: async (input) => {
+        if (input.system?.startsWith("You write one multiple-choice question")) throw new Error("model 503");
+        const r = await base.generate(input);
+        const v = r.value as { mcqs?: { key: string; options: string[] }[] };
+        for (const m of v.mcqs ?? []) {
+          m.key = "zzzz";
+          m.options = ["zzzz", ...m.options.slice(1)];
+        }
+        return r;
+      },
     };
-    const { t, fn } = engine(jobId, failingModelA(), { embedder });
+    const { t, fn } = engine(jobId, modelA);
     const run = await t.execute();
     const error = (run as { error?: Error }).error as Error;
     expect(error.message).toMatch(/^check-and-dedupe: /);

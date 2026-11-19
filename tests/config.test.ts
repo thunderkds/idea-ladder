@@ -168,7 +168,7 @@ describe("loadConfig", () => {
     });
     expect(() => loadConfig({ ...noModel, MODEL_A_BACKEND: "api", MODEL_A_ID: "m" })).toThrow(/ANTHROPIC_API_KEY/);
     expect(() => loadConfig({ ...valid, MODEL_A_BACKEND: "api", MODEL_A_ID: "" })).toThrow(/MODEL_A_ID/);
-    expect(() => loadConfig({ ...valid, MODEL_A_BACKEND: "openai" })).toThrow(
+    expect(() => loadConfig({ ...valid, MODEL_A_BACKEND: "gemini" })).toThrow(
       /MODEL_A_BACKEND must be claude-code or api/,
     );
     // the key's value never reaches an error message
@@ -181,20 +181,24 @@ describe("loadConfig", () => {
   });
 });
 
-describe("loadConfig embeddings (T008 8a)", () => {
-  test("defaults: no OpenAI key, text-embedding-3-small, DEDUPE_COSINE 0.92", () => {
-    const c = loadConfig(valid);
-    expect([c.openaiApiKey, c.embeddingModelId, c.dedupeCosine]).toEqual([undefined, "text-embedding-3-small", 0.92]);
+describe("loadConfig dedupe cutoff (T031)", () => {
+  test("default DEDUPE_JACCARD 0.8", () => {
+    expect(loadConfig(valid).dedupeJaccard).toBe(0.8);
   });
 
-  test("values from env", () => {
-    const c = loadConfig({ ...valid, OPENAI_API_KEY: "sk-test", EMBEDDING_MODEL_ID: "m", DEDUPE_COSINE: "0.9" });
-    expect([c.openaiApiKey, c.embeddingModelId, c.dedupeCosine]).toEqual(["sk-test", "m", 0.9]);
-    expect(loadConfig({ ...valid, DEDUPE_COSINE: "1" }).dedupeCosine).toBe(1);
+  test("value from env", () => {
+    expect(loadConfig({ ...valid, DEDUPE_JACCARD: "0.9" }).dedupeJaccard).toBe(0.9);
+    expect(loadConfig({ ...valid, DEDUPE_JACCARD: "1" }).dedupeJaccard).toBe(1);
   });
 
-  test("DEDUPE_COSINE outside (0, 1] is refused by name", () => {
+  test("DEDUPE_JACCARD outside (0, 1] is refused by name", () => {
     for (const v of ["0", "1.5", "-0.5", "abc", "0.9x"])
-      expect(() => loadConfig({ ...valid, DEDUPE_COSINE: v })).toThrow(/DEDUPE_COSINE/);
+      expect(() => loadConfig({ ...valid, DEDUPE_JACCARD: v })).toThrow(/DEDUPE_JACCARD/);
+  });
+
+  test("a leftover DEDUPE_COSINE is refused by name, never read as a Jaccard cutoff", () => {
+    expect(() => loadConfig({ ...valid, DEDUPE_COSINE: "0.92" })).toThrow(
+      /DEDUPE_COSINE was removed \(T031\): use DEDUPE_JACCARD/,
+    );
   });
 });

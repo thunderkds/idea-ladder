@@ -1,10 +1,9 @@
 // T008: the level generators as an eval subject (`--step ladder`). Per repo: chunk the fixture's README, dependency
 // files, docs and the golden core files, run the five generators (L0 only on a concept-only repo), the code checks and
 // dedupe, and build the same generation_report that save-ladder stores. Nothing is written to a database.
-// `src/subjects/level-generators.ts` wires model A, the real embedder and GitHub reads; tests pass mocks.
-import { CHECK_AND_DEDUPE_STEP, checkAndDedupe, DEFAULT_DEDUPE_COSINE, type LadderLevel } from "../../src/server/check-and-dedupe.ts";
+// `src/subjects/level-generators.ts` wires model A, and GitHub reads; tests pass mocks.
+import { CHECK_AND_DEDUPE_STEP, checkAndDedupe, DEFAULT_DEDUPE_JACCARD, type LadderLevel } from "../../src/server/check-and-dedupe.ts";
 import { chunkFiles, type SourceFile } from "../../src/server/chunker.ts";
-import type { Embedder } from "../../src/server/embedder.ts";
 import { generateLevel, LEVEL_SOURCES, type LevelChunk } from "../../src/server/level-generator.ts";
 import type { Generate } from "../../src/server/model-a.ts";
 import type { CallUsage } from "../../src/server/repo-reader.ts";
@@ -16,8 +15,7 @@ import type { Fixture } from "./schema.ts";
 
 export type LevelGeneratorsDeps = {
   generate: Generate;
-  embedder: Embedder;
-  /** Logs one call (model or embedding) for one repo and step; returns its USD cost (null on the subscription). */
+  /** Logs one model call for one repo and step; returns its USD cost (null on the subscription). */
   logCost: (fx: Fixture, step: string, usage: CallUsage) => number | null;
   /** A file's text at the fixture's SHA (core files and docs are not in the fixture); null when absent. */
   readFile: (fx: Fixture, path: string) => Promise<string | null>;
@@ -44,12 +42,6 @@ export function createLevelGeneratorsSubject(deps: LevelGeneratorsDeps) {
         t.cachedInputTokens += u.cachedInputTokens;
         t.usd = t.usd === null || usd === null ? null : t.usd + usd;
       };
-      const embedUsage = (tokens: number) => ({
-        model: deps.embedder.model,
-        inputTokens: tokens,
-        outputTokens: 0,
-        cachedInputTokens: 0,
-      });
       const files: SourceFile[] = [];
       if (fx.readme) files.push({ source: "readme", path: "README.md", text: fx.readme });
       for (const [path, text] of Object.entries(fx.depFileContents)) files.push({ source: "dep", path, text });
@@ -68,8 +60,6 @@ export function createLevelGeneratorsSubject(deps: LevelGeneratorsDeps) {
           if (text) files.push({ source, path, text });
         }
       const chunks: LevelChunk[] = chunkFiles(fx.sha, files).map((c, i) => ({ ...c, id: i + 1 }));
-      const embedded = await deps.embedder.embedTexts(chunks.map((c) => c.text));
-      log("chunk-and-embed")(embedUsage(embedded.tokens));
       const fallback = confidenceScore(fx).fallbackToConcepts;
       const concepts = deps.conceptsOf(fx.fullName).map((name) => ({ name }));
       const levels: LadderLevel[] = await Promise.all(
@@ -95,10 +85,8 @@ export function createLevelGeneratorsSubject(deps: LevelGeneratorsDeps) {
         levels,
         chunks,
         generate: deps.generate,
-        embedder: deps.embedder,
-        dedupeCosine: DEFAULT_DEDUPE_COSINE,
+        dedupeJaccard: DEFAULT_DEDUPE_JACCARD,
         onUsage: log(CHECK_AND_DEDUPE_STEP),
-        onEmbedTokens: (tokens) => log(CHECK_AND_DEDUPE_STEP)(embedUsage(tokens)),
       });
       return { fullName: fx.fullName, fallback, report: buildReport(checked, costByStep) };
     },

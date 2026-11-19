@@ -13,7 +13,6 @@ import {
   rateLimited,
   V0_REPOS,
 } from "./support/github-fixtures.ts";
-import { mockEmbedder } from "./support/mock-embedder.ts";
 import { testModelA, testReader } from "./support/mock-model.ts";
 
 let db: Awaited<ReturnType<typeof createTestDatabase>>;
@@ -46,7 +45,6 @@ function engine(jobId: string, override?: Override) {
   const gh = fixtureFetch(fixtures, override);
   const github = githubRepoClient({ baseUrl: "https://api.github.com", token: "test-token", fetch: gh.impl });
   const fn = ladderGenerateFunction(createInngest(), {
-    embedder: mockEmbedder(),
     sql: db.sql,
     github,
     reader: testReader(),
@@ -68,7 +66,7 @@ const jobRow = async (id: string) =>
 const snapshotCount = async () => Number((await db.sql`SELECT count(*)::int AS n FROM repo_snapshots`)[0].n);
 
 /** Ends a run right after map-concepts: the T008 steps are not under test here. */
-const STUB_CHUNK_AND_EMBED = { id: "chunk-and-embed", handler: async () => ({ status: "stub" }) };
+const STUB_CHUNK = { id: "chunk", handler: async () => ({ status: "stub" }) };
 
 describe("confidence rule (T001 port)", () => {
   test("the 3 recorded v0 repos score 0.9 high, as in T001 RESULTS § 3", async () => {
@@ -115,14 +113,14 @@ describe("Inngest function ladder-generate, step fetch-repo (AC 5)", () => {
       return undefined;
     });
     const statuses: string[] = [];
-    // chunk-and-embed (T008) is stubbed so the run ends right after map-concepts.
-    const { result, ctx } = await t.execute({ steps: [STUB_CHUNK_AND_EMBED] });
+    // chunk (T008) is stubbed so the run ends right after map-concepts.
+    const { result, ctx } = await t.execute({ steps: [STUB_CHUNK] });
     expect(result).toEqual({ status: "stub" });
     expect(ctx.step.run.mock.calls.map((c) => c[0])).toEqual([
       "fetch-repo",
       "pick-core-files",
       "map-concepts",
-      "chunk-and-embed",
+      "chunk",
     ]);
     expect(statuses).toEqual(["running"]);
     expect((await jobRow(jobId)).status).toBe("mapped");
@@ -214,7 +212,6 @@ describe("fetch-repo: other GitHub answers", () => {
     const gh = fixtureFetch(fixtures);
     const github = githubRepoClient({ baseUrl: "https://api.github.com", token: "t", fetch: gh.impl });
     const fn = ladderGenerateFunction(createInngest(), {
-      embedder: mockEmbedder(),
       sql: db.sql,
       github,
       reader: testReader(),
@@ -234,7 +231,6 @@ describe("fetch-repo: other GitHub answers", () => {
     const gh = fixtureFetch(fixtures);
     const github = githubRepoClient({ baseUrl: "https://api.github.com", token: "t", fetch: gh.impl });
     const fn = ladderGenerateFunction(createInngest(), {
-      embedder: mockEmbedder(),
       sql: db.sql,
       github,
       reader: testReader(),
@@ -349,8 +345,8 @@ describe("retry (AC 8, NFR-005)", () => {
 
     // Inngest retries the failed step alone. (Not re-sending the event is startLadder's job, tested in
     // start-ladder.test.ts: only the inserting caller enqueues.)
-    // chunk-and-embed (T008) is stubbed so the retry ends right after map-concepts.
-    const retry = await t.execute({ steps: [STUB_CHUNK_AND_EMBED] });
+    // chunk (T008) is stubbed so the retry ends right after map-concepts.
+    const retry = await t.execute({ steps: [STUB_CHUNK] });
     expect(retry.result).toEqual({ status: "stub" });
     expect((await jobRow(jobId)).status).toBe("mapped");
     expect(await snapshotCount()).toBe(1);
@@ -360,7 +356,6 @@ describe("retry (AC 8, NFR-005)", () => {
   test("the function retries a step up to 3 times, then onFailure marks the job failed", async () => {
     const jobId = await newJob(DSET.repo, DSET.sha);
     const fn = ladderGenerateFunction(createInngest(), {
-      embedder: mockEmbedder(),
       sql: db.sql,
       github: githubRepoClient({ baseUrl: "https://api.github.com", token: "t", fetch: fixtureFetch(fixtures).impl }),
       reader: testReader(),

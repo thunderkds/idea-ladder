@@ -16,7 +16,6 @@ import { migrateUp } from "../src/server/migrate.ts";
 import { createModelA, type ModelADeps, ModelAFailedError, ModelANotInstalledError } from "../src/server/model-a.ts";
 import { createTestDatabase } from "./support/db.ts";
 import { type Fixture, fixtureFetch, loadFixture, V0_REPOS } from "./support/github-fixtures.ts";
-import { mockEmbedder } from "./support/mock-embedder.ts";
 import { TEST_CONCEPTS, testReader } from "./support/mock-model.ts";
 
 let db: Awaited<ReturnType<typeof createTestDatabase>>;
@@ -50,7 +49,6 @@ const conceptRows = async () =>
 function engine(jobId: string, modelA: ModelADeps, costs: CostEntry[] = [], reader = testReader()) {
   const gh = fixtureFetch(fixtures, () => undefined);
   const fn = ladderGenerateFunction(createInngest(), {
-    embedder: mockEmbedder(),
     sql: db.sql,
     github: githubRepoClient({ baseUrl: "https://api.github.com", token: "t", fetch: gh.impl }),
     reader: { ...reader, logCost: (e) => costs.push(e) },

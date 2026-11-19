@@ -3,14 +3,13 @@
 // sentence, distractor in the chunk) pass here and are left for T009's blind solver.
 import type { LevelId } from "../shared/levels.ts";
 import { keepDistinct } from "./dedupe.ts";
-import type { Embedder } from "./embedder.ts";
 import { type Card, checkMcqKey, type Dropped, LEVEL_SOURCES, type LevelChunk, type Mcq } from "./level-generator.ts";
 import type { Generate } from "./model-a.ts";
 import type { CallUsage } from "./repo-reader.ts";
 import { copiesVerbatim, verbatimIndex } from "./verbatim-check.ts";
 
 export const CHECK_AND_DEDUPE_STEP = "check-and-dedupe";
-export const DEFAULT_DEDUPE_COSINE = 0.92;
+export const DEFAULT_DEDUPE_JACCARD = 0.8;
 
 export type GeneratedLevel = {
   level: LevelId;
@@ -30,12 +29,10 @@ export type CheckAndDedupeInput = {
   /** Every chunk of this repo + SHA, in id order. */
   chunks: LevelChunk[];
   generate: Generate;
-  embedder: Embedder;
-  dedupeCosine: number;
+  /** Word-overlap (Jaccard) cutoff: an item at or above it to an earlier kept item is a duplicate. */
+  dedupeJaccard: number;
   /** Once per model call (regenerations). */
   onUsage?: (usage: CallUsage) => void;
-  /** Once per embedding call, with its input tokens. */
-  onEmbedTokens?: (tokens: number) => void;
 };
 
 /** Per level: the kept cards and MCQs, and every drop with its reason (generator drops first). */
@@ -77,11 +74,10 @@ export async function checkAndDedupe(input: CheckAndDedupeInput): Promise<Ladder
       : [],
   );
   if (pool.length === 0) return out;
-  const { embeddings, tokens } = await input.embedder.embedTexts(pool.map((p) => p.text));
-  input.onEmbedTokens?.(tokens);
-  if (embeddings.length !== pool.length)
-    throw new Error(`check-and-dedupe: ${embeddings.length} embeddings for ${pool.length} items`);
-  const keep = keepDistinct(embeddings, input.dedupeCosine);
+  const keep = keepDistinct(
+    pool.map((p) => p.text),
+    input.dedupeJaccard,
+  );
   const duplicates = new Set<Card | Mcq>(pool.filter((_, i) => !keep[i]).map((p) => p.item));
   for (const { l, item } of pool) if (duplicates.has(item)) l.dropped.push({ item, reason: "duplicate" });
   return out.map((l) =>

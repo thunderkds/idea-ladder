@@ -1,9 +1,7 @@
-// T008 golden-set subject (`--step ladder`): the level generators on model A with the real embedder. Paid run: it
-// needs OPENAI_API_KEY (embeddings are not on the Claude subscription) and GITHUB_TOKEN (core files and docs are read
-// at the pinned SHA). Model A as in the concept-mapper subject: MODEL_A_BACKEND unset or `claude-code` (usd null);
-// `api` needs ANTHROPIC_API_KEY and a priced MODEL_A_ID. Fails before any model call when a key is missing.
+// T008 golden-set subject (`--step ladder`): the level generators on model A. It needs GITHUB_TOKEN (core files and
+// docs are read at the pinned SHA) and, for the default back end, the Claude login (`claude -p`). Model A as in the concept-mapper subject: MODEL_A_BACKEND unset or `claude-code` (usd null);
+// `api` needs ANTHROPIC_API_KEY and a priced MODEL_A_ID. Fails before any model call when GITHUB_TOKEN is missing.
 import { createAnthropic } from "@ai-sdk/anthropic";
-import { createOpenAIEmbedder } from "../../../src/server/embedder.ts";
 import { githubRepoClient } from "../../../src/server/github-repo.ts";
 import { createModelA } from "../../../src/server/model-a.ts";
 import { loadPrices, logStepCost } from "../cost.ts";
@@ -11,11 +9,8 @@ import { loadGolden } from "../golden.ts";
 import { createLevelGeneratorsSubject } from "../level-generators-subject.ts";
 
 const env = process.env;
-const missing = ["OPENAI_API_KEY", "GITHUB_TOKEN"].filter((n) => !env[n]);
-if (missing.length) throw new Error(`level-generators needs ${missing.join(", ")} (paid run); no model call was made`);
-const embeddingModel = env.EMBEDDING_MODEL_ID || "text-embedding-3-small";
-if (!Object.hasOwn(loadPrices(), embeddingModel))
-  throw new Error(`EMBEDDING_MODEL_ID "${embeddingModel}" has no price in eval/prices.json`);
+const missing = ["GITHUB_TOKEN"].filter((n) => !env[n]);
+if (missing.length) throw new Error(`level-generators needs ${missing.join(", ")}; no model call was made`);
 const backend = env.MODEL_A_BACKEND || "claude-code";
 if (backend !== "claude-code" && backend !== "api") throw new Error("MODEL_A_BACKEND must be claude-code or api");
 const runId = `eval-level-generators-${new Date().toISOString().replace(/[-:.]/g, "")}`;
@@ -34,13 +29,11 @@ function modelA() {
 }
 
 const m = modelA();
-const embedder = createOpenAIEmbedder({ apiKey: env.OPENAI_API_KEY, modelId: embeddingModel });
 const github = githubRepoClient({ baseUrl: "https://api.github.com", token: env.GITHUB_TOKEN as string });
 const golden = new Map(loadGolden().map((e) => [e.fullName, e]));
 
 export default createLevelGeneratorsSubject({
   generate: m.generate,
-  embedder,
   readFile: (fx, path) => github.readFile(fx.fullName, fx.sha, path),
   coreFilesOf: (fullName) => golden.get(fullName)?.expectedCoreFiles ?? [],
   conceptsOf: (fullName) => golden.get(fullName)?.expectedConcepts ?? [],
@@ -49,8 +42,8 @@ export default createLevelGeneratorsSubject({
       runId,
       ladderKey: `${fx.fullName}@${fx.sha}`,
       step,
-      // Embedding calls are always priced (API key); model A calls are unpriced on the subscription.
-      ...(m.backend === "claude-code" && u.model !== embedder.model ? { backend: "claude-code" as const } : {}),
+      // Model A calls are unpriced on the subscription.
+      ...(m.backend === "claude-code" ? { backend: "claude-code" as const } : {}),
       ...u,
     }).usd,
 });
