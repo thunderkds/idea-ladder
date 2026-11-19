@@ -204,8 +204,8 @@ async function seedChunk() {
   await db.sql`INSERT INTO repo_snapshots (repo_full_name, commit_sha, default_branch, archived, readme, topics, languages, dep_files, open_issues, good_first_issues, tree, tree_truncated)
     VALUES (${MITT.repo}, ${MITT.sha}, 'main', false, 'r', '[]'::jsonb, '{}'::jsonb, '[]'::jsonb, 0, 0, '[]'::jsonb, false)`;
   const [c] =
-    await db.sql`INSERT INTO chunks (repo_full_name, commit_sha, source, path, ordinal, start_line, end_line, text, embedding, embedding_model)
-    VALUES (${MITT.repo}, ${MITT.sha}, 'core', 'src/index.ts', 0, 1, 2, 't', ${`[${Array(1536).fill(0.1).join(",")}]`}::vector, 'm') RETURNING id::int AS id`;
+    await db.sql`INSERT INTO chunks (repo_full_name, commit_sha, source, path, ordinal, start_line, end_line, text)
+    VALUES (${MITT.repo}, ${MITT.sha}, 'core', 'src/index.ts', 0, 1, 2, 't') RETURNING id::int AS id`;
   return c.id as number;
 }
 

@@ -67,8 +67,24 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 > **before any implementation commit exists**; if it does not (docs, templates, skill-instruction
 > text), BEFORE is the **verbatim prior content** of what changed — a quoted excerpt, not a command.
 
-**BEFORE**: [pasted timestamped command output showing the thing absent/failing, captured before the
-first implementation commit] OR [verbatim excerpt of the prior content, for non-executable changes]
+**BEFORE**:
+```
+2026-11-19T10:18:26Z
+src/server/config.ts
+src/server/embedder.ts
+src/server/main.ts
+eval/src/level-generators-subject.ts
+src/server/ladder-generate.ts
+e2e/serve.ts
+src/server/check-and-dedupe.ts
+eval/src/subjects/level-generators.ts
+package.json
+no 0010 migration
+ 13 pass
+ 0 fail
+ 32 expect() calls
+Ran 13 tests across 2 files. [51.00ms]
+```
 
 **AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
 
