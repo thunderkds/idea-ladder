@@ -20,6 +20,10 @@ export type Config = {
   anthropicApiKey?: string;
   /** Required for `api`; for `claude-code` an optional `--model` alias or id (unset = the CLI default). */
   modelAId?: string;
+  /** Model B (T009 blind solver): a separate Claude call, same two back ends as model A. */
+  modelBBackend: ModelABackend;
+  /** Required for `api`; for `claude-code` an optional `--model` alias or id (unset = the CLI default). */
+  modelBId?: string;
   readerMaxSteps: number;
   readerTokenBudget: number;
   /** Near-duplicate cutoff (word-overlap Jaccard similarity), greater than 0 and at most 1, default 0.8 (T031 dedupe). */
@@ -49,8 +53,6 @@ const REQUIRED = [
   "GITHUB_APP_TOKEN",
   "SESSION_SECRET",
 ] as const;
-/** Required only with MODEL_A_BACKEND=api. */
-const REQUIRED_API = ["ANTHROPIC_API_KEY", "MODEL_A_ID"] as const;
 
 /** Validates the environment once at start, so a bad setup fails with variable names, not deep in OAuth code. */
 export function loadConfig(env: Record<string, string | undefined>): Config {
@@ -58,7 +60,15 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
   const modelABackend = (env.MODEL_A_BACKEND || "claude-code") as ModelABackend;
   if (modelABackend !== "claude-code" && modelABackend !== "api")
     problems.push("MODEL_A_BACKEND must be claude-code or api");
-  const missing = [...REQUIRED, ...(modelABackend === "api" ? REQUIRED_API : [])].filter((name) => !env[name]);
+  const modelBBackend = (env.MODEL_B_BACKEND || "claude-code") as ModelABackend;
+  if (modelBBackend !== "claude-code" && modelBBackend !== "api")
+    problems.push("MODEL_B_BACKEND must be claude-code or api");
+  const missing = [
+    ...REQUIRED,
+    ...(modelABackend === "api" || modelBBackend === "api" ? (["ANTHROPIC_API_KEY"] as const) : []),
+    ...(modelABackend === "api" ? (["MODEL_A_ID"] as const) : []),
+    ...(modelBBackend === "api" ? (["MODEL_B_ID"] as const) : []),
+  ].filter((name) => !env[name]);
   if (missing.length) problems.push(`missing required environment variable(s): ${missing.join(", ")}`);
   if (env.SESSION_SECRET && env.SESSION_SECRET.length < 32)
     problems.push("SESSION_SECRET must be at least 32 characters");
@@ -132,12 +142,20 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     secureCookies: env.NODE_ENV !== "development" && env.NODE_ENV !== "test",
     startMaxNewJobsPerHour,
     modelABackend,
-    ...(modelABackend === "api" ? { anthropicApiKey: env.ANTHROPIC_API_KEY } : {}),
+    ...(modelABackend === "api" || modelBBackend === "api" ? { anthropicApiKey: env.ANTHROPIC_API_KEY } : {}),
     ...(env.MODEL_A_ID ? { modelAId: env.MODEL_A_ID } : {}),
+    modelBBackend,
+    ...(env.MODEL_B_ID ? { modelBId: env.MODEL_B_ID } : {}),
     readerMaxSteps,
     readerTokenBudget,
     dedupeJaccard,
     ...(inngestServeOrigin ? { inngestServeOrigin } : {}),
     ...(vapid ? { vapid } : {}),
   };
+}
+
+/** One warning line when model B resolves to the same model id as model A (blind spots are shared), else undefined. */
+export function modelBWarning(config: Pick<Config, "modelAId" | "modelBId">): string | undefined {
+  const same = (config.modelAId ?? "default") === (config.modelBId ?? "default");
+  return same ? "model B uses the same model as model A: blind spots are shared" : undefined;
 }

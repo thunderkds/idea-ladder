@@ -3,7 +3,7 @@ import { SQL } from "bun";
 import { serve } from "inngest/hono";
 import { loadPrices } from "../../eval/src/cost.ts";
 import { createApp } from "./app.ts";
-import { ConfigError, loadConfig } from "./config.ts";
+import { ConfigError, loadConfig, modelBWarning } from "./config.ts";
 import { readerCostLogger } from "./cost-wiring.ts";
 import { evidencePassedLevels } from "./evidence.ts";
 import { githubRepoClient } from "./github-repo.ts";
@@ -25,6 +25,9 @@ if (config.modelABackend === "api" && !Object.hasOwn(loadPrices(), config.modelA
   console.error(`Invalid configuration: MODEL_A_ID "${config.modelAId}" has no price in eval/prices.json`);
   process.exit(1);
 }
+
+const sameModelWarning = modelBWarning(config);
+if (sameModelWarning) console.warn(sameModelWarning);
 
 const sql = new SQL(config.databaseUrl);
 const limits = { maxSteps: config.readerMaxSteps, tokenBudget: config.readerTokenBudget };

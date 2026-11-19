@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import webpush from "web-push";
-import { ConfigError, loadConfig } from "../src/server/config.ts";
+import { ConfigError, loadConfig, modelBWarning } from "../src/server/config.ts";
 
 const valid = {
   DATABASE_URL: "postgres://u:p@localhost:5432/db",
@@ -200,5 +200,38 @@ describe("loadConfig dedupe cutoff (T031)", () => {
     expect(() => loadConfig({ ...valid, DEDUPE_COSINE: "0.92" })).toThrow(
       /DEDUPE_COSINE was removed \(T031\): use DEDUPE_JACCARD/,
     );
+  });
+});
+
+describe("model B (T009)", () => {
+  test("defaults to claude-code with no model id", () => {
+    const c = loadConfig(valid);
+    expect(c.modelBBackend).toBe("claude-code");
+    expect(c.modelBId).toBeUndefined();
+  });
+
+  test("api without MODEL_B_ID is a config problem naming MODEL_B_ID", () => {
+    expect(() => loadConfig({ ...valid, MODEL_B_BACKEND: "api" })).toThrow(/MODEL_B_ID/);
+  });
+
+  test("api needs ANTHROPIC_API_KEY, claude-code does not", () => {
+    const { ANTHROPIC_API_KEY: _k, MODEL_A_ID: _a, ...noKey } = valid;
+    expect(() => loadConfig({ ...noKey, MODEL_B_BACKEND: "api", MODEL_B_ID: "m" })).toThrow(/ANTHROPIC_API_KEY/);
+    expect(loadConfig({ ...noKey, MODEL_B_BACKEND: "claude-code", MODEL_B_ID: "m" }).modelBId).toBe("m");
+  });
+
+  test("an unknown back end is refused; no MODEL_B_PROVIDER exists", () => {
+    expect(() => loadConfig({ ...valid, MODEL_B_BACKEND: "openai" })).toThrow(/MODEL_B_BACKEND/);
+    expect(Object.keys(loadConfig(valid)).some((k) => /provider/i.test(k))).toBe(false);
+  });
+
+  test("same model as model A gives one warning line, and the server still loads", () => {
+    const same = loadConfig({ ...valid, MODEL_B_BACKEND: "api", MODEL_B_ID: "test-model", MODEL_A_BACKEND: "api" });
+    expect(modelBWarning(same)).toBe("model B uses the same model as model A: blind spots are shared");
+    const { MODEL_A_ID: _a, ...noA } = valid;
+    const defaults = loadConfig({ ...noA, MODEL_A_BACKEND: "claude-code" });
+    expect(modelBWarning(defaults)).toBe("model B uses the same model as model A: blind spots are shared");
+    const differ = loadConfig({ ...valid, MODEL_A_BACKEND: "api", MODEL_B_BACKEND: "api", MODEL_B_ID: "other" });
+    expect(modelBWarning(differ)).toBeUndefined();
   });
 });
