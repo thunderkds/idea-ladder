@@ -2,12 +2,16 @@
 // writes the evidence record (which is the unlock) in the same transaction. Never calls an LLM or GitHub.
 import { randomInt } from "node:crypto";
 import type { SQL } from "bun";
+import pkg from "../../package.json" with { type: "json" };
 import { LEVEL_IDS, levelLockState } from "../shared/levels.ts";
+import { type EvidenceRecord, writeEvidenceRecord } from "./evidence.ts";
 import type { PassedLevels } from "./ladder-view.ts";
-import { MCQ_ATTEMPT_TTL_MS, MCQ_ATTEMPTS_PER_DAY, MCQ_TEST_SIZE } from "./pass-test-config.ts";
+import { MCQ_ATTEMPT_TTL_MS, MCQ_ATTEMPTS_PER_DAY, MCQ_PASS_RATIO, MCQ_TEST_SIZE } from "./pass-test-config.ts";
 import { MIN_MCQ_POOL } from "./save-ladder.ts";
 
 const DAY_MS = 86_400_000;
+/** The verifier that signs off an evidence record: this app at its package.json version. */
+const VERIFIED_BY = `verifier@${pkg.version}`;
 const ID = /^[1-9][0-9]{0,17}$/; // fits a bigint
 
 /** One question as the learner sees it: the options in the attempt's shuffled order, never the key. */
@@ -105,5 +109,119 @@ export async function startMcqAttempt(
         return { id: q.id, question: row.question, options: q.order.map((i) => row.options[i] as string) };
       }),
     };
+  });
+}
+
+export type McqResult = {
+  attemptId: string;
+  asked: number;
+  correct: number;
+  pass: boolean;
+  /** The level a pass opens (null on a fail, or after L4). */
+  unlockedLevel: string | null;
+  /** The stored evidence record on a pass (the first one, if the level was already passed). */
+  evidence: EvidenceRecord | null;
+  /** On a fail: the review cards on the chunks the missed questions cite ("back to review cards"). */
+  reviewCardIds: string[];
+};
+
+/** The answers body: question id -> index of the chosen option in the shown order (0-3). */
+function checkAnswers(body: unknown): Map<string, number> | undefined {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return undefined;
+  const out = new Map<string, number>();
+  for (const [id, choice] of Object.entries(body)) {
+    if (!Number.isInteger(choice) || (choice as number) < 0 || (choice as number) > 3) return undefined;
+    out.set(id, choice as number);
+  }
+  return out;
+}
+
+/** AC 2: pass iff correct / asked >= MCQ_PASS_RATIO, in integers. */
+export function isPass(correct: number, asked: number): boolean {
+  return correct * MCQ_PASS_RATIO.denominator >= asked * MCQ_PASS_RATIO.numerator;
+}
+
+/** The fewest correct answers that pass: the `pass` field of the evidence (as in the source example). */
+function passMark(asked: number): number {
+  return Math.ceil((asked * MCQ_PASS_RATIO.numerator) / MCQ_PASS_RATIO.denominator);
+}
+
+/**
+ * AC 2-4: scores the answers against the stored keys in code. One transaction with the attempt row locked: the
+ * attempt is marked submitted and, on a pass, the evidence record (which unlocks the next level) is written.
+ * Foreign question ids, a second submit or a submit after MCQ_ATTEMPT_TTL_MS change nothing.
+ */
+export async function submitMcqAttempt(
+  sql: SQL,
+  userId: string,
+  attemptId: string,
+  body: unknown,
+  now: Date,
+): Promise<McqResult | McqProblem> {
+  if (!ID.test(attemptId)) return { status: 404, error: "not-found" };
+  const chosen = checkAnswers(body);
+  return await sql.begin(async (tx) => {
+    const [attempt] = await tx`
+      SELECT a.ladder_id::text AS ladder_id, a.level, a.questions, a.started_at, a.submitted_at,
+        u.github_login, l.repo_full_name, l.commit_sha
+      FROM mcq_attempts a JOIN users u ON u.id = a.learner_id JOIN ladders l ON l.id = a.ladder_id
+      WHERE a.id = ${attemptId} AND a.learner_id = ${userId}
+      FOR UPDATE OF a`;
+    if (!attempt) return { status: 404, error: "not-found" } as const;
+    if (!chosen) return { status: 400, error: "invalid-request" } as const;
+    if (attempt.submitted_at) return { status: 409, error: "already-submitted" } as const;
+    if (now.getTime() - new Date(attempt.started_at).getTime() > MCQ_ATTEMPT_TTL_MS)
+      return { status: 409, error: "attempt-expired" } as const;
+    const stored = attempt.questions as StoredQuestion[];
+    const asked = new Set(stored.map((q) => q.id));
+    if ([...chosen.keys()].some((id) => !asked.has(id))) return { status: 422, error: "unknown-question" } as const;
+
+    const keys: { id: string; options: string[]; key: string; chunk_id: string }[] = await tx`
+      SELECT id::text AS id, options, key, chunk_id::text AS chunk_id FROM mcqs
+      WHERE id IN (SELECT x::bigint FROM jsonb_array_elements_text(${[...asked]}::jsonb) AS x)`;
+    const byId = new Map(keys.map((k) => [k.id, k]));
+    const missedChunks: string[] = [];
+    let correct = 0;
+    for (const q of stored) {
+      const mcq = byId.get(q.id);
+      const choice: number | undefined = chosen.get(q.id);
+      const option = choice === undefined ? undefined : q.order[choice];
+      if (mcq && option !== undefined && mcq.options[option] === mcq.key) correct += 1;
+      else if (mcq) missedChunks.push(mcq.chunk_id);
+    }
+    const pass = isPass(correct, stored.length);
+    await tx`
+      UPDATE mcq_attempts SET submitted_at = ${now}, correct = ${correct}, passed = ${pass} WHERE id = ${attemptId}`;
+
+    const result: McqResult = {
+      attemptId,
+      asked: stored.length,
+      correct,
+      pass,
+      unlockedLevel: null,
+      evidence: null,
+      reviewCardIds: [],
+    };
+    if (!pass) {
+      const cards = await tx`
+        SELECT id::text AS id FROM cards
+        WHERE ladder_id = ${attempt.ladder_id} AND level = ${attempt.level}
+          AND chunk_id IN (SELECT x::bigint FROM jsonb_array_elements_text(${missedChunks}::jsonb) AS x)
+        ORDER BY id`;
+      result.reviewCardIds = cards.map((c: { id: string }) => c.id);
+      return result;
+    }
+    const { record } = await writeEvidenceRecord(tx, userId, attempt.ladder_id, {
+      learner: `github:${attempt.github_login}`,
+      ladder: `repo:${attempt.repo_full_name}@${String(attempt.commit_sha).slice(0, 7)}`,
+      level: attempt.level,
+      test: "mcq",
+      evidence: { asked: stored.length, correct, pass: passMark(stored.length), questionIds: stored.map((q) => q.id) },
+      verifiedBy: VERIFIED_BY,
+      verifiedAt: now.toISOString(),
+    });
+    result.evidence = record;
+    result.unlockedLevel = LEVEL_IDS[LEVEL_IDS.indexOf(attempt.level) + 1] ?? null;
+    return result;
   });
 }
