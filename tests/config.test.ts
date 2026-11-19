@@ -180,3 +180,21 @@ describe("loadConfig", () => {
     }
   });
 });
+
+describe("loadConfig embeddings (T008 8a)", () => {
+  test("defaults: no OpenAI key, text-embedding-3-small, DEDUPE_COSINE 0.92", () => {
+    const c = loadConfig(valid);
+    expect([c.openaiApiKey, c.embeddingModelId, c.dedupeCosine]).toEqual([undefined, "text-embedding-3-small", 0.92]);
+  });
+
+  test("values from env", () => {
+    const c = loadConfig({ ...valid, OPENAI_API_KEY: "sk-test", EMBEDDING_MODEL_ID: "m", DEDUPE_COSINE: "0.9" });
+    expect([c.openaiApiKey, c.embeddingModelId, c.dedupeCosine]).toEqual(["sk-test", "m", 0.9]);
+    expect(loadConfig({ ...valid, DEDUPE_COSINE: "1" }).dedupeCosine).toBe(1);
+  });
+
+  test("DEDUPE_COSINE outside (0, 1] is refused by name", () => {
+    for (const v of ["0", "1.5", "-0.5", "abc", "0.9x"])
+      expect(() => loadConfig({ ...valid, DEDUPE_COSINE: v })).toThrow(/DEDUPE_COSINE/);
+  });
+});
