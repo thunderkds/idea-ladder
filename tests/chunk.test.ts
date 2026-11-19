@@ -125,6 +125,7 @@ describe("Inngest step chunk (T031 AC 2, Success Criterion 2)", () => {
       "chunk",
       ...["L0", "L1", "L2", "L3", "L4"].map((l) => `generate-level-${l}`),
       "check-and-dedupe",
+      "blind-solve",
       "save-ladder",
     ]);
     const rows = await chunkRows();

@@ -105,6 +105,7 @@ describe("Inngest steps generate-level-L0..L4 (AC 2, AC 3)", () => {
       "chunk",
       ...LEVEL_STEPS,
       "check-and-dedupe",
+      "blind-solve",
       "save-ladder",
     ]);
     const sources: Record<string, string[]> = {
