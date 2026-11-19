@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "3.0.135",
+    "@ai-sdk/openai": "3.0.142",
     "ai": "6.0.317",
     "hono": "4.13.13",
     "idb": "8.0.4",

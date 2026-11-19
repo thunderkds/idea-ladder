@@ -5,6 +5,7 @@ import { loadPrices } from "../../eval/src/cost.ts";
 import { createApp } from "./app.ts";
 import { ConfigError, loadConfig } from "./config.ts";
 import { readerCostLogger } from "./cost-wiring.ts";
+import { createOpenAIEmbedder } from "./embedder.ts";
 import { githubRepoClient } from "./github-repo.ts";
 import { createInngest, LADDER_GENERATE_EVENT, ladderGenerateFunction, type ReaderDeps } from "./ladder-generate.ts";
 import { noPasses } from "./ladder-view.ts";
@@ -25,6 +26,16 @@ if (config.modelABackend === "api" && !Object.hasOwn(loadPrices(), config.modelA
   console.error(`Invalid configuration: MODEL_A_ID "${config.modelAId}" has no price in eval/prices.json`);
   process.exit(1);
 }
+
+// Embeddings (ADR 0006) are always priced: fail at start, not after a paid call, when the embedding model has no price.
+if (config.openaiApiKey && !Object.hasOwn(loadPrices(), config.embeddingModelId)) {
+  console.error(
+    `Invalid configuration: EMBEDDING_MODEL_ID "${config.embeddingModelId}" has no price in eval/prices.json`,
+  );
+  process.exit(1);
+}
+if (!config.openaiApiKey)
+  console.warn("OPENAI_API_KEY is not set: step chunk-and-embed fails every ladder job (embedder-not-configured)");
 
 const sql = new SQL(config.databaseUrl);
 const limits = { maxSteps: config.readerMaxSteps, tokenBudget: config.readerTokenBudget };
@@ -49,6 +60,7 @@ const reader: ReaderDeps =
         limits,
         logCost,
       };
+const embedder = createOpenAIEmbedder({ apiKey: config.openaiApiKey, modelId: config.embeddingModelId });
 // Model A for the concept mapper (and later T008, T014): the same back end as the reader.
 const modelA = createModelA(
   config.modelABackend === "claude-code"
@@ -81,7 +93,10 @@ const app = createApp({
   },
   inngestHandler: serve({
     client: inngest,
-    functions: [ladderGenerateFunction(inngest, { sql, github, reader, modelA }), reminders],
+    functions: [
+      ladderGenerateFunction(inngest, { sql, github, reader, modelA, embedder, dedupeCosine: config.dedupeCosine }),
+      reminders,
+    ],
     // Never derive the callback origin from the request Host header (required in production by loadConfig).
     ...(config.inngestServeOrigin ? { serveOrigin: config.inngestServeOrigin } : {}),
   }),

@@ -70,7 +70,10 @@ test("SC 7: signed out /start?url=lukeed/dset -> sign-in -> /jobs/:id shows Queu
   await expectTokens(page, STATUS_TOKENS);
   await shootAll(page, "job-picking");
   await expect(heading(page)).toHaveText("Done", { timeout: 15_000 });
-  await expect(page.locator(".status-detail")).toHaveText("The repo is read and its concepts are mapped.");
+  await expect(page.locator(".status-detail")).toHaveText("Your ladder is saved. Its questions are not verified yet.");
+  const open = page.getByRole("link", { name: "Open your ladder" });
+  await expect(open).toHaveAttribute("href", /^\/ladders\/[0-9]+$/);
+  const ladderPath = (await open.getAttribute("href")) as string;
   await expectTokens(page, STATUS_TOKENS);
   await shootAll(page, "job-done");
 
@@ -82,11 +85,9 @@ test("SC 7: signed out /start?url=lukeed/dset -> sign-in -> /jobs/:id shows Queu
   await page.waitForTimeout(5_000);
   expect(polls).toBe(0);
 
-  // Same repo + SHA again: the same job (AC 4 reuse), already Done.
-  const jobUrl = page.url();
+  // Same repo + SHA again: the ladder is saved, so this is a cache hit (T005 AC 2) to the ladder.
   await page.goto("/start?url=lukeed/dset");
-  expect(page.url()).toBe(jobUrl);
-  await expect(heading(page)).toHaveText("Done");
+  expect(new URL(page.url()).pathname).toBe(ladderPath);
 });
 
 test("a job no worker has picked up shows Queued (screenshots)", async ({ page }) => {

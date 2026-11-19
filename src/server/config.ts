@@ -22,6 +22,12 @@ export type Config = {
   modelAId?: string;
   readerMaxSteps: number;
   readerTokenBudget: number;
+  /** OpenAI key for embeddings (ADR 0006). Optional at start: without it chunk-and-embed fails, naming it. Never logged. */
+  openaiApiKey?: string;
+  /** EMBEDDING_MODEL_ID, default text-embedding-3-small (1536 dimensions, the chunks.embedding column). */
+  embeddingModelId: string;
+  /** Near-duplicate cutoff (cosine similarity), greater than 0 and at most 1, default 0.92 (T008 dedupe). */
+  dedupeCosine: number;
   /** Web Push (VAPID) keys; absent = reminders off. Only `publicKey` ever reaches the client; the private key is never logged. */
   vapid?: { publicKey: string; privateKey: string; subject: string };
 };
@@ -86,6 +92,9 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
   };
   const readerMaxSteps = positive("READER_MAX_STEPS", "15", READER_LIMIT_MAX.steps);
   const readerTokenBudget = positive("READER_TOKEN_BUDGET", "80000", READER_LIMIT_MAX.tokens);
+  const dedupeRaw = env.DEDUPE_COSINE || "0.92";
+  const dedupeCosine = /^(0(\.[0-9]+)?|1(\.0+)?)$/.test(dedupeRaw) ? Number(dedupeRaw) : 0;
+  if (!(dedupeCosine > 0)) problems.push("DEDUPE_COSINE must be a number greater than 0 and at most 1");
 
   if (env.NODE_ENV === "production") {
     if (env.INNGEST_DEV) problems.push("INNGEST_DEV must not be set in production");
@@ -129,6 +138,9 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     ...(env.MODEL_A_ID ? { modelAId: env.MODEL_A_ID } : {}),
     readerMaxSteps,
     readerTokenBudget,
+    ...(env.OPENAI_API_KEY ? { openaiApiKey: env.OPENAI_API_KEY } : {}),
+    embeddingModelId: env.EMBEDDING_MODEL_ID || "text-embedding-3-small",
+    dedupeCosine,
     ...(inngestServeOrigin ? { inngestServeOrigin } : {}),
     ...(vapid ? { vapid } : {}),
   };
