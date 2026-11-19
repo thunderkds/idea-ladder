@@ -43,23 +43,37 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 
 -->
 
+## Auto decisions
+
+Mode: auto
+1. Opened T032 as a bugfix task during the run: generated cards never reach the review queue — FACT: docs/decisions/0003-review-tables.md:7 "`review_cards` and adds columns only if it must; T011 only reads it."
+2. Mental model confirmed by the Supervisor from the code, not by the user — RULE: docs/claude-md/tracks.md `### Every user stop and its auto rule`
+3. Fix shape: one table `review_cards`; migration 0012 adds nullable `position` + `chunk_id`, copies `cards` with a count check, drops `cards`; down never deletes `review_cards` rows — DEBATED: one table, down keeps every review_cards row (Advocate 1: one table, copy then drop `cards`, down deletes the copied rows; Advocate 2: one table, copy then drop `cards`, down never deletes `review_cards` rows) ⚠ decided for you — please review
+4. Spawn model claude-sonnet-5-5 (C2, Risk Medium) — FACT: PROJECT_SPEC.md:80 "| claude | `claude` | haiku-5-5 | sonnet-5-5 | sonnet-5-5 or opus-5-5 | opus-5-5 |"
+5. Up pairs same-text `review_cards` rows before copying (the implementer's change to the fix shape), because down drops the only other key — FACT: migrations/0012_review_cards_content.down.sql:22 "ALTER TABLE review_cards DROP COLUMN chunk_id, DROP COLUMN position;"
+6. Stage 4: the P2 (pairing not documented) fixed by the Supervisor in ADR 0003 (885d48f); the 3 P3s cut (near-tautological count check; `public.cards` in migrate tests; no test of adopting an identical hand-seeded row) — RULE: .claude/skills/code-review/SKILL.md:142 "Do not apply P2/P3 fixes automatically — present them as suggestions only."
+7. Diagnosis gate "3–5 ranked hypotheses" not met: only the guide's divergence point was tested, and it was confirmed on the first run — FACT: tasks/TASK_REVIEW_T032.md Demonstration BEFORE (2026-11-19T10:53:39Z, reviewQueue returned [] after saveLadder)
+Checks: tests `bun test` — 481 pass / 0 fail (agent, afc46b2); `bun test -t T032` — 3 pass / 0 fail and `bun test review-generated-cards mcq-submit migrate` — 42 pass / 0 fail (Supervisor, 885d48f); typecheck and lint clean; grep `INTO cards|FROM cards` — "no cards table use left"; reviews code-review — 0 P0, 0 P1, 1 P2 fixed (885d48f), 3 P3 cut; security-review — no findings (confidence ≥ 8); migration-safety (0012) — GO; real run `bun test review-generated-cards` — saveLadder then reviewQueue returns the ladder's L0 cards and rateCard accepts a saved card id (auto-checked, not /verify)
+Memory: memory/decisions.md — T032 merged entry (written at merge); memory/learnings.md — test generation and review through one path
+Not done: auto verify: running (T182); merge (admin: after the auto verify pass)
+
 ## Evidence
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
 | **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | AC1 tests/review-generated-cards.test.ts; AC2 tests/mcq-submit.test.ts (SC 2); AC3 tests/migrate.test.ts "T032 0012_review_cards_content"; AC4 grep empty. `bun test -t T032`: 3 pass 0 fail |
 | Verification command run | ☑ pass | typecheck + lint clean; `bun test migrate save-ladder mcq review offline`: 115 pass 0 fail; `bun test`: 481 pass, 0 fail (Ran 481 tests across 47 files); grep: "no cards table use left" |
-| Negative cases hold | ☐ pass / ☐ fail | |
+| Negative cases hold | ☑ pass | regression test red on main (reviewQueue [] after saveLadder, 0 pass / 2 fail); 0012 count check raises on a mismatch; the unique index rejects a duplicate position; down never deletes a `review_cards` row, so a `review_log` reference stays valid; hand-seeded rows (NULL chunk_id) are left out of `reviewCardIds` |
 | verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
-| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
-| Full smoke suite still green (no regression) | ☐ pass / ☐ fail | |
-| **Companion score (easy-verifier)** | ☐ pass / ☐ fail / ☐ N/A | [`overall` and `change_risk` as the tool returned them, the scope, the ref, and the absolute path of the verifier report after a literal `report:` label — e.g. "overall 86 (>= 80), change_risk pass, scope changes, ref `main...HEAD`, report: `/home/me/.easy-verifier-reports/kit/score_changes_20261028T0530Z.html`". The gate reads the path that follows `report:` and nothing else, so with no label, or a path that is absent, the row is unscored — write ☑ N/A instead. ☑ N/A with a reason when neither companion tool was run: the merge gate blocks on ☑ fail only, never on an absent or N/A row] |
-| **UI: Visual regression (diff or verdict pasted)** | ☐ pass / ☐ fail / ☐ N/A | [screenshot path or LLM verdict — required for UI tasks, Hard-Stop Gate 6] |
-| **UI: Design-system compliance (tokens/colors/typography verified)** | ☐ pass / ☐ fail / ☐ N/A | [method used + output] |
-| **UI: Responsiveness at target viewports** | ☐ pass / ☐ fail / ☐ N/A | [viewports tested, any overflow findings] |
+| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☑ pass | `git diff main...HEAD` (13 files) plus every reader of `review_cards` (review.ts, offline.ts, mcq-test.ts, reminders via reviewQueue); one code reviewer (migration, correctness, testing, over-engineering) and one security reviewer |
+| Full smoke suite still green (no regression) | ☑ pass | `bun test` 481 pass / 0 fail on afc46b2 |
+| **Companion score (easy-verifier)** | ☑ N/A | Neither companion tool was run for this task |
+| **UI: Visual regression (diff or verdict pasted)** | ☑ N/A | Pure backend bugfix: no client file changed |
+| **UI: Design-system compliance (tokens/colors/typography verified)** | ☑ N/A | Pure backend bugfix: no client file changed |
+| **UI: Responsiveness at target viewports** | ☑ N/A | Pure backend bugfix: no client file changed |
 | Repro loop | ☑ pass | `bun test tests/review-generated-cards.test.ts` at 2026-11-19T10:53:39Z: 0 pass / 2 fail, reviewQueue returns [] after saveLadder (see Demonstration BEFORE) |
 | Regression test | ☑ pass | tests/review-generated-cards.test.ts (red before, 2 pass after); tests/mcq-submit.test.ts SC 2 now rates each reviewCardId; tests/migrate.test.ts T032 0012 describe |
-| Smoke suite | ☐ pass / ☐ fail | [bug-specific smoke check beyond the full suite row above] |
+| Smoke suite | ☑ pass | `bun test review-generated-cards mcq-submit migrate` — 42 pass / 0 fail (Supervisor, 885d48f): save → queue → rate, failed MCQ → rateable reviewCardIds, 0012 up/down/up |
 
 ---
 
