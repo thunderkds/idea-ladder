@@ -126,3 +126,16 @@ describe("T012 startMcqAttempt", () => {
     expect(await attemptRows()).toBe(0);
   });
 });
+
+describe("T012 startMcqAttempt parallel starts", () => {
+  test("AC 6: four parallel starts of one learner + level create 3 attempts and 1 is 429 with retryAt", async () => {
+    const { learner, ladder } = await setup("L3", 17);
+    const results = await Promise.all([0, 1, 2, 3].map(() => start(learner, ladder.ladderId, "L3", T)));
+    expect(results.filter((r) => "attemptId" in r)).toHaveLength(3);
+    const limited = results.filter((r) => "error" in r);
+    expect(limited).toEqual([{ status: 429, error: "too-many-attempts", retryAt: at(24 * HOUR).toISOString() }]);
+    const [{ n }] = await sql()`
+      SELECT count(*)::int AS n FROM mcq_attempts WHERE learner_id = ${learner} AND level = 'L3'`;
+    expect(n).toBe(3);
+  });
+});
