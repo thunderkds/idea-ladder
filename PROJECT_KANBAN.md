@@ -33,9 +33,9 @@
 - [ ] **T029** — "Learn what's trending" weekly pick | backend-developer | C1 | Risk: Low | P2 | Phase: v3 (after Gate 3)
 
 ### In Progress
-- [ ] **T007** — Concept mapper (3–6 concepts, structured output) + learner edits concepts | backend-developer | C2 | Risk: Low | P1 | Phase: v1 (after Gate 1) | Started 2026-11-17: branch `T007-concept-mapper`, worktree `../wt-t007` ([admin]) · Ready for Review 2026-11-17: review fixes `4f9c3c9` `3d72565` `4af71d0`; golden run 20/20 mapped, 3,854 tokens/call, overlap 0.03 (exact-slug scorer, no threshold); auto verify started · 2026-11-19: first build lost (branch never pushed, clone not on this machine); user chose rebuild; back to In Progress on new branch `T007-concept-mapper` from main 467d538, worktree `../wt-t007`
 
 ### Ready for Review
+- [ ] **T007** — Concept mapper (3–6 concepts, structured output) + learner edits concepts | backend-developer | C2 | Risk: Low | P1 | Phase: v1 (after Gate 1) | Started 2026-11-17: branch `T007-concept-mapper`, worktree `../wt-t007` ([admin]) · Ready for Review 2026-11-17: review fixes `4f9c3c9` `3d72565` `4af71d0`; golden run 20/20 mapped, 3,854 tokens/call, overlap 0.03 (exact-slug scorer, no threshold); auto verify started · 2026-11-19: first build lost (branch never pushed, clone not on this machine); user chose rebuild; back to In Progress on new branch `T007-concept-mapper` from main 467d538, worktree `../wt-t007` · Ready for Review 2026-11-19 (rebuild): 15 commits on `T007-concept-mapper`; bun test 359 pass / 0 fail; e2e concepts-edit + start-flow 17 passed; code-review 0 P0, P1 + 3 P2 fixed (4bcc80d 5cd665f 2218681 a5f47be), 6 P3 cut list; migration-safety GO; golden-set run (AC 7) and live /start are the owner's; auto verify started
 
 ### Blocked
 
