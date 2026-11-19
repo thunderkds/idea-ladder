@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Thinking Report — Resolution — T008-level-generators</title>
+<style>
+  :root {
+    --bg:        #0a0a12;
+    --surface:   #111128;
+    --surface2:  #16162e;
+    --border:    #1e1e42;
+    --border-glow: #2a2a6e;
+    --text:      #e2e2f0;
+    --muted:     #6b6b9a;
+    --cyan:      #00d4ff;
+    --green:     #00ff88;
+    --amber:     #ffb800;
+    --red:       #ff3b6b;
+    --purple:    #a855f7;
+    --cyan-dim:  rgba(0,212,255,.12);
+    --green-dim: rgba(0,255,136,.12);
+    --red-dim:   rgba(255,59,107,.12);
+    --amber-dim: rgba(255,184,0,.12);
+    --purple-dim: rgba(168,85,247,.12);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    max-width: 980px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.5;
+  }
+  h1 { margin: 0; font-size: 1.25rem; color: #fff; letter-spacing: .02em; }
+  h2 { font-size: .8rem; color: var(--muted); margin: 0 0 .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--purple);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 0 24px rgba(168,85,247,.08), 0 4px 24px rgba(0,0,0,.5);
+  }
+  .header-meta { color: var(--muted); font-size: .85rem; margin-top: .3rem; }
+  .header-meta code { color: var(--cyan); background: var(--cyan-dim); padding: .1rem .4rem; border-radius: 4px; font-size: .8rem; }
+
+  /* ── BADGE ── */
+  .badge { display: inline-block; padding: .3rem .9rem; border-radius: 999px; font-weight: 700; font-size: .78rem; letter-spacing: .05em; text-transform: uppercase; }
+  .badge-green  { background: var(--green-dim);  color: var(--green);  border: 1px solid rgba(0,255,136,.3); box-shadow: 0 0 8px rgba(0,255,136,.2); }
+  .badge-yellow { background: var(--amber-dim);  color: var(--amber);  border: 1px solid rgba(255,184,0,.3); box-shadow: 0 0 8px rgba(255,184,0,.2); }
+  .badge-blue   { background: var(--cyan-dim);   color: var(--cyan);   border: 1px solid rgba(0,212,255,.3); box-shadow: 0 0 8px rgba(0,212,255,.2); }
+
+  /* ── SECTION CARD ── */
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 16px rgba(0,0,0,.4);
+  }
+  .section-head {
+    padding: .7rem 1.25rem;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ── DECISION BOX ── */
+  .decision-box { padding: 1.25rem 1.5rem; }
+  .decision-problem { font-size: .82rem; color: var(--muted); margin-bottom: .5rem; letter-spacing: .01em; }
+  .decision-statement { font-size: 1.05rem; font-weight: 600; color: #fff; margin-bottom: .85rem; }
+  .decision-statement::before { content: '→ '; color: var(--cyan); }
+  .decision-rationale {
+    font-size: .875rem;
+    color: #b0b0d0;
+    line-height: 1.75;
+    border-left: 3px solid var(--green);
+    padding-left: .85rem;
+    box-shadow: -6px 0 12px rgba(0,255,136,.08);
+  }
+
+  /* ── TRADE-OFF MATRIX ── */
+  .matrix-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    padding: .65rem 1.25rem;
+    font-size: .72rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    text-align: left;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  th.col-chosen { background: rgba(0,255,136,.07); color: var(--green); }
+  td { padding: .72rem 1.25rem; font-size: .875rem; border-top: 1px solid var(--border); vertical-align: middle; color: var(--text); }
+  tr:hover td { background: rgba(255,255,255,.02); }
+  td.criteria-label { font-weight: 500; color: #9090b8; width: 200px; }
+  td.col-chosen { background: rgba(0,255,136,.04); }
+
+  .cell-yes     { color: var(--green);  font-weight: 700; }
+  .cell-partial { color: var(--amber);  font-weight: 700; }
+  .cell-no      { color: var(--red);    font-weight: 700; }
+
+  /* ── ASSUMPTIONS LIST ── */
+  .item-list { padding: 1rem 1.5rem; }
+  .item-list ul { margin: 0; padding-left: 1.25rem; }
+  .item-list li { font-size: .875rem; line-height: 1.75; color: #b0b0d0; }
+  .item-list li + li { margin-top: .3rem; }
+  .tag { display: inline-block; font-size: .7rem; font-weight: 700; padding: .1rem .5rem; border-radius: 4px; margin-right: .4rem; vertical-align: middle; letter-spacing: .04em; text-transform: uppercase; }
+  .tag-assumption { background: var(--amber-dim);  color: var(--amber);  border: 1px solid rgba(255,184,0,.25); }
+  .tag-deferred   { background: var(--purple-dim); color: var(--purple); border: 1px solid rgba(168,85,247,.25); }
+  .tag-resolved   { background: var(--green-dim);  color: var(--green);  border: 1px solid rgba(0,255,136,.25); }
+
+  /* ── FOOTER ── */
+  .footer {
+    font-size: .72rem;
+    color: var(--muted);
+    text-align: center;
+    padding: 1rem 0 2rem;
+    border-top: 1px solid var(--border);
+    margin-top: .5rem;
+  }
+  code { font-family: 'Cascadia Code', 'Fira Code', monospace; background: var(--cyan-dim); color: var(--cyan); padding: .1rem .4rem; border-radius: 3px; font-size: .78rem; }
+  .footer code { background: var(--purple-dim); color: var(--purple); }
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══════════════════════════════════════════════════════════ -->
+<!--
+  SESSION_TYPE : e.g. "Brainstorming", "Grilling", "Planning"
+  BRANCH       : git branch name
+  DATE         : e.g. 2026-06-18
+  BADGE_CLASS  : green | yellow | blue
+  BADGE_LABEL  : e.g. "Direction Locked" | "Pending Approval" | "Deferred"
+-->
+<div class="header">
+  <div>
+    <h1>Thinking Report — Resolution</h1>
+    <div class="header-meta">
+      Branch: <code>T008-level-generators</code> &nbsp;·&nbsp; 2026-11-19
+    </div>
+  </div>
+  <span class="badge badge-green">Direction Locked</span>
+</div>
+
+<!-- ═══ DECISION BOX ══════════════════════════════════════════════════════ -->
+<!--
+  PROBLEM_STATEMENT : one sentence — what question was being answered
+  DECISION_STATEMENT: the chosen option / conclusion, one sentence
+  DECISION_RATIONALE: 2–4 sentences explaining WHY this was chosen
+-->
+<div class="section">
+  <div class="section-head"><h2>Decision</h2></div>
+  <div class="decision-box">
+    <div class="decision-problem">Problem: Q1: Which embedding model and provider should T008 use (AI SDK embedMany, fixed vector dimension in the migration, cost via logStepCost)? Q2: OPENAI_API_KEY is not on this machine — block T008, or build on the mock embedder?</div>
+    <div class="decision-statement">OpenAI text-embedding-3-small, vector(1536), @ai-sdk/openai 3.0.x; build and test on a test-only mock embedder; the paid golden run and live /start are the owner&#x27;s. Debated (2 Advocates each), decided by the Supervisor.</div>
+    <div class="decision-rationale">Both Advocates proposed the same option for each question, alone. Rule 2 (safer option): the choice can be undone (chunks rebuild from repo + SHA), keeps all data, and one OpenAI key may also serve T009&#x27;s model B. Blocking would stall every later v1 task without getting the key; the guide already puts every test but the paid run on a mock embedder.</div>
+  </div>
+</div>
+
+<!-- ═══ TRADE-OFF MATRIX ══════════════════════════════════════════════════ -->
+<!--
+  Replace <th class="criteria-label"></th><th class="col-chosen">OpenAI text-embedding-3-small + build on mock ✅</th><th>Google gemini-embedding-001</th><th>Local Ollama nomic-embed-text</th><th>Block T008 until key</th> with one <th> per option.
+  Mark the chosen option column with class="col-chosen".
+  Replace <tr><td class="criteria-label">Advocate 1 proposal</td><td class="col-chosen cell-yes">✅ Yes (both questions)</td><td class="cell-no">❌ No</td><td class="cell-no">❌ No</td><td class="cell-no">❌ No</td></tr>
+<tr><td class="criteria-label">Advocate 2 proposal</td><td class="col-chosen cell-yes">✅ Yes (both questions)</td><td class="cell-no">❌ No</td><td class="cell-no">❌ No</td><td class="cell-no">❌ No</td></tr>
+<tr><td class="criteria-label">Callable through AI SDK embedMany, first-party package</td><td class="col-chosen cell-yes">✅ @ai-sdk/openai 3.0.x</td><td class="cell-yes">✅ @ai-sdk/google</td><td class="cell-partial">⚠️ community provider</td><td class="cell-partial">⚠️ n/a</td></tr>
+<tr><td class="criteria-label">Fits pgvector index without extra work</td><td class="col-chosen cell-yes">✅ 1536 dims</td><td class="cell-partial">⚠️ 3072 default, must reduce</td><td class="cell-yes">✅ 768 dims</td><td class="cell-partial">⚠️ n/a</td></tr>
+<tr><td class="criteria-label">Keys / vendors (with T009 model B)</td><td class="col-chosen cell-yes">✅ 1 key may serve both</td><td class="cell-yes">✅ 1 key may serve both</td><td class="cell-partial">⚠️ 0 for embeddings, still a model B key</td><td class="cell-partial">⚠️ n/a</td></tr>
+<tr><td class="criteria-label">Matches recorded rule: embeddings use API keys</td><td class="col-chosen cell-yes">✅ Yes</td><td class="cell-yes">✅ Yes</td><td class="cell-no">❌ reopens the decision</td><td class="cell-yes">✅ Yes</td></tr>
+<tr><td class="criteria-label">Later v1 tasks can proceed</td><td class="col-chosen cell-yes">✅ Yes</td><td class="cell-yes">✅ Yes</td><td class="cell-yes">✅ Yes</td><td class="cell-no">❌ all wait</td></tr>
+<tr><td class="criteria-label">Reversibility</td><td class="col-chosen cell-yes">✅ chunks rebuild from repo + SHA</td><td class="cell-yes">✅</td><td class="cell-partial">⚠️ new service to remove</td><td class="cell-yes">✅</td></tr> with one <tr> per criterion.
+
+  Example header row:
+    <th class="criteria-label"></th>
+    <th>Option A — Shell Pipe</th>
+    <th class="col-chosen">Option B — LLM Renderer ✅</th>
+    <th>Option C — Dedicated Skill</th>
+
+  Example body row:
+    <tr>
+      <td class="criteria-label">Offline / no CDN</td>
+      <td class="cell-yes">✅ Yes</td>
+      <td class="col-chosen cell-yes">✅ Yes</td>
+      <td class="cell-yes">✅ Yes</td>
+    </tr>
+
+  Cell classes: cell-yes (green) | cell-partial (amber) | cell-no (red)
+  For the chosen column, always add col-chosen as a second class on <td>.
+-->
+<div class="section">
+  <div class="section-head"><h2>Trade-Off Matrix</h2></div>
+  <div class="matrix-wrap">
+    <table>
+      <thead>
+        <tr><th class="criteria-label"></th><th class="col-chosen">OpenAI text-embedding-3-small + build on mock ✅</th><th>Google gemini-embedding-001</th><th>Local Ollama nomic-embed-text</th><th>Block T008 until key</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="criteria-label">Advocate 1 proposal</td><td class="col-chosen cell-yes">✅ Yes (both questions)</td><td class="cell-no">❌ No</td><td class="cell-no">❌ No</td><td class="cell-no">❌ No</td></tr>
+<tr><td class="criteria-label">Advocate 2 proposal</td><td class="col-chosen cell-yes">✅ Yes (both questions)</td><td class="cell-no">❌ No</td><td class="cell-no">❌ No</td><td class="cell-no">❌ No</td></tr>
+<tr><td class="criteria-label">Callable through AI SDK embedMany, first-party package</td><td class="col-chosen cell-yes">✅ @ai-sdk/openai 3.0.x</td><td class="cell-yes">✅ @ai-sdk/google</td><td class="cell-partial">⚠️ community provider</td><td class="cell-partial">⚠️ n/a</td></tr>
+<tr><td class="criteria-label">Fits pgvector index without extra work</td><td class="col-chosen cell-yes">✅ 1536 dims</td><td class="cell-partial">⚠️ 3072 default, must reduce</td><td class="cell-yes">✅ 768 dims</td><td class="cell-partial">⚠️ n/a</td></tr>
+<tr><td class="criteria-label">Keys / vendors (with T009 model B)</td><td class="col-chosen cell-yes">✅ 1 key may serve both</td><td class="cell-yes">✅ 1 key may serve both</td><td class="cell-partial">⚠️ 0 for embeddings, still a model B key</td><td class="cell-partial">⚠️ n/a</td></tr>
+<tr><td class="criteria-label">Matches recorded rule: embeddings use API keys</td><td class="col-chosen cell-yes">✅ Yes</td><td class="cell-yes">✅ Yes</td><td class="cell-no">❌ reopens the decision</td><td class="cell-yes">✅ Yes</td></tr>
+<tr><td class="criteria-label">Later v1 tasks can proceed</td><td class="col-chosen cell-yes">✅ Yes</td><td class="cell-yes">✅ Yes</td><td class="cell-yes">✅ Yes</td><td class="cell-no">❌ all wait</td></tr>
+<tr><td class="criteria-label">Reversibility</td><td class="col-chosen cell-yes">✅ chunks rebuild from repo + SHA</td><td class="cell-yes">✅</td><td class="cell-partial">⚠️ new service to remove</td><td class="cell-yes">✅</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══ ASSUMPTIONS & OPEN QUESTIONS ════════════════════════════════════ -->
+<!--
+  Replace <li><span class="tag tag-resolved">Resolved</span> Q1 Which embedding model and provider? Both Advocates, alone: OpenAI text-embedding-3-small via @ai-sdk/openai (memory/decisions.md:24 &quot;Model B and embeddings always use API keys&quot;).</li>
+<li><span class="tag tag-resolved">Resolved</span> Q2 OPENAI_API_KEY is missing: both Advocates, alone: option (b), build and test on a test-only mock embedder; the server fails fast naming the key (tasks/TASK_GUIDE_T008.md:200 &quot;a deterministic mock embedder (fixed vectors) for AC 1–6 and 8&quot;).</li>
+<li><span class="tag tag-assumption">Assumption</span> @ai-sdk/openai 3.0.x pairs with ai 6.0.317: npm shows @ai-sdk/provider 3.0.19 for both it and @ai-sdk/anthropic 3.0.135.</li>
+<li><span class="tag tag-assumption">Assumption</span> The text-embedding-3-small price per 1M tokens is not in the repo; it goes into eval/prices.json with a source and checkedAt before a priced run.</li>
+<li><span class="tag tag-deferred">Deferred</span> The paid golden-set run (SC 8) and a live /start wait for the owner&#x27;s OPENAI_API_KEY (Stops that stay: a secret the Supervisor does not have).</li>
+<li><span class="tag tag-deferred">Deferred</span> If T009 picks a non-OpenAI model B, the app has 3 keys; re-embedding under that provider stays possible.</li> with one <li> per item.
+  Use tags to classify: tag-assumption (amber) | tag-deferred (purple) | tag-resolved (green)
+
+  Example items:
+    <li><span class="tag tag-resolved">Resolved</span> Score scale is 0–100% — user confirmed.</li>
+    <li><span class="tag tag-assumption">Assumption</span> No Python runtime guaranteed — POSIX sh only.</li>
+    <li><span class="tag tag-deferred">Deferred</span> Flowchart visualization — revisit after matrix pilot.</li>
+-->
+<div class="section">
+  <div class="section-head"><h2>Assumptions &amp; Open Questions</h2></div>
+  <div class="item-list">
+    <ul>
+      <li><span class="tag tag-resolved">Resolved</span> Q1 Which embedding model and provider? Both Advocates, alone: OpenAI text-embedding-3-small via @ai-sdk/openai (memory/decisions.md:24 &quot;Model B and embeddings always use API keys&quot;).</li>
+<li><span class="tag tag-resolved">Resolved</span> Q2 OPENAI_API_KEY is missing: both Advocates, alone: option (b), build and test on a test-only mock embedder; the server fails fast naming the key (tasks/TASK_GUIDE_T008.md:200 &quot;a deterministic mock embedder (fixed vectors) for AC 1–6 and 8&quot;).</li>
+<li><span class="tag tag-assumption">Assumption</span> @ai-sdk/openai 3.0.x pairs with ai 6.0.317: npm shows @ai-sdk/provider 3.0.19 for both it and @ai-sdk/anthropic 3.0.135.</li>
+<li><span class="tag tag-assumption">Assumption</span> The text-embedding-3-small price per 1M tokens is not in the repo; it goes into eval/prices.json with a source and checkedAt before a priced run.</li>
+<li><span class="tag tag-deferred">Deferred</span> The paid golden-set run (SC 8) and a live /start wait for the owner&#x27;s OPENAI_API_KEY (Stops that stay: a secret the Supervisor does not have).</li>
+<li><span class="tag tag-deferred">Deferred</span> If T009 picks a non-OpenAI model B, the app has 3 keys; re-embedding under that provider stays possible.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ═══ FOOTER ═══════════════════════════════════════════════════════════ -->
+<!--
+  SESSION_REF : path to the source file, e.g. BRAINSTORMING_LOG.md or tasks/TASK_GUIDE_T001.md
+  TASK_ID     : e.g. T001 or —
+  TIMESTAMP   : ISO-8601 e.g. 2026-06-18T14:30:22
+-->
+<div class="footer">
+  Source: <code>tasks/TASK_GUIDE_T008.md § Questions Log</code> &nbsp;·&nbsp; Task: T008 &nbsp;·&nbsp; Generated: 2026-11-19T08:40:00
+</div>
+
+</body>
+</html>
