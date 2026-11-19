@@ -58,10 +58,10 @@ alone false-rejects 11.3% (paraphrase keys); a second check (T009) is required.
 
 ### Requirement Fidelity Gate (sign off BEFORE implementation)
 
-- [ ] Restated intent confirmed to match the user's request (by Supervisor / user — not the implementing agent)
-- [ ] Domain terms align with `PROJECT_SPEC.md` glossary (`grill-with-docs` run if terminology was fuzzy)
-- [ ] Every Acceptance Criterion below traces to a line in the Requirement
-- [ ] All Requirement Refs exist in `PRD.md` and are fully covered by the Acceptance Criteria above
+- [x] Restated intent confirmed to match the user's request (by Supervisor / user — not the implementing agent) — auto (Supervisor) 2026-11-19: matches FR-003/004/005/006/016, NFR-005/006, US-001/003 and the user's "complete all task [admin]"
+- [x] Domain terms align with `PROJECT_SPEC.md` glossary (`grill-with-docs` run if terminology was fuzzy)
+- [x] Every Acceptance Criterion below traces to a line in the Requirement
+- [x] All Requirement Refs exist in `PRD.md` and are fully covered by the Acceptance Criteria above
 
 > An agent must NOT start implementing until this gate is checked. If anything here is unclear,
 > STOP and ask the Supervisor (Karpathy: Think Before Coding).
@@ -211,3 +211,10 @@ bun test per subtask with the AI SDK mock language model and a deterministic moc
 - [ ] Tests written AND pass — output pasted into `tasks/TASK_REVIEW_T008.md` Evidence (Hard-Stop Gate 5)
 - [ ] `Skill({ skill: "verify" })` run — headless auto verify (adversarial at C3)
 - [ ] Supervisor notified: task ready for Stage 4 review
+
+---
+
+## Questions Log
+
+- 2026-11-19 DEBATE Which embedding model and provider? → OpenAI `text-embedding-3-small`, `vector(1536)`, `@ai-sdk/openai` 3.0.x (Advocate 1: OpenAI text-embedding-3-small via @ai-sdk/openai; Advocate 2: OpenAI text-embedding-3-small via @ai-sdk/openai) ⚠ decided for you — please review (reports/question_T008_20261119T0840.html)
+- 2026-11-19 DEBATE `OPENAI_API_KEY` is missing: block, or build on the mock embedder? → build and test on a test-only mock; server fails fast naming the key; paid golden run and live `/start` are the owner's (Advocate 1: option (b); Advocate 2: option (b) with fail-fast and test-only mock) ⚠ decided for you — please review (reports/question_T008_20261119T0840.html)
