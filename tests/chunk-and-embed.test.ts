@@ -147,6 +147,7 @@ describe("Inngest step chunk-and-embed (AC 1, Success Criterion 1)", () => {
       "map-concepts",
       "chunk-and-embed",
       ...["L0", "L1", "L2", "L3", "L4"].map((l) => `generate-level-${l}`),
+      "check-and-dedupe",
     ]);
     const rows = await chunkRows();
     expect(result).toMatchObject({ status: "mapped", chunks: rows.length });
@@ -167,7 +168,8 @@ describe("Inngest step chunk-and-embed (AC 1, Success Criterion 1)", () => {
       "package.json#1",
     ]);
     expect(dep[1].start_line).toBeLessThan(dep[0].end_line + 1); // the overlap repeats the end of chunk 0
-    expect(embedder.calls).toHaveLength(1);
+    // The first call embeds the chunks; check-and-dedupe (8c) embeds items after it (the test engine may re-run it).
+    expect(embedder.calls[0]).toHaveLength(rows.length);
     const tokens = (embedder.calls[0] ?? []).reduce((n, t) => n + Math.ceil(t.length / 4), 0);
     expect(costs.filter((c) => c.step === "chunk-and-embed")).toEqual([
       {
@@ -183,10 +185,10 @@ describe("Inngest step chunk-and-embed (AC 1, Success Criterion 1)", () => {
       },
     ]);
 
-    // Re-run for the same repo + SHA: no new row, no paid embedding call.
+    // Re-run for the same repo + SHA: no new row, no chunk embedding call (only check-and-dedupe embeds again).
     await engine(jobId, embedder, costs).execute();
     expect((await chunkRows()).length).toBe(rows.length);
-    expect(embedder.calls).toHaveLength(1);
+    expect(costs.filter((c) => c.step === "chunk-and-embed")).toHaveLength(1);
   });
 
   test("no OPENAI_API_KEY: the job fails embedder-not-configured at once, no chunk stored", async () => {

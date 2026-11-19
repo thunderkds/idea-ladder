@@ -102,6 +102,7 @@ describe("Inngest steps generate-level-L0..L4 (AC 2, AC 3)", () => {
       "map-concepts",
       "chunk-and-embed",
       ...LEVEL_STEPS,
+      "check-and-dedupe",
     ]);
     const sources: Record<string, string[]> = {
       L0: ["readme", "dep"],
@@ -172,7 +173,12 @@ describe("retry and failure (NFR-005, AC 8)", () => {
     );
     const others: Record<string, unknown> = {};
     for (const id of LEVEL_STEPS.filter((s) => s !== "generate-level-L2")) {
-      others[id] = { level: id.slice(-2), status: "generated", memoized: true };
+      others[id] = {
+        ...{ goal: "g", passTest: { kind: "k", description: "d" }, cards: [], mcqs: [], dropped: [] },
+        level: id.slice(-2),
+        status: "generated",
+        memoized: true,
+      };
       memo.push({ id, handler: async () => others[id] });
     }
     // The retry gets its own model A record: handlers the first engine still runs in the background do not count.
@@ -213,5 +219,55 @@ describe("retry and failure (NFR-005, AC 8)", () => {
     // (The engine may re-run the L1 handler after the job failed, which then answers job-failed: assert the job row.)
     expect(result).toMatchObject({ status: "failed" });
     expect(await jobRow(jobId)).toEqual({ status: "failed", reason: "generate-level-L1-failed" });
+  });
+
+  test("check-and-dedupe after the generator steps: per-level kept items and drops, its cost under its own step", async () => {
+    const jobId = await newJob();
+    const { modelA, calls } = levelModelA();
+    const costs: CostEntry[] = [];
+    const { result } = await engine(jobId, modelA, costs).t.execute();
+    const checked = (
+      result as {
+        checked: {
+          level: string;
+          status: string;
+          cards: unknown[];
+          mcqs: { key: string }[];
+          dropped: { reason: string }[];
+          passTest: { kind: string };
+        }[];
+      }
+    ).checked;
+    expect(checked.map((l) => [l.level, l.status, l.passTest.kind])).toEqual([
+      ["L0", "generated", "concept-mcq"],
+      ["L1", "generated", "run-log-and-explanation"],
+      ["L2", "generated", "branch-diff-and-diff-questions"],
+      ["L3", "generated", "verified-mcq"],
+      ["L4", "generated", "repo-or-merged-pr"],
+    ]);
+    // testModelA answers the same card and question at every level: L0 keeps them, the rest are near-duplicates.
+    expect(checked.map((l) => [l.cards.length, l.mcqs.length])).toEqual([
+      [1, 1],
+      [0, 0],
+      [0, 0],
+      [0, 0],
+      [0, 0],
+    ]);
+    for (const l of checked.slice(1)) expect(l.dropped.map((d) => d.reason)).toEqual(["duplicate", "duplicate"]);
+    expect(checked[0]?.dropped).toEqual([]);
+    for (const level of ["L0", "L1", "L2", "L3", "L4"]) expect(calls[level]?.length).toBeGreaterThan(0);
+    // The embedding cost is logged under check-and-dedupe (the test engine may re-run an unmemoized step).
+    const checkCosts = costs.filter((c) => c.step === "check-and-dedupe");
+    expect(checkCosts.length).toBeGreaterThan(0);
+    for (const c of checkCosts)
+      expect(c).toMatchObject({
+        jobId,
+        step: "check-and-dedupe",
+        backend: "api",
+        model: "mock-embedding",
+        outputTokens: 0,
+      });
+    expect((await jobRow(jobId)).status).toBe("mapped"); // job done is save-ladder's (8d)
+    expect((await db.sql`SELECT count(*)::int AS n FROM ladders`)[0].n).toBe(0);
   });
 });

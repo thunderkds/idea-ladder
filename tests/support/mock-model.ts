@@ -93,15 +93,22 @@ export function promptData(prompt: string): { level: string; chunks: { id: numbe
   }
 }
 
-/** A level answer with one card and one MCQ citing the first chunk the prompt gave (none when it gave none). */
+/**
+ * A level answer with one card and one MCQ citing the first chunk the prompt gave (none when it gave none). The
+ * MCQ key is the chunk's first word, so it passes the answer-key check (8c) with no regeneration.
+ */
 const testLevelAnswer = (prompt: string) => {
-  const id = promptData(prompt)?.chunks[0]?.id;
+  const first = promptData(prompt)?.chunks[0] as { id: number; text?: string } | undefined;
+  const id = first?.id;
+  const key = first?.text?.match(/[\p{L}\p{N}]+/u)?.[0] ?? "a";
   return {
     goal: "Test goal",
     passTest: { kind: "model-kind", description: "Test pass test" },
     cards: id === undefined ? [] : [{ front: "Test front?", back: "Test back.", chunkId: id }],
     mcqs:
-      id === undefined ? [] : [{ question: "Test question?", options: ["a", "b", "c", "d"], key: "a", chunkId: id }],
+      id === undefined
+        ? []
+        : [{ question: "Test question?", options: [key, "option b", "option c", "option d"], key, chunkId: id }],
   };
 };
 

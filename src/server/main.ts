@@ -93,7 +93,10 @@ const app = createApp({
   },
   inngestHandler: serve({
     client: inngest,
-    functions: [ladderGenerateFunction(inngest, { sql, github, reader, modelA, embedder }), reminders],
+    functions: [
+      ladderGenerateFunction(inngest, { sql, github, reader, modelA, embedder, dedupeCosine: config.dedupeCosine }),
+      reminders,
+    ],
     // Never derive the callback origin from the request Host header (required in production by loadConfig).
     ...(config.inngestServeOrigin ? { serveOrigin: config.inngestServeOrigin } : {}),
   }),
