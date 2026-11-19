@@ -5,6 +5,8 @@ import { MockEmbeddingModelV3 } from "ai/test";
 import { CHUNK_OVERLAP, CHUNK_SIZE, chunkFiles, chunkText } from "../src/server/chunker.ts";
 import {
   createOpenAIEmbedder,
+  EMBED_BATCH_MAX_CHARS,
+  EMBED_BATCH_MAX_TEXTS,
   type Embedder,
   EmbedderNotConfiguredError,
   embedderFromModel,
@@ -81,6 +83,34 @@ describe("chunk-and-embed embedder", () => {
     }); // one call per value here; usage is summed;
     expect(await e.embedTexts([])).toEqual({ embeddings: [], tokens: 0 });
     expect(e.model).toBe("text-embedding-3-small");
+  });
+
+  test("large input: batches bounded by count and chars, every text embedded in input order, tokens summed", async () => {
+    const calls: { n: number; chars: number }[] = [];
+    const model = new MockEmbeddingModelV3({
+      maxEmbeddingsPerCall: 2048, // as @ai-sdk/openai: it splits by count only, never by size
+      doEmbed: async ({ values }) => {
+        calls.push({ n: values.length, chars: values.reduce((s, v) => s + v.length, 0) });
+        return {
+          embeddings: values.map((v) => [Number(v.slice(0, 4))]),
+          usage: { tokens: values.length },
+          warnings: [],
+        };
+      },
+    });
+    const texts = Array.from({ length: 900 }, (_, i) => String(i).padStart(4, "0").padEnd(1500, "x"));
+    const r = await embedderFromModel(model, "text-embedding-3-small").embedTexts(texts);
+    expect(calls.length).toBeGreaterThan(1);
+    for (const c of calls) {
+      expect(c.n).toBeLessThanOrEqual(EMBED_BATCH_MAX_TEXTS);
+      expect(c.chars).toBeLessThanOrEqual(EMBED_BATCH_MAX_CHARS);
+    }
+    expect(calls.reduce((s, c) => s + c.n, 0)).toBe(900);
+    expect(r.embeddings).toEqual(texts.map((_, i) => [i]));
+    expect(r.tokens).toBe(900);
+    calls.length = 0;
+    expect(await embedderFromModel(model, "m").embedTexts([])).toEqual({ embeddings: [], tokens: 0 });
+    expect(calls).toEqual([]);
   });
 
   test("no OPENAI_API_KEY: fails naming the key, never a mock vector", async () => {

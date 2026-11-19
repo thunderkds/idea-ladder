@@ -6,6 +6,10 @@ import { embedMany } from "ai";
 /** Fixed by the `chunks.embedding vector(1536)` column (migrations/0008_generation.up.sql). */
 export const EMBEDDING_DIMENSIONS = 1536;
 export const DEFAULT_EMBEDDING_MODEL_ID = "text-embedding-3-small";
+/** One `embedMany` call gets at most this many texts ... */
+export const EMBED_BATCH_MAX_TEXTS = 200;
+/** ... and at most this many characters (~100k tokens, far under OpenAI's per-request input cap). */
+export const EMBED_BATCH_MAX_CHARS = 400_000;
 
 export type EmbedResult = { embeddings: number[][]; tokens: number };
 /** `model` is the id written to the cost log and to `chunks.embedding_model`. */
@@ -21,14 +25,35 @@ export class EmbedderNotConfiguredError extends Error {
   }
 }
 
-/** One `embedMany` call per batch of texts (the SDK splits by the model's per-call limit); usage tokens summed. */
+/**
+ * One `embedMany` call per batch, in input order; embeddings concatenated, usage tokens summed. The SDK splits
+ * only by count (`maxEmbeddingsPerCall`), never by size, and an OpenAI request has a total-input token cap, so
+ * batches are bounded here by EMBED_BATCH_MAX_TEXTS and EMBED_BATCH_MAX_CHARS. Every text is embedded.
+ */
 export function embedderFromModel(model: EmbeddingModel, modelId: string): Embedder {
   return {
     model: modelId,
     embedTexts: async (texts) => {
-      if (texts.length === 0) return { embeddings: [], tokens: 0 };
-      const r = await embedMany({ model, values: texts });
-      return { embeddings: r.embeddings, tokens: r.usage.tokens };
+      const batches: string[][] = [];
+      let batch: string[] = [];
+      let chars = 0;
+      for (const t of texts) {
+        if (batch.length > 0 && (batch.length >= EMBED_BATCH_MAX_TEXTS || chars + t.length > EMBED_BATCH_MAX_CHARS)) {
+          batches.push(batch);
+          batch = [];
+          chars = 0;
+        }
+        batch.push(t);
+        chars += t.length;
+      }
+      if (batch.length > 0) batches.push(batch);
+      const out: EmbedResult = { embeddings: [], tokens: 0 };
+      for (const values of batches) {
+        const r = await embedMany({ model, values });
+        out.embeddings.push(...r.embeddings);
+        out.tokens += r.usage.tokens;
+      }
+      return out;
     },
   };
 }
