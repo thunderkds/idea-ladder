@@ -43,20 +43,34 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 
 -->
 
+## Auto decisions
+
+Mode: auto
+1. Guide rewritten for the user's "Claude subscription only" decision before spawn: model B is a separate blind Claude call built by `createModelA` from `MODEL_B_BACKEND` / `MODEL_B_ID`; no second provider — FACT: memory/decisions.md:98 "Model B (T009 blind solve, T014 diff questions) is a separate Claude call on the owner's subscription that never sees the answer key; there is no second provider."
+2. Requirement Fidelity Gate signed `auto (Supervisor)` before spawn — RULE: docs/claude-md/tracks.md:221 "| 13 | Stage 2/3: the Requirement Fidelity Gate (\"Restated intent confirmed\") | Signed `auto (Supervisor)`"
+3. Spawn model claude-sonnet-5-5 (C2, Risk Medium) — FACT: PROJECT_SPEC.md:80 "| claude | `claude` | haiku-5-5 | sonnet-5-5 | sonnet-5-5 or opus-5-5 | opus-5-5 |"
+4. Stage 4 fix set: fix P2-1 (only model errors count as disagreement, incl. the SDK's `RetryError`; `onUsage` after the try) and P2-2 (dedupe replacements against a live pool); cut the 3 P3s (seeds bookkeeping; 3 untested paths; no `claude` CLI startup check, same as model A) — DEBATED: fix both P2s with `RetryError` in the allowlist, cut the P3s (Advocate 1: fix P2-1 and P2-2, cut P3s; Advocate 2: fix P2-1 with `RetryError` added and P2-2, cut P3s) ⚠ decided for you — please review
+5. Lane check EXCEEDS (25 files > 14; 2405 lines > 500) is accepted: the 49-item seed set and new tests are most of it — RULE: .claude/skills/code-review/SKILL.md:74 "It is warn-only"
+6. A model B call that fails twice inside the step counts as disagreement, so an Inngest retry never re-pays solved items — FACT: tasks/TASK_GUIDE_T009.md:81 "| 4 | Negative: model B output that fails the schema, or a model error after the step's retries → that MCQ counts as disagreement (dropped), never as agreement."
+Paused: the measurement run SC 7 / AC 7 (`cd eval && bun run eval:blind-solver`, twice) calls model B on the owner's Claude subscription — the owner's go-ahead, as for the T006 and T008 golden-set runs (docs/claude-md/tracks.md `### Stops that stay`)
+Checks: tests `bun test --timeout 60000` — 528 pass / 0 fail (fix agent, 2d69600); `bun test blind-solver seed-schema` — 45 pass / 0 fail (Supervisor, 2d69600); `cd eval && bun test` — 77 pass; `bun run test:e2e -- start-flow` — 6 passed (build agent); typecheck and lint clean; reviews code-review — 0 P0, 0 P1, 2 P2 fixed (2d69600), 3 P3 cut; security-review — no findings (confidence ≥ 8); real run `cd eval && env -i HOME=… PATH=/usr/bin:/bin bun run eval:blind-solver` — printed `eval:blind-solver cannot run; missing: the `claude` CLI is not installed or not on PATH (install Claude Code and sign in). No model call was made.` (auto-checked, not /verify)
+Memory: memory/decisions.md — T009 merged entry (written at merge)
+Not done: the 3-policy measurement on the live model, twice (owner, Claude subscription); auto verify: running (T182); merge (admin: after the auto verify pass)
+
 ## Evidence
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
 | **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | tests/blind-solver.test.ts (AC 1, 4, 7), tests/blind-solver-step.test.ts (AC 3, 4, SC 3-5), tests/config.test.ts `model B (T009)` (AC 2), tests/seed-schema.test.ts (AC 5), tests/blind-solver-metrics.test.ts (AC 5-7, SC 6). Full run: `bun test --timeout 60000` -> 524 pass, 0 fail; `cd eval && bun test` -> 77 pass, 0 fail; `bun run test:e2e -- start-flow` -> 6 passed |
 | Verification command run | ☑ pass (unit tests); live `eval:blind-solver` is the owner's | `bun test blind-solver seed-schema blind-solver-metrics save-ladder config` -> `81 pass |  0 fail |  825 expect() calls | Ran 81 tests across 7 files. [4.37s]`. `bun run typecheck` and `bun run lint` clean. `env -i PATH=/usr/bin:/bin bun run eval:blind-solver` (no `claude`) -> `eval:blind-solver cannot run; missing: the `claude` CLI is not installed or not on PATH (install Claude Code and sign in). No model call was made.` exit 1; with `MODEL_B_BACKEND=api` -> `missing: ANTHROPIC_API_KEY (MODEL_B_BACKEND=api); MODEL_B_ID (MODEL_B_BACKEND=api)`. No live model call was made. |
-| Negative cases hold | ☐ pass / ☐ fail | |
+| Negative cases hold | ☑ pass | model B answer index 7 or a thrown model error → dropped, never kept; 3 disagreements → 2 regenerations then `blind-solve-mismatch`; a throwing cost log and a TypeError now fail the step (red before 2d69600); two near-duplicate replacements → one kept (red before 2d69600); seed hash mismatch → the script refuses; no credentials → fails fast with no model call; `MODEL_B_BACKEND=api` without `MODEL_B_ID` → config problem |
 | verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
-| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
-| Full smoke suite still green (no regression) | ☐ pass / ☐ fail | |
-| **Companion score (easy-verifier)** | ☐ pass / ☐ fail / ☐ N/A | [`overall` and `change_risk` as the tool returned them, the scope, the ref, and the absolute path of the verifier report after a literal `report:` label — e.g. "overall 86 (>= 80), change_risk pass, scope changes, ref `main...HEAD`, report: `/home/me/.easy-verifier-reports/kit/score_changes_20261028T0530Z.html`". The gate reads the path that follows `report:` and nothing else, so with no label, or a path that is absent, the row is unscored — write ☑ N/A instead. ☑ N/A with a reason when neither companion tool was run: the merge gate blocks on ☑ fail only, never on an absent or N/A row] |
-| **UI: Visual regression (diff or verdict pasted)** | ☐ pass / ☐ fail / ☐ N/A | [screenshot path or LLM verdict — required for UI tasks, Hard-Stop Gate 6] |
-| **UI: Design-system compliance (tokens/colors/typography verified)** | ☐ pass / ☐ fail / ☐ N/A | [method used + output] |
-| **UI: Responsiveness at target viewports** | ☐ pass / ☐ fail / ☐ N/A | [viewports tested, any overflow findings] |
+| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☑ pass | `git diff main...HEAD` (26 files) plus direct callers (ladder-generate steps, main.ts wiring, model-a.ts); one code reviewer (correctness, testing, over-engineering, seed set) and one security reviewer |
+| Full smoke suite still green (no regression) | ☑ pass | `bun test --timeout 60000` 528 pass / 0 fail on 2d69600; eval 77 pass; e2e start-flow 6 passed |
+| **Companion score (easy-verifier)** | ☑ N/A | Neither companion tool was run for this task |
+| **UI: Visual regression (diff or verdict pasted)** | ☑ N/A | Pure backend task: no UI section in the guide, no client file changed |
+| **UI: Design-system compliance (tokens/colors/typography verified)** | ☑ N/A | Pure backend task: no UI section in the guide, no client file changed |
+| **UI: Responsiveness at target viewports** | ☑ N/A | Pure backend task: no UI section in the guide, no client file changed |
 
 ---
 

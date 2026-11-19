@@ -209,3 +209,4 @@ bun test with mock `Generate` for A and B: prompt content, shuffle mapping, disa
 
 ## Questions Log
 
+- 2026-11-19 DEBATE Which Stage 4 P2/P3 findings to fix before Ready for Review? → fix P2-1 (only model errors, incl. RetryError, count as disagreement; onUsage after the try) and P2-2 (live dedupe pool); cut the 3 P3s (Advocate 1: fix P2-1 and P2-2, cut P3s; Advocate 2: fix P2-1 with RetryError added and P2-2, cut P3s) ⚠ decided for you — please review
