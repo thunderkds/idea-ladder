@@ -447,6 +447,7 @@ describe("T007 0007_concepts", () => {
   const SHA = "6b41670516ed8e8b738612f60491995470aa63b3";
   test("job statuses mapping and mapped allowed; concepts go with their snapshot and learner; down resets jobs to picked", async () => {
     await migrateUp(db.sql);
+    await db.sql`TRUNCATE repo_snapshots, generation_jobs CASCADE`;
     await db.sql`INSERT INTO repo_snapshots (repo_full_name, commit_sha, default_branch, archived, readme, topics, languages, dep_files, open_issues, good_first_issues, tree, tree_truncated)
       VALUES ('a/b', ${SHA}, 'main', false, 'r', '[]'::jsonb, '{}'::jsonb, '[]'::jsonb, 0, 0, '[]'::jsonb, false)`;
     await db.sql`INSERT INTO repo_concepts (repo_full_name, commit_sha, position, name, slug, reason, basis)
