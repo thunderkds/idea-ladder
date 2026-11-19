@@ -67,8 +67,17 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 > **before any implementation commit exists**; if it does not (docs, templates, skill-instruction
 > text), BEFORE is the **verbatim prior content** of what changed — a quoted excerpt, not a command.
 
-**BEFORE**: [pasted timestamped command output showing the thing absent/failing, captured before the
-first implementation commit] OR [verbatim excerpt of the prior content, for non-executable changes]
+**BEFORE** (captured 2026-11-19T10:53:26Z, before any T009 implementation commit):
+
+```
+$ date -u +%Y-%m-%dT%H:%M:%SZ; bun test blind-solver seed-schema blind-solver-metrics 2>&1 | tail -4; grep -n "blind-solve" src/server/ladder-generate.ts || echo "no blind-solve step"
+2026-11-19T10:53:26Z
+62 files were searched [2.00ms]
+
+note: Tests need ".test", "_test_", ".spec" or "_spec_" in the filename (ex: "MyApp.test.ts")
+
+no blind-solve step
+```
 
 **AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
 
