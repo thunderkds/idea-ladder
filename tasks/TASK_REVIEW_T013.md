@@ -67,8 +67,20 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 > **before any implementation commit exists**; if it does not (docs, templates, skill-instruction
 > text), BEFORE is the **verbatim prior content** of what changed — a quoted excerpt, not a command.
 
-**BEFORE**: [pasted timestamped command output showing the thing absent/failing, captured before the
-first implementation commit] OR [verbatim excerpt of the prior content, for non-executable changes]
+**BEFORE**: captured by backend-developer before the first implementation commit (HEAD 950b0bf), command
+`date -u +%Y-%m-%dT%H:%M:%SZ; bun test -t "T013" 2>&1 | tail -4; ls migrations | grep 0014 || echo "no 0014 migration"; grep -n "MCQ_LEVELS\|POOL_LEVELS" src/server/level-generator.ts src/server/save-ladder.ts`
+
+```
+2026-11-19T11:28:26Z
+bun test v1.4.4 (38afee6c8)
+
+error: regex "T013" matched 0 tests. Searched 51 files (skipping 531 tests) [155.00ms]
+no 0014 migration
+src/server/save-ladder.ts:13:const POOL_LEVELS = new Set(["L0", "L3"]);
+src/server/save-ladder.ts:44:  if (POOL_LEVELS.has(l.level) && l.mcqs.length < MIN_MCQ_POOL) flags.push("insufficient-pool");
+src/server/level-generator.ts:26:const MCQ_LEVELS: ReadonlySet<LevelId> = new Set(["L0", "L3"]);
+src/server/level-generator.ts:73:  const mcqs = MCQ_LEVELS.has(level)
+```
 
 **AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
 
