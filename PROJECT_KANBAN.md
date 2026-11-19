@@ -31,9 +31,9 @@
 - [ ] **T029** — "Learn what's trending" weekly pick | backend-developer | C1 | Risk: Low | P2 | Phase: v3 (after Gate 3)
 
 ### In Progress
-- [ ] **T012** — MCQ pass test — score vs stored keys, randomized pool, rate-limited retakes, append-only evidence record + SHA-256 | backend-developer | C2 | Risk: High | P0 | Phase: v1 (after Gate 1) | Started 2026-11-19: branch `T012-mcq-pass-test`, worktree `../wt-t012` ([admin], auto)
 
 ### Ready for Review
+- [ ] **T012** — MCQ pass test — score vs stored keys, randomized pool, rate-limited retakes, append-only evidence record + SHA-256 | backend-developer | C2 | Risk: High | P0 | Phase: v1 (after Gate 1) | Started 2026-11-19: branch `T012-mcq-pass-test`, worktree `../wt-t012` ([admin], auto) · Ready for Review 2026-11-19: 11 commits on `T012-mcq-pass-test`; bun test 476 pass / 0 fail; code-review 0 P0/P1, 1 P2 fixed (9f74e5f), 9 P3 cut; security-review no findings; migration-safety GO (0011); auto verify started
 
 ### Blocked
 
