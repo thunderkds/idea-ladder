@@ -502,3 +502,48 @@ a.button {
 .save-bar .save-status {
   margin: 0;
 }
+/* T016 flag button: secondary, low emphasis, under the ratings; full width on mobile only */
+.flag-open {
+  border-color: transparent;
+  background-color: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-body);
+  text-decoration: underline;
+}
+.flag-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 100%;
+  margin-bottom: var(--space-6);
+}
+.flag-reason {
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: var(--font-size-body);
+}
+.flag-actions {
+  display: flex;
+  gap: var(--space-3);
+}
+.flag-error {
+  margin: 0;
+  color: var(--color-error);
+}
+.flag-notice {
+  margin: 0 0 var(--space-3);
+  color: var(--color-text-muted);
+}
+@media (max-width: 480px) {
+  .flag-open,
+  .flag-actions .button {
+    width: 100%;
+  }
+}
