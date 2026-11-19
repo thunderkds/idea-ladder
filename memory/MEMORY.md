@@ -28,6 +28,7 @@
 - [Concepts eval overlap is lexical](learnings.md#gotchas) — exact-slug Jaccard; T007 run 0.03 with sensible maps; read Missed/Extra
 - [claude-code needs CLAUDE_CONFIG_DIR](learnings.md#gotchas) — plain terminal = "Not logged in", 0 tokens; set `CLAUDE_CONFIG_DIR=~/.claude-hung2` for eval/server runs
 - [T007 rebuild gotchas](learnings.md#gotchas) — step limit shared per session+task; agents skip startup reads; push task branches before leaving a machine
+- [T008 test + embed gotchas](learnings.md#gotchas) — drain @inngest/test parallel runs in afterEach; embedMany batches by count only; security-review sees only its own checkout
 - [Source conflicts settled](decisions.md#2026-11-12--four-source-conflicts-settled-user) — user agreed to all 4 readings in docs/MAIN_FLOW.md § 5
 - [Phase plan T003–T030](decisions.md#2026-11-01--phase-plan-t003t030) — v1 19 tasks, v2 6, v3 5; each phase waits for its gate
 - [v1 stack](decisions.md#2026-11-12--v1-stack-bun-react-postgres--pgvector-claude-subscription-for-lesson-generation) — Bun + React/Vite + Postgres/pgvector; model A via Claude subscription until other learners, then API; model B always API

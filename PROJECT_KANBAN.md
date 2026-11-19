@@ -32,9 +32,9 @@
 - [ ] **T029** — "Learn what's trending" weekly pick | backend-developer | C1 | Risk: Low | P2 | Phase: v3 (after Gate 3)
 
 ### In Progress
-- [ ] **T008** — Level generators in parallel from grounded chunks; answer-key code check; embedding dedupe; save ladder unverified | backend-developer | C3 | Risk: Medium | P0 | Phase: v1 (after Gate 1) | Started 2026-11-19: branch `T008-level-generators`, worktree `../wt-t008` ([admin], auto)
 
 ### Ready for Review
+- [ ] **T008** — Level generators in parallel from grounded chunks; answer-key code check; embedding dedupe; save ladder unverified | backend-developer | C3 | Risk: Medium | P0 | Phase: v1 (after Gate 1) | Started 2026-11-19: branch `T008-level-generators`, worktree `../wt-t008` ([admin], auto) · Ready for Review 2026-11-19: 22 commits on `T008-level-generators`; bun test 443 pass / 0 fail; code-review 0 P0/P1, 2 P2 fixed (d779933, 6ca472b), 4 P2 + 6 P3 cut list; security-review no findings; migration-safety GO (0008, 0009); golden-set run (SC 8) and live /start paused for OPENAI_API_KEY (owner); auto verify started
 
 ### Blocked
 

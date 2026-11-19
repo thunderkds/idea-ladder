@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Code Review Report — T008-level-generators</title>
+<style>
+  :root {
+    --bg:        #0a0a12;
+    --surface:   #111128;
+    --surface2:  #16162e;
+    --border:    #1e1e42;
+    --border-glow: #2a2a6e;
+    --text:      #e2e2f0;
+    --muted:     #6b6b9a;
+    --cyan:      #00d4ff;
+    --green:     #00ff88;
+    --amber:     #ffb800;
+    --red:       #ff3b6b;
+    --purple:    #a855f7;
+    --cyan-dim:  rgba(0,212,255,.12);
+    --green-dim: rgba(0,255,136,.12);
+    --red-dim:   rgba(255,59,107,.12);
+    --amber-dim: rgba(255,184,0,.12);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.5;
+  }
+  h1 { margin: 0; font-size: 1.25rem; color: #fff; letter-spacing: .02em; }
+  h2 { font-size: .85rem; color: var(--muted); margin: 0 0 .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--cyan);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 0 24px rgba(0,212,255,.08), 0 4px 24px rgba(0,0,0,.5);
+  }
+  .header-meta { color: var(--muted); font-size: .85rem; margin-top: .3rem; }
+  .header-meta code { color: var(--cyan); background: var(--cyan-dim); padding: .1rem .4rem; border-radius: 4px; font-size: .8rem; }
+
+  /* ── OVERALL BADGE ── */
+  .badge { display: inline-block; padding: .3rem .9rem; border-radius: 999px; font-weight: 700; font-size: .8rem; letter-spacing: .05em; text-transform: uppercase; }
+  .badge-green  { background: var(--green-dim); color: var(--green); border: 1px solid rgba(0,255,136,.3); box-shadow: 0 0 8px rgba(0,255,136,.2); }
+  .badge-yellow { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(255,184,0,.3); box-shadow: 0 0 8px rgba(255,184,0,.2); }
+  .badge-red    { background: var(--red-dim);   color: var(--red);   border: 1px solid rgba(255,59,107,.3); box-shadow: 0 0 8px rgba(255,59,107,.2); }
+
+  /* ── SEVERITY BADGES ── */
+  .sev { display: inline-block; padding: .15rem .55rem; border-radius: 999px; font-weight: 700; font-size: .75rem; white-space: nowrap; letter-spacing: .04em; }
+  .sev-high { background: var(--red-dim);   color: var(--red);   border: 1px solid rgba(255,59,107,.25); }
+  .sev-med  { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(255,184,0,.25); }
+  .sev-low  { background: var(--cyan-dim);  color: var(--cyan);  border: 1px solid rgba(0,212,255,.25); }
+  .sev-info { background: rgba(168,85,247,.1); color: var(--purple); border: 1px solid rgba(168,85,247,.25); }
+
+  /* ── GAUGE CARDS ── */
+  .gauges { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+  .gauge-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+    transition: border-color .2s;
+  }
+  .gauge-card:hover { border-color: var(--border-glow); }
+  .gauge-label { font-size: .7rem; font-weight: 700; letter-spacing: .1em; color: var(--muted); text-transform: uppercase; margin-bottom: .5rem; }
+  .gauge-value { font-size: 2rem; font-weight: 700; margin-bottom: .6rem; font-variant-numeric: tabular-nums; }
+  .gauge-value-risk    { color: var(--red); text-shadow: 0 0 12px rgba(255,59,107,.5); }
+  .gauge-value-quality { color: var(--green); text-shadow: 0 0 12px rgba(0,255,136,.5); }
+  .gauge-value-effort  { color: var(--amber); text-shadow: 0 0 12px rgba(255,184,0,.5); }
+  .bar-bg   { background: var(--border); border-radius: 999px; height: 6px; overflow: hidden; }
+  .bar-fill { height: 6px; border-radius: 999px; }
+  .bar-risk    { background: linear-gradient(90deg, #ff3b6b, #ff006e); box-shadow: 0 0 8px rgba(255,59,107,.6); }
+  .bar-quality { background: linear-gradient(90deg, #00c96e, #00ff88); box-shadow: 0 0 8px rgba(0,255,136,.6); }
+  .bar-effort  { background: linear-gradient(90deg, #e0a000, #ffb800); box-shadow: 0 0 8px rgba(255,184,0,.6); }
+
+  /* ── SECTION CARD ── */
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 16px rgba(0,0,0,.4);
+  }
+  .section-head {
+    padding: .7rem 1.25rem;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ── TABLE ── */
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left;
+    padding: .6rem 1.25rem;
+    font-size: .72rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: .8rem 1.25rem;
+    font-size: .875rem;
+    border-top: 1px solid var(--border);
+    vertical-align: top;
+    color: var(--text);
+  }
+  tr:hover td { background: rgba(255,255,255,.02); }
+  td pre {
+    margin: 0;
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    font-size: .78rem;
+    background: #0d0d1f;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--cyan);
+    border-radius: 4px;
+    padding: .5rem .75rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: #b0c4ff;
+    line-height: 1.6;
+  }
+  td code {
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    background: var(--cyan-dim);
+    color: var(--cyan);
+    padding: .1rem .4rem;
+    border-radius: 3px;
+    font-size: .78rem;
+  }
+
+  /* ── PROSE ── */
+  .prose {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.5rem;
+    line-height: 1.8;
+    margin-bottom: 1.5rem;
+    font-size: .9rem;
+    color: #c0c0e0;
+    box-shadow: 0 2px 16px rgba(0,0,0,.4);
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    font-size: .72rem;
+    color: var(--muted);
+    text-align: center;
+    padding-bottom: 2rem;
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+    margin-top: .5rem;
+  }
+  .footer code { color: var(--purple); background: rgba(168,85,247,.1); padding: .1rem .4rem; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══════════════════════════════════════════════════════════ -->
+<div class="header">
+  <div>
+    <h1>Code Review</h1>
+    <div class="header-meta">
+      Branch: <code>T008-level-generators</code> &nbsp;·&nbsp; 2026-11-19
+    </div>
+  </div>
+  <span class="badge badge-green">Healthy</span>
+</div>
+
+<!-- ═══ DIMENSION GAUGES ═════════════════════════════════════════════════ -->
+<!--
+  OVERALL_CLASS  : green | yellow | red
+  OVERALL_LABEL  : e.g. "Healthy" | "Needs Attention" | "Critical"
+  RISK_SCORE     : integer 0–100 (higher = more risk)
+  QUALITY_SCORE  : integer 0–100 (higher = better quality)
+  EFFORT_SCORE   : integer 0–100 (higher = more adaptation work needed)
+-->
+<div class="gauges">
+  <div class="gauge-card">
+    <div class="gauge-label">Risk</div>
+    <div class="gauge-value gauge-value-risk">22%</div>
+    <div class="bar-bg"><div class="bar-fill bar-risk" style="width:22%"></div></div>
+  </div>
+  <div class="gauge-card">
+    <div class="gauge-label">Code Quality</div>
+    <div class="gauge-value gauge-value-quality">80%</div>
+    <div class="bar-bg"><div class="bar-fill bar-quality" style="width:80%"></div></div>
+  </div>
+  <div class="gauge-card">
+    <div class="gauge-label">Adaptation Effort</div>
+    <div class="gauge-value gauge-value-effort">25%</div>
+    <div class="bar-bg"><div class="bar-fill bar-effort" style="width:25%"></div></div>
+  </div>
+</div>
+
+<!-- ═══ FINDINGS TABLE ═══════════════════════════════════════════════════ -->
+<!--
+  Replace <tr>
+  <td><span class="sev sev-med">Med</span></td>
+  <td><code>src/server/embedder.ts</code></td>
+  <td>embedderFromModel</td>
+  <td><pre>P2 (confidence 75, both reviewers&#x27; scope): one embedMany call carried every chunk; @ai-sdk/openai splits only by count (maxEmbeddingsPerCall = 2048), so a repo with one 1 MiB file (~800 chunks) exceeds the per-request input cap and fails embedder-error (non-retryable 400), breaking AC 1 on real repos and the owner&#x27;s paid SC 8 run. FIXED in d779933: batches of at most 200 texts and 400,000 chars, input order kept, tokens summed. Red first: &#x27;Expected: &gt; 1  Received: 1&#x27;.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-med">Med</span></td>
+  <td><code>tests (save-ladder, level-generator-step, chunk-and-embed)</code></td>
+  <td>afterEach</td>
+  <td><pre>P2 (confidence 75): flaky test (one run 93 pass / 1 fail, rerun 94 / 0). Root cause: @inngest/test finishes a run without cancelling the other parallel branches, which keep re-running unmemoized steps and write to the shared test DB after the test ends. FIXED in 6ca472b: tests/support/inngest-drain.ts + afterEach(drainInngestRuns); proof `bun test --rerun-each 10 &lt;8 files&gt;` 950 pass / 0 fail; 3 full runs 443 / 0.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-med">Med</span></td>
+  <td><code>src/server/check-and-dedupe.ts</code></td>
+  <td>46-61, 80</td>
+  <td><pre>P2 (confidence 75): every regeneration runs in one step; a transient error late in check-and-dedupe (e.g. a 429 on the dedupe embed) re-runs every paid regeneration. NFR-005 is met as written (the step is retried on its own). Cut list -&gt; T009 / T017 (split per level or memoize).</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-med">Med</span></td>
+  <td><code>src/server/ladder-generate.ts</code></td>
+  <td>~350 chunkAndEmbedStep</td>
+  <td><pre>P2 (confidence 75): a GitHub RateLimitError while reading docs is not caught, so the job fails embedder-error with no reset time instead of rate-limited. Cut list (Advocates split; smaller change wins).</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-med">Med</span></td>
+  <td><code>migrations/0009_ladder_content.up.sql</code></td>
+  <td>5-7</td>
+  <td><pre>P2 (confidence 75): `mapped` is no longer final; jobs left in `mapped` from before 0009 poll forever and block a new job for that repo + SHA. No production database exists. Cut list -&gt; T018 deploy runbook; the owner marks old mapped jobs failed before the live /start (Paused note).</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-med">Med</span></td>
+  <td><code>src/server/save-ladder.ts, src/shared/levels.ts</code></td>
+  <td>88; 12-22</td>
+  <td><pre>P2 (confidence 75): generated rows store the guide&#x27;s AC 2 pass-test kinds, skipped rows and the view fallback use FIXED_LEVELS names. docs/decisions/0002-ladder-levels-table.md:15 leaves the values to T012/T013. Cut list -&gt; T012/T013.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low</span></td>
+  <td><code>src/server/ladder-generate.ts</code></td>
+  <td>427 LEVEL_STEP</td>
+  <td><pre>P3 (confidence 75): the onFailure regex is not anchored, so a repo named e.g. acme/save-ladder can turn a github-error into save-ladder-failed. Cut list.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low</span></td>
+  <td><code>src/server/level-generator.ts, check-and-dedupe.ts</code></td>
+  <td>237-245; 57</td>
+  <td><pre>P3 (confidence 75): an MCQ whose regenerations fail on citation/options is dropped key-check-failed, not bad-citation. Cut list.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low</span></td>
+  <td><code>src/server/chunker.ts</code></td>
+  <td>26-30</td>
+  <td><pre>P3 (confidence 75): lineAt rescans from 0, quadratic in file size (616 ms for 1 MiB). Cut list.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low</span></td>
+  <td><code>src/client/App.tsx</code></td>
+  <td>FAILED_DETAIL</td>
+  <td><pre>P3 (confidence 75): new failure reasons fall back to &#x27;...while reading the repo&#x27;. Cut list.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low</span></td>
+  <td><code>tests/migrate.test.ts</code></td>
+  <td>612</td>
+  <td><pre>P3 (confidence 75): title says &#x27;4 distinct options&#x27;; no DB rule enforces distinct (code drops bad-options). Cut list.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low</span></td>
+  <td><code>src/server/save-ladder.ts</code></td>
+  <td>86-99</td>
+  <td><pre>P3 (confidence 75): one INSERT per row (~85 round-trips in one transaction). Cut list.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-info">Info</span></td>
+  <td><code>security-review</code></td>
+  <td>—</td>
+  <td><pre>No findings (HIGH/MEDIUM, confidence &gt;= 0.8): SQL parameterised; cost-log path guarded by RUN_ID_RE and uuid job ids; no shell, path or HTML sink for model/repo text; OPENAI_API_KEY only in createOpenAI with a pinned baseURL; e2e control endpoints not importable from src; /start authorisation unchanged. The built-in skill diffed the main checkout, so a reviewer was pointed at `git -C wt-t008 diff main...HEAD`.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-info">Info</span></td>
+  <td><code>tasks/TASK_GUIDE_T008.md</code></td>
+  <td>—</td>
+  <td><pre>lane: C3, 46 files, 3491 lines, FITS. Entry points found: chunk-and-embed, generate-level-L0..L4, check-and-dedupe, save-ladder, saveLadder. Startup reads: all 6 implementing agents listed PROJECT_SPEC.md, the guide and agents/backend.md (no process finding).</pre></td>
+</tr> with one <tr> per finding.
+  Severity class: sev-high | sev-med | sev-low | sev-info
+  Finding description goes inside <pre>...</pre> — do NOT HTML-escape manually;
+  wrap the text in <pre> and let the browser handle rendering safely.
+
+  Example row:
+  <tr>
+    <td><span class="sev sev-high">High</span></td>
+    <td><code>scripts/setup.sh</code></td>
+    <td>42–55</td>
+    <td><pre>Unquoted variable $TARGET_DIR in rm call — word-splitting can delete wrong path.</pre></td>
+  </tr>
+-->
+<div class="section">
+  <div class="section-head"><h2>Findings</h2></div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:90px">Severity</th>
+        <th style="width:200px">File</th>
+        <th style="width:80px">Lines</th>
+        <th>Finding</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+  <td><span class="sev sev-med">Med</span></td>
+  <td><code>src/server/embedder.ts</code></td>
+  <td>embedderFromModel</td>
+  <td><pre>P2 (confidence 75, both reviewers&#x27; scope): one embedMany call carried every chunk; @ai-sdk/openai splits only by count (maxEmbeddingsPerCall = 2048), so a repo with one 1 MiB file (~800 chunks) exceeds the per-request input cap and fails embedder-error (non-retryable 400), breaking AC 1 on real repos and the owner&#x27;s paid SC 8 run. FIXED in d779933: batches of at most 200 texts and 400,000 chars, input order kept, tokens summed. Red first: &#x27;Expected: &gt; 1  Received: 1&#x27;.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-med">Med</span></td>
+  <td><code>tests (save-ladder, level-generator-step, chunk-and-embed)</code></td>
+  <td>afterEach</td>
+  <td><pre>P2 (confidence 75): flaky test (one run 93 pass / 1 fail, rerun 94 / 0). Root cause: @inngest/test finishes a run without cancelling the other parallel branches, which keep re-running unmemoized steps and write to the shared test DB after the test ends. FIXED in 6ca472b: tests/support/inngest-drain.ts + afterEach(drainInngestRuns); proof `bun test --rerun-each 10 &lt;8 files&gt;` 950 pass / 0 fail; 3 full runs 443 / 0.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-med">Med</span></td>
+  <td><code>src/server/check-and-dedupe.ts</code></td>
+  <td>46-61, 80</td>
+  <td><pre>P2 (confidence 75): every regeneration runs in one step; a transient error late in check-and-dedupe (e.g. a 429 on the dedupe embed) re-runs every paid regeneration. NFR-005 is met as written (the step is retried on its own). Cut list -&gt; T009 / T017 (split per level or memoize).</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-med">Med</span></td>
+  <td><code>src/server/ladder-generate.ts</code></td>
+  <td>~350 chunkAndEmbedStep</td>
+  <td><pre>P2 (confidence 75): a GitHub RateLimitError while reading docs is not caught, so the job fails embedder-error with no reset time instead of rate-limited. Cut list (Advocates split; smaller change wins).</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-med">Med</span></td>
+  <td><code>migrations/0009_ladder_content.up.sql</code></td>
+  <td>5-7</td>
+  <td><pre>P2 (confidence 75): `mapped` is no longer final; jobs left in `mapped` from before 0009 poll forever and block a new job for that repo + SHA. No production database exists. Cut list -&gt; T018 deploy runbook; the owner marks old mapped jobs failed before the live /start (Paused note).</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-med">Med</span></td>
+  <td><code>src/server/save-ladder.ts, src/shared/levels.ts</code></td>
+  <td>88; 12-22</td>
+  <td><pre>P2 (confidence 75): generated rows store the guide&#x27;s AC 2 pass-test kinds, skipped rows and the view fallback use FIXED_LEVELS names. docs/decisions/0002-ladder-levels-table.md:15 leaves the values to T012/T013. Cut list -&gt; T012/T013.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low</span></td>
+  <td><code>src/server/ladder-generate.ts</code></td>
+  <td>427 LEVEL_STEP</td>
+  <td><pre>P3 (confidence 75): the onFailure regex is not anchored, so a repo named e.g. acme/save-ladder can turn a github-error into save-ladder-failed. Cut list.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low</span></td>
+  <td><code>src/server/level-generator.ts, check-and-dedupe.ts</code></td>
+  <td>237-245; 57</td>
+  <td><pre>P3 (confidence 75): an MCQ whose regenerations fail on citation/options is dropped key-check-failed, not bad-citation. Cut list.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low</span></td>
+  <td><code>src/server/chunker.ts</code></td>
+  <td>26-30</td>
+  <td><pre>P3 (confidence 75): lineAt rescans from 0, quadratic in file size (616 ms for 1 MiB). Cut list.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low</span></td>
+  <td><code>src/client/App.tsx</code></td>
+  <td>FAILED_DETAIL</td>
+  <td><pre>P3 (confidence 75): new failure reasons fall back to &#x27;...while reading the repo&#x27;. Cut list.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low</span></td>
+  <td><code>tests/migrate.test.ts</code></td>
+  <td>612</td>
+  <td><pre>P3 (confidence 75): title says &#x27;4 distinct options&#x27;; no DB rule enforces distinct (code drops bad-options). Cut list.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-low">Low</span></td>
+  <td><code>src/server/save-ladder.ts</code></td>
+  <td>86-99</td>
+  <td><pre>P3 (confidence 75): one INSERT per row (~85 round-trips in one transaction). Cut list.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-info">Info</span></td>
+  <td><code>security-review</code></td>
+  <td>—</td>
+  <td><pre>No findings (HIGH/MEDIUM, confidence &gt;= 0.8): SQL parameterised; cost-log path guarded by RUN_ID_RE and uuid job ids; no shell, path or HTML sink for model/repo text; OPENAI_API_KEY only in createOpenAI with a pinned baseURL; e2e control endpoints not importable from src; /start authorisation unchanged. The built-in skill diffed the main checkout, so a reviewer was pointed at `git -C wt-t008 diff main...HEAD`.</pre></td>
+</tr>
+<tr>
+  <td><span class="sev sev-info">Info</span></td>
+  <td><code>tasks/TASK_GUIDE_T008.md</code></td>
+  <td>—</td>
+  <td><pre>lane: C3, 46 files, 3491 lines, FITS. Entry points found: chunk-and-embed, generate-level-L0..L4, check-and-dedupe, save-ladder, saveLadder. Startup reads: all 6 implementing agents listed PROJECT_SPEC.md, the guide and agents/backend.md (no process finding).</pre></td>
+</tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ═══ SUMMARY PROSE ════════════════════════════════════════════════════ -->
+<!--
+  Replace Stage 4 code review of T008 (branch T008-level-generators, 47 files, +3536/-62 vs main): two independent reviewers (pipeline core; persistence, client, eval) plus a security reviewer. 0 P0, 0 P1. 6 P2: 2 fixed test-first after a Debate (d779933 embed batching, 6ca472b flaky test), 4 on the cut list; 6 P3 on the cut list. security-review: no findings. migration-safety (0008, 0009): GO. Gate after fixes (Supervisor, 6ca472b, 2026-11-19T09:55Z): typecheck and lint clean; bun test 443 pass / 0 fail; bun test migrate 27 pass; guide tests 72 pass; eval suite 77 pass; e2e start-flow 6 passed. with the LLM's full narrative text.
+  Plain text is safe here; no HTML escaping needed for prose.
+-->
+<div class="prose">
+  Stage 4 code review of T008 (branch T008-level-generators, 47 files, +3536/-62 vs main): two independent reviewers (pipeline core; persistence, client, eval) plus a security reviewer. 0 P0, 0 P1. 6 P2: 2 fixed test-first after a Debate (d779933 embed batching, 6ca472b flaky test), 4 on the cut list; 6 P3 on the cut list. security-review: no findings. migration-safety (0008, 0009): GO. Gate after fixes (Supervisor, 6ca472b, 2026-11-19T09:55Z): typecheck and lint clean; bun test 443 pass / 0 fail; bun test migrate 27 pass; guide tests 72 pass; eval suite 77 pass; e2e start-flow 6 passed.
+</div>
+
+<!-- ═══ FOOTER ═══════════════════════════════════════════════════════════ -->
+<!--
+  MODEL     : e.g. claude-sonnet-4-6
+  TASK_ID   : e.g. T001 (or "—" if not task-scoped)
+  TIMESTAMP : ISO-8601, e.g. 2026-06-18T14:30:22
+-->
+<div class="footer">
+  Model: <code>claude-opus-5-5</code> &nbsp;·&nbsp; Task: T008 &nbsp;·&nbsp; Generated: 2026-11-19T10:00:00
+</div>
+
+</body>
+</html>
