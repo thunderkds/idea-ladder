@@ -59,12 +59,14 @@ Source (`docs/REQUIREMENT_SOURCE.md`):
 
 Supervisor recommendation: A (the only option that keeps L1 inside "GitHub-checked artifacts"). **The agent stops with `Status: blocked` + `Question:` until the user answers.** AC 6 below is written for option A; if the user picks B or C, the Supervisor rewrites AC 6 before spawn.
 
+**Answered 2026-11-19 (auto, [admin]) by Debate: option B** — see `## Questions Log`. The agent does not stop for this question; AC 6 is written for option B.
+
 ### Requirement Fidelity Gate (sign off BEFORE implementation)
 
-- [ ] Restated intent confirmed to match the user's request (by Supervisor / user — not the implementing agent)
-- [ ] Domain terms align with `PROJECT_SPEC.md` glossary (`grill-with-docs` run if terminology was fuzzy)
-- [ ] Every Acceptance Criterion below traces to a line in the Requirement
-- [ ] All Requirement Refs exist in `PRD.md` and are fully covered by the Acceptance Criteria above
+- [x] Restated intent confirmed to match the user's request (by Supervisor / user — not the implementing agent) — auto (Supervisor) 2026-11-19: L1 rule settled by Debate (option B); matches FR-007/010/011, NFR-002/003/009 and the user's "complete all task [admin]"
+- [x] Domain terms align with `PROJECT_SPEC.md` glossary (`grill-with-docs` run if terminology was fuzzy)
+- [x] Every Acceptance Criterion below traces to a line in the Requirement
+- [x] All Requirement Refs exist in `PRD.md` and are fully covered by the Acceptance Criteria above
 
 > An agent must NOT start implementing until this gate is checked. If anything here is unclear,
 > STOP and ask the Supervisor (Karpathy: Think Before Coding).
@@ -74,7 +76,7 @@ Supervisor recommendation: A (the only option that keeps L1 inside "GitHub-check
 ## Dependencies & Reachability
 
 **Depends on**: T012 — `writeEvidenceRecord` (canonical JSON + SHA-256, append-only table), the pass-test rate limit and the level unlock transaction.
-**Entry point**: `verifyL2Branch`, `verifyL4Artifact`, `verifyL1RunLog` (server handlers; route paths follow the app layout set by T003)
+**Entry point**: `verifyL2Branch`, `verifyL4Artifact` (server handlers; L1 uses T012's MCQ routes; route paths follow the app layout set by T003)
 
 ---
 
@@ -87,7 +89,7 @@ Supervisor recommendation: A (the only option that keeps L1 inside "GitHub-check
 | 3 | `verifyL4Artifact(learner, ladder, url)` accepts a repo link or a PR link. Repo: exists, public, `owner.id` = learner id, ≥ 1 commit authored by the learner; records the default-branch head SHA. PR: in the ladder's repo (upstream), `merged = true`, `user.id` = learner id; records `merge_commit_sha`. A pass writes an evidence record (`test: "artifact"`) through `writeEvidenceRecord` and completes the ladder. | "Repo link or PR link"; "PR merged state" |
 | 4 | Negative: a branch or PR authored by another account, an open (unmerged) PR, a closed-unmerged PR, a private or missing repo, or a branch with only commits already in the pinned SHA → rejected with a reason code (`author-mismatch`, `pr-not-merged`, `not-found`, `no-new-commits`); nothing stored. Identity uses numeric ids, never commit email or display name. | NFR-003 "every artifact must belong to that GitHub account" |
 | 5 | GitHub 403/429 with `x-ratelimit-remaining: 0` → `RateLimitError` surfaced as HTTP 503 with `retryAt`; 404 → `not-found`; no partial artifact row, no evidence record. Calls use the app's own GitHub token (server env), never a token sent by the client. | NFR-009; MAIN_FLOW § 6 "own token" |
-| 6 | (Option A) `verifyL1RunLog(learner, ladder, url)` passes iff the gist or commit exists, its owner id = learner id, its creation time is after the nonce issue time, and its content contains the nonce issued for this learner + ladder. The explanation must have exactly 3 sentences (split on `.`, `!`, `?` followed by space or end) and ≤ 600 chars; it is stored, never scored by an LLM. A pass writes an evidence record (`test: "run-log"`) and unlocks L2. | L1 "log + 3-sentence explanation"; FR-008 |
+| 6 | (Option B, Debate 2026-11-19) L1 passes through the T012 MCQ pass test: add `L1` to `MCQ_LEVELS` (src/server/level-generator.ts) and `POOL_LEVELS` (src/server/save-ladder.ts) so the L1 generator writes an MCQ pool from the README + docs chunks it already gets, with questions on installing, starting and configuring the repo and on what running it shows (port, first output, required env var). L1 `passTest.kind` becomes `run-mcq` in both src/shared/levels.ts and src/server/level-generator.ts (one name), description "MCQs on setting up and running it; a run log and a 3-sentence explanation are optional feedback". A pasted run log and the explanation (exactly 3 sentences, ≤ 600 chars) may be stored as feedback only; they are never scored and never in the evidence record. No new verifier for L1; the evidence record is T012's `test: "mcq"`. | L1 "Run it"; FR-007, FR-010 (verified MCQs only), NFR-002 |
 | 7 | No LLM call is reachable from any verifier (AI SDK client and `generate` mocked to throw; all tests pass). All tests run offline from recorded GitHub fixtures. | NFR-002 |
 
 ---
@@ -103,7 +105,7 @@ Supervisor recommendation: A (the only option that keeps L1 inside "GitHub-check
 | 3 | Fixture: PR in the upstream repo, `merged: true`, `user.id` = learner | evidence record `test: "artifact"`, `merge_commit_sha` stored, hash recomputes | integration test |
 | 4 | PR with `merged: false` | `pr-not-merged`; no record | integration test |
 | 5 | Mocked 403 + `x-ratelimit-remaining: 0` mid-verification | 503 with `retryAt`; no rows | integration test |
-| 6 | (Option A) gist created before the nonce, or missing the nonce | rejected; L2 still locked | integration test |
+| 6 | (Option B) ladder generated with a README that yields ≥ 8 L1 MCQs; an L1 MCQ attempt with 8 of 10 correct | L1 pool saved (`POOL_LEVELS` has L1), the attempt passes through T012, evidence `test: "mcq"`, L2 opens; a thin README → L1 flagged `insufficient-pool`, attempt `pool-too-small` | integration test |
 | 7 | Branch URL `https://github.com.evil.io/...` or `http://` scheme | rejected as invalid input before any fetch | bun test |
 
 ### Verification Command (exact, runnable)
@@ -136,7 +138,7 @@ bun install --frozen-lockfile && bun run typecheck && bun run lint && bun test -
 - webhook-driven PR-merge detection (the learner re-submits after the merge)
 - L1 options B and C (built only if the user picks them)
 
-Parse URLs with `new URL()` and an exact host check `github.com`; reject anything else before a fetch. Use GitHub REST: repo, branch, compare `base...head`, pulls, gists. Paginate compare commits (> 250 commits → reject as `range-too-large`; an L2 change is "one small feature"). Compare identity on numeric `id` from the OAuth account stored by T003. Nonce (option A): 128-bit from `crypto.randomBytes`, stored with `issued_at`, single use per learner + ladder. Write the migration (artifact table, L1 nonce table); it must pass `Skill({ skill: "migration-safety" })` and Common-Infrastructure applies it.
+Parse URLs with `new URL()` and an exact host check `github.com`; reject anything else before a fetch. Use GitHub REST: repo, branch, compare `base...head`, pulls. Paginate compare commits (> 250 commits → reject as `range-too-large`; an L2 change is "one small feature"). Compare identity on numeric `id` from the OAuth account stored by T003. (Option A nonce: not built — option B chosen.) Write the migration `0014_artifacts` (artifact table); it must pass `Skill({ skill: "migration-safety" })` and Common-Infrastructure applies it.
 
 ---
 
@@ -157,9 +159,10 @@ Parse URLs with `new URL()` and an exact host check `github.com`; reject anythin
 
 | File | Change |
 |------|--------|
-| artifact verifier module with `verifyL2Branch`, `verifyL4Artifact`, `verifyL1RunLog` (server code area set by T003) | new |
+| artifact verifier module with `verifyL2Branch`, `verifyL4Artifact` (server code area set by T003) | new |
+| src/server/level-generator.ts, src/server/save-ladder.ts, src/shared/levels.ts | L1 in `MCQ_LEVELS` / `POOL_LEVELS`; L1 kind `run-mcq` (AC 6) |
 | GitHub client from T005 | add compare, pulls, gists calls |
-| new migration (migrations folder set by T003) | artifact table; L1 nonce table |
+| new migration `0014_artifacts` (0013 is T016's) | artifact table (no L1 nonce table: option B) |
 | recorded GitHub fixtures for tests | new |
 | tests (bun test + test Postgres) | AC 1–7 |
 | `tasks/TASK_REVIEW_T013.md` | Evidence (reviewer) |
@@ -192,3 +195,9 @@ Unit (bun test): URL parsing (valid, foreign host, wrong scheme, branch with `/`
 - [ ] Tests written AND pass — output pasted into `tasks/TASK_REVIEW_T013.md` Evidence (Hard-Stop Gate 5)
 - [ ] `Skill({ skill: "verify" })` run — headless auto verify
 - [ ] Supervisor notified: task ready for Stage 4 review
+
+---
+
+## Questions Log
+
+- 2026-11-19 DEBATE How does L1 pass (the decision this guide asked the user for)? → option B: L1 passes through the MCQ pass test on README/setup chunks; run log and explanation are optional feedback (Advocate 1: option B, MCQs on setup, log/explanation feedback only; Advocate 2: option A, gist with a nonce checked on GitHub; Advocate 3: option B, the smallest change) ⚠ decided for you — please review (the guide's Supervisor recommendation had been A)
