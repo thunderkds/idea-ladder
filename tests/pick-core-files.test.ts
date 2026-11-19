@@ -14,7 +14,6 @@ import {
 import { migrateUp } from "../src/server/migrate.ts";
 import { createTestDatabase } from "./support/db.ts";
 import { type Fixture, fixtureFetch, loadFixture, V0_REPOS } from "./support/github-fixtures.ts";
-import { mockEmbedder } from "./support/mock-embedder.ts";
 import { answer, type Reply, scriptedModel, testModelA } from "./support/mock-model.ts";
 
 let db: Awaited<ReturnType<typeof createTestDatabase>>;
@@ -66,7 +65,6 @@ function engine(
   const costs: CostEntry[] = [];
   const statuses: string[] = [];
   const fn = ladderGenerateFunction(createInngest(), {
-    embedder: mockEmbedder(),
     sql: db.sql,
     github,
     modelA: testModelA(),
@@ -247,7 +245,6 @@ describe("Inngest step pick-core-files on the claude-code back end (AC 9)", () =
     const jobId = await newJob();
     const gh = fixtureFetch(fixtures, () => undefined);
     const fn = ladderGenerateFunction(createInngest(), {
-      embedder: mockEmbedder(),
       sql: db.sql,
       github: githubRepoClient({ baseUrl: "https://api.github.com", token: "t", fetch: gh.impl }),
       modelA: testModelA(),
@@ -280,7 +277,6 @@ describe("Inngest step pick-core-files on the claude-code back end (AC 9)", () =
     const gh = fixtureFetch(fixtures, () => undefined);
     const costs: CostEntry[] = [];
     const fn = ladderGenerateFunction(createInngest(), {
-      embedder: mockEmbedder(),
       sql: db.sql,
       github: githubRepoClient({ baseUrl: "https://api.github.com", token: "t", fetch: gh.impl }),
       modelA: testModelA(),

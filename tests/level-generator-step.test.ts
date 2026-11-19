@@ -1,4 +1,4 @@
-// T008 (8b) AC 2 / AC 8 / Success Criteria 6 (first half) and 7: steps generate-level-L0..L4 after chunk-and-embed.
+// T008 (8b) AC 2 / AC 8 / Success Criteria 6 (first half) and 7: steps generate-level-L0..L4 after chunk.
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { InngestTestEngine } from "@inngest/test";
 import { githubRepoClient } from "../src/server/github-repo.ts";
@@ -13,7 +13,6 @@ import { type ModelADeps, ModelAFailedError, ModelANotInstalledError } from "../
 import { createTestDatabase } from "./support/db.ts";
 import { type Fixture, fixtureFetch, loadFixture, V0_REPOS } from "./support/github-fixtures.ts";
 import { drainInngestRuns } from "./support/inngest-drain.ts";
-import { mockEmbedder } from "./support/mock-embedder.ts";
 import { promptData, testModelA, testReader } from "./support/mock-model.ts";
 
 let db: Awaited<ReturnType<typeof createTestDatabase>>;
@@ -79,7 +78,6 @@ function engine(jobId: string, modelA: ModelADeps, costs: CostEntry[] = []) {
     github: githubRepoClient({ baseUrl: "https://api.github.com", token: "t", fetch: gh.impl }),
     reader: { ...testReader(), logCost: (e) => costs.push(e) },
     modelA,
-    embedder: mockEmbedder(),
   });
   const t = new InngestTestEngine({
     function: fn,
@@ -94,7 +92,7 @@ const chunkIds = async (sources: string[]) =>
   ).map((r: { id: number }) => r.id);
 
 describe("Inngest steps generate-level-L0..L4 (AC 2, AC 3)", () => {
-  test("five generator steps after chunk-and-embed, each grounded in its own level's chunks; cost per step; nothing stored", async () => {
+  test("five generator steps after chunk, each grounded in its own level's chunks; cost per step; nothing stored", async () => {
     const jobId = await newJob();
     const { modelA, calls } = levelModelA();
     const costs: CostEntry[] = [];
@@ -103,7 +101,7 @@ describe("Inngest steps generate-level-L0..L4 (AC 2, AC 3)", () => {
       "fetch-repo",
       "pick-core-files",
       "map-concepts",
-      "chunk-and-embed",
+      "chunk",
       ...LEVEL_STEPS,
       "check-and-dedupe",
       "save-ladder",
@@ -172,7 +170,7 @@ describe("retry and failure (NFR-005, AC 8)", () => {
     const results = first.ctx.step.run.mock.results;
     const ran = first.ctx.step.run.mock.calls.map((c) => c[0]);
     const memo = await Promise.all(
-      ["fetch-repo", "pick-core-files", "map-concepts", "chunk-and-embed"].map(async (id) => {
+      ["fetch-repo", "pick-core-files", "map-concepts", "chunk"].map(async (id) => {
         const value = await (results[ran.indexOf(id)] as { value?: unknown }).value;
         return { id, handler: async () => value };
       }),
@@ -262,17 +260,6 @@ describe("retry and failure (NFR-005, AC 8)", () => {
     for (const l of checked.slice(1)) expect(l.dropped.map((d) => d.reason)).toEqual(["duplicate", "duplicate"]);
     expect(checked[0]?.dropped).toEqual([]);
     for (const level of ["L0", "L1", "L2", "L3", "L4"]) expect(calls[level]?.length).toBeGreaterThan(0);
-    // The embedding cost is logged under check-and-dedupe (the test engine may re-run an unmemoized step).
-    const checkCosts = costs.filter((c) => c.step === "check-and-dedupe");
-    expect(checkCosts.length).toBeGreaterThan(0);
-    for (const c of checkCosts)
-      expect(c).toMatchObject({
-        jobId,
-        step: "check-and-dedupe",
-        backend: "api",
-        model: "mock-embedding",
-        outputTokens: 0,
-      });
     // Nothing is stored before save-ladder; it writes one ladder and sets the job done (tests/save-ladder.test.ts).
     expect((await jobRow(jobId)).status).toBe("done");
     expect((await db.sql`SELECT count(*)::int AS n FROM ladders`)[0].n).toBe(1);

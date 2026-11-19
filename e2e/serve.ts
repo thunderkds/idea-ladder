@@ -15,7 +15,6 @@ import { type PushTarget, reminderTick } from "../src/server/reminders.ts";
 import { adminUrl } from "../tests/support/db.ts";
 import { fixtureFetch, loadFixture, rateLimited, V0_REPOS, type V0Repo } from "../tests/support/github-fixtures.ts";
 import { startGithubStub } from "../tests/support/github-stub.ts";
-import { mockEmbedder } from "../tests/support/mock-embedder.ts";
 import { testModelA, testReader } from "../tests/support/mock-model.ts";
 
 export const APP_PORT = 54401;
@@ -202,7 +201,7 @@ const fixtures = await Promise.all(Object.keys(V0_REPOS).map((r) => loadFixture(
 const gh = fixtureFetch(fixtures, (path) =>
   path.startsWith(`/repos/${RATE_LIMITED_REPO}`) && !path.endsWith("/commits?per_page=1")
     ? rateLimited(RESET_EPOCH_S)
-    : // T008 chunk-and-embed reads dependency and core files: the fixtures hold no file contents.
+    : // T008 chunk reads dependency and core files: the fixtures hold no file contents.
       /^\/repos\/[^/]+\/[^/]+\/contents\//.test(path)
       ? new Response(`${path}\n`.repeat(40))
       : undefined,
@@ -230,7 +229,6 @@ const slowReader = {
   }),
 };
 const fn = ladderGenerateFunction(createInngest(), {
-  embedder: mockEmbedder(),
   sql,
   github,
   reader: slowReader,

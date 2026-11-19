@@ -1,16 +1,7 @@
-// T008 (8a) AC 1 / Success Criterion 1: chunker, embedder and the Inngest step chunk-and-embed after map-concepts.
+// T008 (8a) AC 1, T031 AC 2 / Success Criterion 2: chunker and the Inngest step chunk after map-concepts (no embedding).
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { InngestTestEngine } from "@inngest/test";
-import { MockEmbeddingModelV3 } from "ai/test";
 import { CHUNK_OVERLAP, CHUNK_SIZE, chunkFiles, chunkText } from "../src/server/chunker.ts";
-import {
-  createOpenAIEmbedder,
-  EMBED_BATCH_MAX_CHARS,
-  EMBED_BATCH_MAX_TEXTS,
-  type Embedder,
-  EmbedderNotConfiguredError,
-  embedderFromModel,
-} from "../src/server/embedder.ts";
 import { githubRepoClient } from "../src/server/github-repo.ts";
 import {
   type CostEntry,
@@ -22,12 +13,11 @@ import { migrateUp } from "../src/server/migrate.ts";
 import { createTestDatabase } from "./support/db.ts";
 import { type Fixture, fixtureFetch, loadFixture, V0_REPOS } from "./support/github-fixtures.ts";
 import { drainInngestRuns } from "./support/inngest-drain.ts";
-import { mockEmbedder } from "./support/mock-embedder.ts";
 import { testModelA, testReader } from "./support/mock-model.ts";
 
 const letters = (n: number) => Array.from({ length: n }, (_, i) => String.fromCharCode(97 + (i % 26))).join("");
 
-describe("chunk-and-embed chunker", () => {
+describe("chunker", () => {
   test("~1,500-char windows with 200 overlap cover the whole text", () => {
     const text = letters(3_500);
     const pieces = chunkText(text);
@@ -65,63 +55,6 @@ describe("chunk-and-embed chunker", () => {
   });
 });
 
-describe("chunk-and-embed embedder", () => {
-  test("embedMany through an AI SDK embedding model: vectors and usage tokens", async () => {
-    const model = new MockEmbeddingModelV3({
-      doEmbed: async ({ values }) => ({
-        embeddings: values.map((v) => [v.length, v.charCodeAt(0)]),
-        usage: { tokens: 11 },
-        warnings: [],
-      }),
-    });
-    const e = embedderFromModel(model, "text-embedding-3-small");
-    expect(await e.embedTexts(["a", "b"])).toEqual({
-      embeddings: [
-        [1, 97],
-        [1, 98],
-      ],
-      tokens: 22,
-    }); // one call per value here; usage is summed;
-    expect(await e.embedTexts([])).toEqual({ embeddings: [], tokens: 0 });
-    expect(e.model).toBe("text-embedding-3-small");
-  });
-
-  test("large input: batches bounded by count and chars, every text embedded in input order, tokens summed", async () => {
-    const calls: { n: number; chars: number }[] = [];
-    const model = new MockEmbeddingModelV3({
-      maxEmbeddingsPerCall: 2048, // as @ai-sdk/openai: it splits by count only, never by size
-      doEmbed: async ({ values }) => {
-        calls.push({ n: values.length, chars: values.reduce((s, v) => s + v.length, 0) });
-        return {
-          embeddings: values.map((v) => [Number(v.slice(0, 4))]),
-          usage: { tokens: values.length },
-          warnings: [],
-        };
-      },
-    });
-    const texts = Array.from({ length: 900 }, (_, i) => String(i).padStart(4, "0").padEnd(1500, "x"));
-    const r = await embedderFromModel(model, "text-embedding-3-small").embedTexts(texts);
-    expect(calls.length).toBeGreaterThan(1);
-    for (const c of calls) {
-      expect(c.n).toBeLessThanOrEqual(EMBED_BATCH_MAX_TEXTS);
-      expect(c.chars).toBeLessThanOrEqual(EMBED_BATCH_MAX_CHARS);
-    }
-    expect(calls.reduce((s, c) => s + c.n, 0)).toBe(900);
-    expect(r.embeddings).toEqual(texts.map((_, i) => [i]));
-    expect(r.tokens).toBe(900);
-    calls.length = 0;
-    expect(await embedderFromModel(model, "m").embedTexts([])).toEqual({ embeddings: [], tokens: 0 });
-    expect(calls).toEqual([]);
-  });
-
-  test("no OPENAI_API_KEY: fails naming the key, never a mock vector", async () => {
-    const e = createOpenAIEmbedder({ modelId: "text-embedding-3-small" });
-    const err = await e.embedTexts(["x"]).catch((x: unknown) => x);
-    expect(err).toBeInstanceOf(EmbedderNotConfiguredError);
-    expect(String(err)).toContain("OPENAI_API_KEY");
-  });
-});
-
 let db: Awaited<ReturnType<typeof createTestDatabase>>;
 let fixtures: Fixture[];
 beforeAll(async () => {
@@ -147,13 +80,13 @@ const newJob = async () =>
 const jobRow = async (id: string) =>
   (await db.sql`SELECT status, reason FROM generation_jobs WHERE id = ${id}`)[0] as { status: string; reason: string };
 const chunkRows = async () =>
-  await db.sql`SELECT source, path, ordinal, start_line, end_line, text, embedding_model, vector_dims(embedding) AS dims
+  await db.sql`SELECT source, path, ordinal, start_line, end_line, text
     FROM chunks WHERE repo_full_name = ${MITT.repo} AND commit_sha = ${MITT.sha} ORDER BY id`;
 const modelA = testModelA(); // answers the mapper and the 8b level generators
 /** File text served for every contents read: 120 numbered lines, so each file gives 2+ chunks. */
 const fileText = (path: string) => Array.from({ length: 120 }, (_, i) => `${path} line ${i + 1}`).join("\n");
 
-function engine(jobId: string, embedder: Embedder, costs: CostEntry[] = []) {
+function engine(jobId: string, costs: CostEntry[] = []) {
   const gh = fixtureFetch(fixtures, (path) => {
     const m = path.match(/^\/repos\/developit\/mitt\/contents\/([^?]+)\?ref=/);
     return m ? new Response(fileText(decodeURIComponent(m[1] as string))) : undefined;
@@ -163,22 +96,21 @@ function engine(jobId: string, embedder: Embedder, costs: CostEntry[] = []) {
     github: githubRepoClient({ baseUrl: "https://api.github.com", token: "t", fetch: gh.impl }),
     reader: { ...testReader(), logCost: (e) => costs.push(e) },
     modelA,
-    embedder,
   });
   return new InngestTestEngine({ function: fn, events: [{ name: LADDER_GENERATE_EVENT, data: { ...MITT, jobId } }] });
 }
 
-describe("Inngest step chunk-and-embed (AC 1, Success Criterion 1)", () => {
-  test("developit/mitt: after map-concepts, chunks stored with line ranges and embeddings; a re-run adds 0 rows", async () => {
+describe("Inngest step chunk (T031 AC 2, Success Criterion 2)", () => {
+  test("developit/mitt, no OPENAI_API_KEY in env: chunks stored with line ranges and no vector; a re-run adds 0 rows", async () => {
+    expect(process.env.OPENAI_API_KEY).toBeUndefined();
     const jobId = await newJob();
-    const embedder = mockEmbedder();
     const costs: CostEntry[] = [];
-    const { result, ctx } = await engine(jobId, embedder, costs).execute();
+    const { result, ctx } = await engine(jobId, costs).execute();
     expect(ctx.step.run.mock.calls.map((c) => c[0])).toEqual([
       "fetch-repo",
       "pick-core-files",
       "map-concepts",
-      "chunk-and-embed",
+      "chunk",
       ...["L0", "L1", "L2", "L3", "L4"].map((l) => `generate-level-${l}`),
       "check-and-dedupe",
       "save-ladder",
@@ -194,49 +126,20 @@ describe("Inngest step chunk-and-embed (AC 1, Success Criterion 1)", () => {
       expect(r.start_line).toBeGreaterThanOrEqual(1);
       expect(r.end_line).toBeGreaterThanOrEqual(r.start_line);
       expect(r.text.length).toBeLessThanOrEqual(1_500);
-      expect([r.embedding_model, r.dims]).toEqual(["mock-embedding", 1536]);
     }
+    const cols = await db.sql`SELECT column_name FROM information_schema.columns WHERE table_name = 'chunks'`;
+    expect(cols.map((c: { column_name: string }) => c.column_name)).not.toContain("embedding");
     const dep = rows.filter((r: { source: string }) => r.source === "dep");
     expect(dep.map((r: { path: string; ordinal: number }) => `${r.path}#${r.ordinal}`)).toEqual([
       "package.json#0",
       "package.json#1",
     ]);
     expect(dep[1].start_line).toBeLessThan(dep[0].end_line + 1); // the overlap repeats the end of chunk 0
-    // The first call embeds the chunks; check-and-dedupe (8c) embeds items after it (the test engine may re-run it).
-    expect(embedder.calls[0]).toHaveLength(rows.length);
-    const tokens = (embedder.calls[0] ?? []).reduce((n, t) => n + Math.ceil(t.length / 4), 0);
-    expect(costs.filter((c) => c.step === "chunk-and-embed")).toEqual([
-      {
-        jobId,
-        repo: MITT.repo,
-        sha: MITT.sha,
-        step: "chunk-and-embed",
-        backend: "api",
-        model: "mock-embedding",
-        inputTokens: tokens,
-        outputTokens: 0,
-        cachedInputTokens: 0,
-      },
-    ]);
+    // The chunk step makes no model call, so it logs no cost.
+    expect(costs.filter((c) => c.step === "chunk")).toEqual([]);
 
-    // Re-run for the same repo + SHA: no new row, no chunk embedding call (only check-and-dedupe embeds again).
-    await engine(jobId, embedder, costs).executeStep("chunk-and-embed");
+    // Re-run for the same repo + SHA: no new row.
+    await engine(jobId, costs).executeStep("chunk");
     expect((await chunkRows()).length).toBe(rows.length);
-    expect(costs.filter((c) => c.step === "chunk-and-embed")).toHaveLength(1);
-  });
-
-  test("no OPENAI_API_KEY: the job fails embedder-not-configured at once, no chunk stored", async () => {
-    const jobId = await newJob();
-    const { result } = await engine(jobId, createOpenAIEmbedder({ modelId: "text-embedding-3-small" })).execute();
-    expect(result).toEqual({ status: "failed", reason: "embedder-not-configured" });
-    expect(await jobRow(jobId)).toEqual({ status: "failed", reason: "embedder-not-configured" });
-    expect(await chunkRows()).toEqual([]);
-  });
-
-  test("a vector of the wrong dimension fails the job embedder-error, no chunk stored", async () => {
-    const jobId = await newJob();
-    const { result } = await engine(jobId, mockEmbedder(3)).execute();
-    expect(result).toEqual({ status: "failed", reason: "embedder-error" });
-    expect(await chunkRows()).toEqual([]);
   });
 });

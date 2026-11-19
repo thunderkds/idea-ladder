@@ -6,7 +6,6 @@
       "name": "idea-ladder",
       "dependencies": {
         "@ai-sdk/anthropic": "3.0.135",
-        "@ai-sdk/openai": "3.0.142",
         "ai": "6.0.317",
         "hono": "4.13.13",
         "idb": "8.0.4",
@@ -36,8 +35,6 @@
     "@ai-sdk/anthropic": ["@ai-sdk/anthropic@3.0.135", "", { "dependencies": { "@ai-sdk/provider": "3.0.19", "@ai-sdk/provider-utils": "4.0.62" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-lOMoKXRbQ0gQ9ctOBo8aOqqQQ8nZEEf9INT8PpAXLSuwIsZl26Jg0vDqkhUsBWBuS9oPtEx3VFqGt3AuAvkjgg=="],
 
     "@ai-sdk/gateway": ["@ai-sdk/gateway@3.0.223", "", { "dependencies": { "@ai-sdk/provider": "3.0.19", "@ai-sdk/provider-utils": "4.0.62", "@vercel/oidc": "3.2.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-edH4CW5q3zFAw2+o9vkcafgT+Iomk/BJoA1IP9dmmm+z2vbAfCB01Vuml8zX2FF16cUJqwnRTt6DGjAFd6DGRg=="],
-
-    "@ai-sdk/openai": ["@ai-sdk/openai@3.0.142", "", { "dependencies": { "@ai-sdk/provider": "3.0.19", "@ai-sdk/provider-utils": "4.0.66" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-vuJjlMS3I0J6pr1KIy03aUMP0rDRAkA4t9yLlrjwmQGGNCKAgU3NkRMKdOtSqgkEWdfH3hgaJaxhb52RaQxNIQ=="],
 
     "@ai-sdk/provider": ["@ai-sdk/provider@3.0.19", "", { "dependencies": { "json-schema": "^0.4.0" } }, "sha512-5lWq7zSfRaU5ylDESn3sDQjgGl2AI1vjZKO/6JY3aFW70ct4zcP1kN+ZUYOuTXr28fVsYbyu2YFhddLdIgQFZQ=="],
 
@@ -674,8 +671,6 @@
     "yargs-parser": ["yargs-parser@21.1.1", "", {}, "sha512-tVpsJW7DdjecAiFpbIB1e3qxIQsE6NoPc5/eTdrbbIC4h0LVsWhnoa3g+m2HclBIujHzsxZ4VJVA+GUuc2/LBw=="],
 
     "zod": ["zod@4.6.7", "", {}, "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg=="],
-
-    "@ai-sdk/openai/@ai-sdk/provider-utils": ["@ai-sdk/provider-utils@4.0.66", "", { "dependencies": { "@ai-sdk/provider": "3.0.19", "@standard-schema/spec": "^1.1.0", "eventsource-parser": "^3.0.8", "undici": "^6.28.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-tITCIYBJlxD4PmDIAI2VXb67yEbWRepvJBJrv2pIY5vMRUta51AFRxLlxm0IexRGdIBGuQ10+ClClZMXtawkbA=="],
 
     "@isaacs/cliui/string-width": ["string-width@5.1.2", "", { "dependencies": { "eastasianwidth": "^0.2.0", "emoji-regex": "^9.2.2", "strip-ansi": "^7.0.1" } }, "sha512-HnLOCR3vjcY8beoNLtcjZ5/nxn2afmME6lhrDrebokqMap+XbeW8n9TXpPDOqdGK5qcI3oT0GKTW6wC7EMiVqA=="],
 

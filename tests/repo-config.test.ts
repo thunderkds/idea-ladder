@@ -45,7 +45,7 @@ describe("CI workflow (.github/workflows/ci.yml, AC 7)", async () => {
 });
 
 describe("env files and secrets (AC 8)", () => {
-  test(".env.example lists exactly the variable names (T003's four, T005's five, T006's five, T015's three VAPID, T008's three embedding), all empty", async () => {
+  test(".env.example lists exactly the variable names (T003's four, T005's five, T006's five, T015's three VAPID, T031's dedupe cutoff), all empty", async () => {
     const assignments = (await Bun.file(`${root}/.env.example`).text())
       .split("\n")
       .map((line) => line.trim())
@@ -65,9 +65,7 @@ describe("env files and secrets (AC 8)", () => {
       "MODEL_A_ID=",
       "READER_MAX_STEPS=",
       "READER_TOKEN_BUDGET=",
-      "OPENAI_API_KEY=",
-      "EMBEDDING_MODEL_ID=",
-      "DEDUPE_COSINE=",
+      "DEDUPE_JACCARD=",
       "VAPID_PUBLIC_KEY=",
       "VAPID_PRIVATE_KEY=",
       "VAPID_SUBJECT=",
