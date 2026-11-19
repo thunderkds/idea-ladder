@@ -97,6 +97,10 @@ const app = createApp({
   enqueue: async (data) => {
     await inngest.send({ id: data.jobId, name: LADDER_GENERATE_EVENT, data });
   },
+  // T013: event id l2-artifact-<artifactId>, so a re-send for the same artifact is one event.
+  emitArtifact: async (event) => {
+    await inngest.send(event);
+  },
   inngestHandler: serve({
     client: inngest,
     functions: [

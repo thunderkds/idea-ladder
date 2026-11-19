@@ -5,6 +5,7 @@ import { bodyLimit } from "hono/body-limit";
 import { serveStatic } from "hono/bun";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { secureHeaders } from "hono/secure-headers";
+import { type EmitArtifact, verifyL2Branch, verifyL4Artifact } from "./artifacts.ts";
 import {
   checkState,
   endSession,
@@ -34,6 +35,7 @@ import { offlinePack, syncRatings } from "./offline.ts";
 import { exportProgress, importProgress, MAX_IMPORT_BYTES, parseProgressFile } from "./progress.ts";
 import { checkSubscribe, isEndpoint, pushStatus, subscribe, unsubscribe } from "./push.ts";
 import { checkRateRequest, rateCard, reviewQueue } from "./review.ts";
+import { checkRunFeedback, saveRunFeedback } from "./run-feedback.ts";
 import {
   checkUrl,
   type Enqueue,
@@ -101,6 +103,8 @@ export function createApp(opts: {
   enqueue?: Enqueue;
   /** Levels a learner has passed on a ladder. Default: the levels with an evidence record (T012). */
   passedLevels?: PassedLevels;
+  /** T013: sends ladder/l2-artifact.verified. Default: none configured, so a verified L2 answers queue-unavailable. */
+  emitArtifact?: EmitArtifact;
   /** Inngest serve handler, mounted at /api/inngest. */
   inngestHandler?: (c: Context) => Promise<Response>;
 }) {
@@ -112,6 +116,11 @@ export function createApp(opts: {
       throw new Error("no Inngest client configured");
     });
   const passedLevels = opts.passedLevels ?? evidencePassedLevels(sql);
+  const emitArtifact: EmitArtifact =
+    opts.emitArtifact ??
+    (async () => {
+      throw new Error("no Inngest client configured");
+    });
   const now = opts.now ?? Date.now;
   const secret = config.sessionSecret;
   const cookieBase = { httpOnly: true, sameSite: "Lax", secure: config.secureCookies, path: "/" } as const;
@@ -204,6 +213,31 @@ export function createApp(opts: {
     if (!("status" in result)) return c.json(result);
     const { status, ...problem } = result;
     return c.json(problem, status);
+  });
+
+  // T013: GitHub artifact checks (L2 branch, L4 repo or merged PR), code only, with the app's own GitHub token.
+  app.post("/api/ladders/:ladderId/levels/:level/artifact", async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const level = c.req.param("level");
+    if (level !== "L2" && level !== "L4") return c.json({ error: "not-found" }, 404);
+    const body = (await c.req.json().catch(() => undefined)) as { url?: unknown } | undefined;
+    const deps = { sql, github, passedLevels, emit: emitArtifact, now: () => new Date(now()) };
+    const verify = level === "L2" ? verifyL2Branch : verifyL4Artifact;
+    const result = await verify(deps, user.userId, c.req.param("ladderId"), body?.url);
+    if (!("status" in result)) return c.json(result);
+    const { status, ...problem } = result;
+    return c.json(problem, status);
+  });
+
+  // T013 AC 6: the optional L1 run log + 3-sentence explanation. Feedback only: never scored, never evidence.
+  app.post("/api/ladders/:ladderId/levels/L1/run-feedback", async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const feedback = checkRunFeedback(await c.req.json().catch(() => undefined));
+    if (typeof feedback === "string") return c.json({ error: feedback }, feedback === "invalid-request" ? 400 : 422);
+    const saved = await saveRunFeedback(sql, user.userId, c.req.param("ladderId"), feedback, new Date(now()));
+    return saved === "ok" ? c.json({ ok: true }) : c.json({ error: saved }, 404);
   });
 
   // The client pages; an unknown id still gets the client (it draws the 404 page) with status 404.
