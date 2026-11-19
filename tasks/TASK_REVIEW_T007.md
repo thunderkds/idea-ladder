@@ -44,13 +44,13 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 
 -->
 
-
 ## Auto decisions
 
 Mode: auto
 1. Requirement Fidelity Gate signed by the Supervisor before spawn (FR-002, FR-005, US-001 exist in PRD.md and every AC traces to them) — RULE: tasks/TASK_GUIDE_T007.md:54 "An agent must NOT start implementing until this gate is checked"
 2. T007 guide aligned with T006 as built before spawn (migration 0007, `mapping`/`mapped`, `src/server/model-a.ts`, `usd: null` on claude-code) — RULE: CLAUDE.md:205 "No TASK_GUIDE = no work"
 3. The golden-set run (AC 7) is run by the owner in their own terminal with `CLAUDE_CONFIG_DIR` set, as for T006; agents never run it — FACT: memory/learnings.md:28 "The owner's subscription login lives in `CLAUDE_CONFIG_DIR=/home/thunderkds/.claude-hung2`"
+4. 2026-11-19: T007 rebuilt from this guide on a new `T007-concept-mapper` branch from main 467d538. The first build (review fixes 4f9c3c9, 3d72565, 4af71d0) was never pushed and its clone is not on this machine; the user chose "rebuild T007". The first build's review findings (reports/code-review_T007-concept-mapper_20261117T102941.html: sticky Save bar at 360 px, back link ≥ 44 px, "Concepts saved." status, code-point name length, control-character rejection, eval usd null) go into the spawn prompt as known pitfalls — RULE: user instruction 2026-11-19 "rebuild T007"
 Checks: tests — not yet run; reviews — not yet run; real run — not yet run
 Memory: nothing new
 Not done: auto verify: not started; merge (admin: after the auto verify pass)
