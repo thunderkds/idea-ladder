@@ -57,7 +57,9 @@ export async function offlinePack(sql: SQL, userId: string, now: Date, passed: P
       SELECT split_part(k, ':', 1)::bigint AS ladder_id, split_part(k, ':', 2) AS level
       FROM jsonb_array_elements_text(${JSON.stringify(keys)}::text::jsonb) AS k
     ) u ON u.ladder_id = c.ladder_id AND u.level = c.level
-    LEFT JOIN card_states s ON s.card_id = c.id AND s.learner_id = ${userId}`;
+    LEFT JOIN card_states s ON s.card_id = c.id AND s.learner_id = ${userId}
+    WHERE c.status = 'active'
+      AND NOT EXISTS (SELECT 1 FROM question_flags f WHERE f.learner_id = ${userId} AND f.kind = 'card' AND f.question_id = c.id)`;
   const rows = await sql`
     WITH queue_cards AS (${cards})
     SELECT q.*, q.id::text AS card_id, q.ladder_id::text AS ladder_text FROM (

@@ -3,6 +3,7 @@
 import { createApp } from "../../src/server/app.ts";
 import { signInUser } from "../../src/server/auth.ts";
 import { type Config, loadConfig } from "../../src/server/config.ts";
+import type { RegenerateRequested } from "../../src/server/flags.ts";
 import { githubRepoClient } from "../../src/server/github-repo.ts";
 import type { GenerateRequested } from "../../src/server/ladder-generate.ts";
 import { migrateUp } from "../../src/server/migrate.ts";
@@ -21,7 +22,9 @@ export async function startHarness(extraEnv: Record<string, string> = {}) {
   const state = {
     override: undefined as Override | undefined,
     sent: [] as GenerateRequested[],
+    regenerate: [] as RegenerateRequested[],
     enqueueFails: false,
+    regenerateFails: false,
   };
   const gh = fixtureFetch(fixtures, (path) => state.override?.(path));
   const config: Config = loadConfig({
@@ -40,6 +43,10 @@ export async function startHarness(extraEnv: Record<string, string> = {}) {
     sql: db.sql,
     clientDir: "tests/fixtures/client",
     github: githubRepoClient({ baseUrl: config.githubApiBaseUrl, token: config.githubAppToken, fetch: gh.impl }),
+    enqueueRegenerate: async (data) => {
+      if (state.regenerateFails) throw new Error("Inngest unreachable");
+      state.regenerate.push(data);
+    },
     enqueue: async (data) => {
       if (state.enqueueFails) throw new Error("Inngest unreachable");
       state.sent.push(data);
@@ -65,7 +72,9 @@ export async function startHarness(extraEnv: Record<string, string> = {}) {
     await db.sql`TRUNCATE ladders, generation_jobs, repo_snapshots CASCADE`;
     state.override = undefined;
     state.sent.length = 0;
+    state.regenerate.length = 0;
     state.enqueueFails = false;
+    state.regenerateFails = false;
     gh.calls.length = 0;
   }
 

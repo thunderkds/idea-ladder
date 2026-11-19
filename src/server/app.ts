@@ -18,6 +18,7 @@ import {
 } from "./auth.ts";
 import type { Config } from "./config.ts";
 import { evidencePassedLevels } from "./evidence.ts";
+import { checkFlagRequest, type EnqueueRegenerate, flagQuestion } from "./flags.ts";
 import { authorizeUrl, fetchGithubUser } from "./github.ts";
 import {
   GitHubError,
@@ -99,6 +100,8 @@ export function createApp(opts: {
   github?: GithubRepoClient;
   /** Sends ladder/generate.requested. Default: none configured, so /start answers queue-unavailable. */
   enqueue?: Enqueue;
+  /** Sends ladder/question.regenerate (T016). Default: none configured, so the flag that reaches the threshold answers 503. */
+  enqueueRegenerate?: EnqueueRegenerate;
   /** Levels a learner has passed on a ladder. Default: the levels with an evidence record (T012). */
   passedLevels?: PassedLevels;
   /** Inngest serve handler, mounted at /api/inngest. */
@@ -108,6 +111,11 @@ export function createApp(opts: {
   const github = opts.github ?? githubRepoClient({ baseUrl: config.githubApiBaseUrl, token: config.githubAppToken });
   const enqueue: Enqueue =
     opts.enqueue ??
+    (async () => {
+      throw new Error("no Inngest client configured");
+    });
+  const enqueueRegenerate: EnqueueRegenerate =
+    opts.enqueueRegenerate ??
     (async () => {
       throw new Error("no Inngest client configured");
     });
@@ -137,6 +145,7 @@ export function createApp(opts: {
     "/api/push/*",
     "/api/progress/*",
     "/api/mcq-attempts/*",
+    "/api/flags",
     SETTINGS_PATH,
   ]) {
     app.use(path, async (c, next) => {
@@ -204,6 +213,22 @@ export function createApp(opts: {
     if (!("status" in result)) return c.json(result);
     const { status, ...problem } = result;
     return c.json(problem, status);
+  });
+
+  // T016: "This question seems wrong" on a review card or an MCQ.
+  app.post("/api/flags", async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const req = checkFlagRequest(await c.req.json().catch(() => undefined));
+    if (!req) return c.json({ error: "invalid-request" }, 400);
+    try {
+      return (await flagQuestion(sql, user.userId, req, enqueueRegenerate)) === "ok"
+        ? c.json({ ok: true })
+        : c.json({ error: "not-found" }, 404);
+    } catch (err) {
+      console.error("flag: could not send the regenerate event", err);
+      return c.json({ error: "queue-unavailable" }, 503);
+    }
   });
 
   // The client pages; an unknown id still gets the client (it draws the 404 page) with status 404.

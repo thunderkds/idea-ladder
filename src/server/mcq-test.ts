@@ -65,7 +65,11 @@ export async function startMcqAttempt(
     // Serialises this learner's starts, so two parallel starts cannot both pass the limit.
     await tx`SELECT 1 FROM users WHERE id = ${userId} FOR UPDATE`;
     const pool: string[] = (
-      await tx`SELECT id::text AS id FROM mcqs WHERE ladder_id = ${ladderId} AND level = ${level} ORDER BY id`
+      await tx`
+        SELECT id::text AS id FROM mcqs
+        WHERE ladder_id = ${ladderId} AND level = ${level} AND status = 'active'
+          AND NOT EXISTS (SELECT 1 FROM question_flags f WHERE f.learner_id = ${userId} AND f.kind = 'mcq' AND f.question_id = mcqs.id)
+        ORDER BY id`
     ).map((r: { id: string }) => r.id);
     if (pool.length < MIN_MCQ_POOL) return { status: 422, error: "pool-too-small" } as const;
 
