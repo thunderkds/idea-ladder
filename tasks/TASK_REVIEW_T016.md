@@ -47,8 +47,8 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass / ☐ fail | [test file path(s) — required before Done] |
-| Verification command run | ☐ pass / ☐ fail | [paste actual output] |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass (backend AC 1-5 and the backend half of AC 6) | tests/question-flags.test.ts (AC 1-6 server side, threshold, parallel flags, scoring unchanged), tests/question-regenerate.test.ts (consumer), tests/migrate.test.ts (0013 up/down). `bun test -t "T016"` (2026-11-19T11:32:56Z): 15 pass, 0 fail, 92 expect() calls. Playwright (AC 6 UI) is the frontend agent's. |
+| Verification command run | ☑ pass (backend part) | `bun run typecheck` clean; `bun run lint`: `Checked 139 files in 75ms. No fixes applied.` + `check-tokens: 0 color literals`; `bun test --timeout 60000`: `546 pass 0 fail 3186 expect() calls Ran 546 tests across 53 files`. Playwright not yet run (frontend). |
 | Negative cases hold | ☐ pass / ☐ fail | |
 | verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
 | Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |

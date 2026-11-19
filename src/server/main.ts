@@ -6,9 +6,11 @@ import { createApp } from "./app.ts";
 import { ConfigError, loadConfig, modelBWarning } from "./config.ts";
 import { readerCostLogger } from "./cost-wiring.ts";
 import { evidencePassedLevels } from "./evidence.ts";
+import { REGENERATE_EVENT } from "./flags.ts";
 import { githubRepoClient } from "./github-repo.ts";
 import { createInngest, LADDER_GENERATE_EVENT, ladderGenerateFunction, type ReaderDeps } from "./ladder-generate.ts";
 import { createModelA } from "./model-a.ts";
+import { questionRegenerateFunction } from "./question-regenerate.ts";
 import { reminderFunction, webPushSender } from "./reminders.ts";
 
 let config: ReturnType<typeof loadConfig>;
@@ -97,10 +99,15 @@ const app = createApp({
   enqueue: async (data) => {
     await inngest.send({ id: data.jobId, name: LADDER_GENERATE_EVENT, data });
   },
+  enqueueRegenerate: async (data) => {
+    // Event id = kind + question id, so Inngest drops a duplicate send for the same question.
+    await inngest.send({ id: `regenerate-${data.kind}-${data.questionId}`, name: REGENERATE_EVENT, data });
+  },
   inngestHandler: serve({
     client: inngest,
     functions: [
       ladderGenerateFunction(inngest, { sql, github, reader, modelA, modelB, dedupeJaccard: config.dedupeJaccard }),
+      questionRegenerateFunction(inngest, { sql, modelA, modelB, dedupeJaccard: config.dedupeJaccard }),
       reminders,
     ],
     // Never derive the callback origin from the request Host header (required in production by loadConfig).
