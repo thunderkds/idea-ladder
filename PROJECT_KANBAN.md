@@ -32,9 +32,9 @@
 
 ### In Progress
 - [ ] **T012** — MCQ pass test — score vs stored keys, randomized pool, rate-limited retakes, append-only evidence record + SHA-256 | backend-developer | C2 | Risk: High | P0 | Phase: v1 (after Gate 1) | Started 2026-11-19: branch `T012-mcq-pass-test`, worktree `../wt-t012` ([admin], auto)
-- [ ] **T031** — Remove embeddings: drop the embedder, `chunks.embedding` and `@ai-sdk/openai`; dedupe by word overlap (user 2026-11-19: Claude subscription only) | backend-developer | C2 | Risk: Medium | P0 | Phase: v1 | Started 2026-11-19: branch `T031-remove-embeddings`, worktree `../wt-t031` ([admin], auto)
 
 ### Ready for Review
+- [ ] **T031** — Remove embeddings: drop the embedder, `chunks.embedding` and `@ai-sdk/openai`; dedupe by word overlap (user 2026-11-19: Claude subscription only) | backend-developer | C2 | Risk: Medium | P0 | Phase: v1 | Started 2026-11-19: branch `T031-remove-embeddings`, worktree `../wt-t031` ([admin], auto) · Ready for Review 2026-11-19: 10 commits on `T031-remove-embeddings`; bun test 445 pass / 0 fail; code-review 0 P0/P1, 3 P2 fixed (f3aff3e), 3 P3 cut; security-review no findings; migration-safety GO (0010); auto verify started
 
 ### Blocked
 
