@@ -11,7 +11,7 @@ export const STEPS: readonly Step[] = ["core-files", "concepts"];
 
 interface RowBase { fullName: string; tier: string; predicted: string[]; missed: string[]; extra: string[]; error?: string }
 export interface CoreFilesRow extends RowBase { recall: number; precision: number; modelCalls?: number; usd?: number | null; tokens?: number; hitLimit?: boolean; githubRateLimited?: number }
-export interface ConceptsRow extends RowBase { overlap: number }
+export interface ConceptsRow extends RowBase { overlap: number; modelCalls?: number; usd?: number | null; tokens?: number }
 
 interface ReportBase { subject: string; generatedAt: string }
 export interface CoreFilesReport extends ReportBase {
@@ -26,7 +26,7 @@ export interface CoreFilesReport extends ReportBase {
   baseline?: { subject: string; meanRecall: number };
   verdicts?: string[];
 }
-export interface ConceptsReport extends ReportBase { step: "concepts"; rows: ConceptsRow[]; mean: { overlap: number } }
+export interface ConceptsReport extends ReportBase { step: "concepts"; rows: ConceptsRow[]; mean: { overlap: number; tokensPerCall?: number | null; usdPerCall?: number | null } }
 export type Report = CoreFilesReport | ConceptsReport;
 
 export interface RunOptions {
@@ -60,9 +60,9 @@ export async function runEval(o: RunOptions & { step: Step }): Promise<Report> {
       error = (err as Error).message; // an error is a miss: scored as an empty prediction, reported on its row
     }
     const errField = error === undefined ? {} : { error };
-    const stats = step === "core-files" ? (subject as Partial<MeasuredSubject>).runStats?.(e.fullName) : undefined;
+    const stats = (subject as Partial<MeasuredSubject>).runStats?.(e.fullName);
     if (step === "core-files") rows.push({ ...base, predicted, ...scoreCoreFiles(predicted, e.expectedCoreFiles), ...errField, ...stats });
-    else rows.push({ ...base, predicted, ...scoreConcepts(predicted, e.expectedConcepts), ...errField });
+    else rows.push({ ...base, predicted, ...scoreConcepts(predicted, e.expectedConcepts), ...errField, ...(stats && { modelCalls: stats.modelCalls, usd: stats.usd, tokens: stats.tokens }) });
   }
 
   if (step === "core-files") {
@@ -85,7 +85,15 @@ export async function runEval(o: RunOptions & { step: Step }): Promise<Report> {
     };
   }
   const r = rows as ConceptsRow[];
-  return { step, subject: subject.name, generatedAt, rows: r, mean: { overlap: mean(r.map((x) => x.overlap)) } };
+  const withStats = r.filter((x) => x.modelCalls !== undefined);
+  const calls = withStats.reduce((n, x) => n + (x.modelCalls ?? 0), 0);
+  const priced = withStats.filter((x) => typeof x.usd === "number");
+  const pricedCalls = priced.reduce((n, x) => n + (x.modelCalls ?? 0), 0);
+  const statsMean = withStats.length === 0 ? {} : {
+    tokensPerCall: calls === 0 ? null : withStats.reduce((n, x) => n + (x.tokens ?? 0), 0) / calls,
+    usdPerCall: pricedCalls === 0 ? null : priced.reduce((n, x) => n + (x.usd as number), 0) / pricedCalls,
+  };
+  return { step, subject: subject.name, generatedAt, rows: r, mean: { overlap: mean(r.map((x) => x.overlap)), ...statsMean } };
 }
 
 const f = (n: number) => n.toFixed(2);
@@ -104,9 +112,11 @@ export function renderMarkdown(report: Report): string {
     if (report.baseline) lines.push("", `Baseline \`${report.baseline.subject}\` mean recall: ${f(report.baseline.meanRecall)}`);
     if (report.verdicts?.length) lines.push("", ...report.verdicts.map((v) => `- ${v}`));
   } else {
-    lines.push("| Repo | Tier | Overlap | Missed | Extra |", "|---|---|---|---|---|");
-    for (const r of report.rows) lines.push(`| ${r.fullName} | ${r.tier} | ${f(r.overlap)} | ${cell(r.missed)} | ${cell(r.extra)}${r.error ? ` (error: ${r.error})` : ""} |`);
-    lines.push(`| **mean** | | ${f(report.mean.overlap)} | | |`);
+    const st = report.mean.tokensPerCall !== undefined;
+    const n = (v: number | null | undefined, d: number) => (v === null || v === undefined ? "n/a" : v.toFixed(d));
+    lines.push(`| Repo | Tier | Overlap | Missed | Extra |${st ? " Model calls | Tokens | USD |" : ""}`, `|---|---|---|---|---|${st ? "---|---|---|" : ""}`);
+    for (const r of report.rows) lines.push(`| ${r.fullName} | ${r.tier} | ${f(r.overlap)} | ${cell(r.missed)} | ${cell(r.extra)}${r.error ? ` (error: ${r.error})` : ""} |${st ? ` ${r.modelCalls ?? 0} | ${r.tokens ?? 0} | ${n(r.usd, 4)} |` : ""}`);
+    lines.push(`| **mean** | | ${f(report.mean.overlap)} | | |${st ? ` | ${n(report.mean.tokensPerCall, 0)} per call | ${n(report.mean.usdPerCall, 4)} per call |` : ""}`);
   }
   return `${lines.join("\n")}\n`;
 }
