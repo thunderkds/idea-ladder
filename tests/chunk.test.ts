@@ -13,7 +13,7 @@ import { migrateUp } from "../src/server/migrate.ts";
 import { createTestDatabase } from "./support/db.ts";
 import { type Fixture, fixtureFetch, loadFixture, V0_REPOS } from "./support/github-fixtures.ts";
 import { drainInngestRuns } from "./support/inngest-drain.ts";
-import { testModelA, testReader } from "./support/mock-model.ts";
+import { testModelA, testModelB, testReader } from "./support/mock-model.ts";
 
 const letters = (n: number) => Array.from({ length: n }, (_, i) => String.fromCharCode(97 + (i % 26))).join("");
 
@@ -96,6 +96,7 @@ function engine(jobId: string, costs: CostEntry[] = [], contents?: () => Respons
     github: githubRepoClient({ baseUrl: "https://api.github.com", token: "t", fetch: gh.impl }),
     reader: { ...testReader(), logCost: (e) => costs.push(e) },
     modelA,
+    modelB: testModelB(),
   });
   const t = new InngestTestEngine({
     function: fn,
@@ -124,6 +125,7 @@ describe("Inngest step chunk (T031 AC 2, Success Criterion 2)", () => {
       "chunk",
       ...["L0", "L1", "L2", "L3", "L4"].map((l) => `generate-level-${l}`),
       "check-and-dedupe",
+      "blind-solve",
       "save-ladder",
     ]);
     const rows = await chunkRows();

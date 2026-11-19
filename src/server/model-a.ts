@@ -15,7 +15,8 @@ import {
 } from "./claude-code-reader.ts";
 import type { CallUsage } from "./repo-reader.ts";
 
-export type GenerateInput<T> = { schema: z.ZodType<T>; prompt: string; system?: string };
+/** `temperature` is honoured by the `api` back end only (default 0.2); `claude -p` has no temperature flag. */
+export type GenerateInput<T> = { schema: z.ZodType<T>; prompt: string; system?: string; temperature?: number };
 export type GenerateOutput<T> = { value: T; usage: CallUsage };
 export type Generate = <T>(input: GenerateInput<T>) => Promise<GenerateOutput<T>>;
 /** What the workflow gets: the back end name (for the cost log) and `generate`. */
@@ -89,12 +90,12 @@ function parseWith<T>(schema: z.ZodType<T>, text: string, usage: CallUsage): T {
 }
 
 function apiGenerate(model: LanguageModel): Generate {
-  return async <T>({ schema, prompt, system }: GenerateInput<T>) => {
+  return async <T>({ schema, prompt, system, temperature }: GenerateInput<T>) => {
     const r = await generateText({
       model,
       system: `${system ?? MODEL_A_SYSTEM}\n\nJSON schema of the answer:\n${JSON.stringify(jsonSchemaOf(schema))}`,
       prompt,
-      temperature: API_TEMPERATURE,
+      temperature: temperature ?? API_TEMPERATURE,
       maxOutputTokens: API_MAX_OUTPUT_TOKENS,
     });
     const cached = r.usage.inputTokenDetails?.cacheReadTokens ?? 0;

@@ -128,3 +128,21 @@ export function testModelA(): ModelADeps {
     },
   };
 }
+
+/**
+ * Model B dep for workflow tests: picks the option that equals the first word of the chunk it was shown (what
+ * `testModelA`'s MCQs use as their key), so it agrees with every `testModelA` question. It never sees the key.
+ */
+export function testModelB(): ModelADeps {
+  return {
+    backend: "api",
+    generate: async ({ schema, prompt }) => {
+      const data = JSON.parse(prompt.split("\n")[1] ?? "{}") as { chunk?: string; options?: string[] };
+      const first = data.chunk?.match(/[\p{L}\p{N}]+/u)?.[0];
+      return {
+        value: schema.parse({ answerIndex: Math.max(data.options?.indexOf(first ?? "") ?? 0, 0) }),
+        usage: { model: "test-model-b", inputTokens: 1, outputTokens: 1, cachedInputTokens: 0 },
+      };
+    },
+  };
+}

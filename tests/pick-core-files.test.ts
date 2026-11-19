@@ -14,7 +14,7 @@ import {
 import { migrateUp } from "../src/server/migrate.ts";
 import { createTestDatabase } from "./support/db.ts";
 import { type Fixture, fixtureFetch, loadFixture, V0_REPOS } from "./support/github-fixtures.ts";
-import { answer, type Reply, scriptedModel, testModelA } from "./support/mock-model.ts";
+import { answer, type Reply, scriptedModel, testModelA, testModelB } from "./support/mock-model.ts";
 
 let db: Awaited<ReturnType<typeof createTestDatabase>>;
 let fixtures: Fixture[];
@@ -68,6 +68,7 @@ function engine(
     sql: db.sql,
     github,
     modelA: testModelA(),
+    modelB: testModelB(),
     reader: {
       model,
       limits: { maxSteps: 15, tokenBudget: 80_000 },
@@ -248,6 +249,7 @@ describe("Inngest step pick-core-files on the claude-code back end (AC 9)", () =
       sql: db.sql,
       github: githubRepoClient({ baseUrl: "https://api.github.com", token: "t", fetch: gh.impl }),
       modelA: testModelA(),
+      modelB: testModelB(),
       reader: {
         backend: "claude-code",
         claudeBin: join(tmpdir(), "il-no-such-dir", "claude"),
@@ -280,6 +282,7 @@ describe("Inngest step pick-core-files on the claude-code back end (AC 9)", () =
       sql: db.sql,
       github: githubRepoClient({ baseUrl: "https://api.github.com", token: "t", fetch: gh.impl }),
       modelA: testModelA(),
+      modelB: testModelB(),
       reader: {
         backend: "claude-code",
         githubToken: "app-token",

@@ -10,7 +10,8 @@
     "eval": "bun run src/cli-eval.ts",
     "eval:record": "bun run src/cli-record.ts",
     "eval:pin": "bun run src/cli-pin.ts",
-    "eval:cost": "bun run src/cli-cost.ts"
+    "eval:cost": "bun run src/cli-cost.ts",
+    "eval:blind-solver": "bun run src/blind-solver-measure.ts"
   },
   "dependencies": {
     "zod": "4.6.7"

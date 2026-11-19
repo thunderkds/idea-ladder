@@ -13,7 +13,7 @@ import { type ModelADeps, ModelAFailedError, ModelANotInstalledError } from "../
 import { createTestDatabase } from "./support/db.ts";
 import { type Fixture, fixtureFetch, loadFixture, V0_REPOS } from "./support/github-fixtures.ts";
 import { drainInngestRuns } from "./support/inngest-drain.ts";
-import { promptData, testModelA, testReader } from "./support/mock-model.ts";
+import { promptData, testModelA, testModelB, testReader } from "./support/mock-model.ts";
 
 let db: Awaited<ReturnType<typeof createTestDatabase>>;
 let fixtures: Fixture[];
@@ -78,6 +78,7 @@ function engine(jobId: string, modelA: ModelADeps, costs: CostEntry[] = []) {
     github: githubRepoClient({ baseUrl: "https://api.github.com", token: "t", fetch: gh.impl }),
     reader: { ...testReader(), logCost: (e) => costs.push(e) },
     modelA,
+    modelB: testModelB(),
   });
   const t = new InngestTestEngine({
     function: fn,
@@ -104,6 +105,7 @@ describe("Inngest steps generate-level-L0..L4 (AC 2, AC 3)", () => {
       "chunk",
       ...LEVEL_STEPS,
       "check-and-dedupe",
+      "blind-solve",
       "save-ladder",
     ]);
     const sources: Record<string, string[]> = {
