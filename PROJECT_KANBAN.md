@@ -29,9 +29,9 @@
 - [ ] **T029** — "Learn what's trending" weekly pick | backend-developer | C1 | Risk: Low | P2 | Phase: v3 (after Gate 3)
 
 ### In Progress
-- [ ] **T013** — GitHub artifact verifiers — L2 branch, L4 repo or merged PR, L1 verifier design | backend-developer | C2 | Risk: High | P0 | Phase: v1 (after Gate 1) | HITL | L1 rule decided 2026-11-19 by Debate (option B: MCQ on setup, flagged for the user) | Started 2026-11-19: branch `T013-artifact-verifiers`, worktree `../wt-t013` ([admin], auto)
 
 ### Ready for Review
+- [ ] **T013** — GitHub artifact verifiers — L2 branch, L4 repo or merged PR, L1 verifier design | backend-developer | C2 | Risk: High | P0 | Phase: v1 (after Gate 1) | HITL | L1 rule decided 2026-11-19 by Debate (option B: MCQ on setup, flagged for the user) | Started 2026-11-19: branch `T013-artifact-verifiers`, worktree `../wt-t013` ([admin], auto) · Ready for Review 2026-11-19: 11 commits on `T013-artifact-verifiers`; bun test 593 pass / 0 fail; code-review 0 P0, P1 resolved as specified (Debate; follow-up T033), seed fixed (7052dae); security-review no findings; migration-safety GO (0014); live GitHub check is the owner's; auto verify started
 
 ### Blocked
 
