@@ -79,8 +79,19 @@ Not done: auto verify: not started; merge (admin: after the auto verify pass)
 > **before any implementation commit exists**; if it does not (docs, templates, skill-instruction
 > text), BEFORE is the **verbatim prior content** of what changed — a quoted excerpt, not a command.
 
-**BEFORE**: [pasted timestamped command output showing the thing absent/failing, captured before the
-first implementation commit] OR [verbatim excerpt of the prior content, for non-executable changes]
+**BEFORE** (command: `date -u +%Y-%m-%dT%H:%M:%SZ; bun test concept-mapper learner-concepts; ls migrations | grep 0007 || echo "no 0007 migration"`):
+
+```
+2026-11-19T07:36:43Z
+bun test v1.4.4 (38afee6c8)
+The following filters did not match any test files in --cwd="/home/thunderkds/workspace/pets/hungnguyen111/wt-t007":
+ concept-mapper learner-concepts
+39 files were searched [2.00ms]
+
+note: Tests need ".test", "_test_", ".spec" or "_spec_" in the filename (ex: "MyApp.test.ts")
+
+no 0007 migration
+```
 
 **AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
 
