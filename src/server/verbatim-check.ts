@@ -4,7 +4,7 @@ import { normalise, stripInlineMarkdown } from "./answer-key-check.ts";
 
 export const VERBATIM_WORDS = 25;
 
-const words = (s: string): string[] =>
+export const words = (s: string): string[] =>
   normalise(stripInlineMarkdown(s))
     .split(/[^\p{L}\p{N}_]+/u)
     .filter(Boolean);

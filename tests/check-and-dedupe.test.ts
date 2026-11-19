@@ -1,11 +1,9 @@
 // T008 (8c) AC 4-6: checkAndDedupe on generated levels: key check -> regenerate (max 2) -> verbatim -> dedupe.
 import { describe, expect, test } from "bun:test";
 import { checkAndDedupe, type GeneratedLevel, type LadderLevel } from "../src/server/check-and-dedupe.ts";
-import type { Embedder } from "../src/server/embedder.ts";
 import type { LevelChunk } from "../src/server/level-generator.ts";
 import type { Generate, GenerateInput } from "../src/server/model-a.ts";
 import type { CallUsage } from "../src/server/repo-reader.ts";
-import { mockEmbedder } from "./support/mock-embedder.ts";
 
 const USAGE: CallUsage = { model: "test-model", inputTokens: 5, outputTokens: 2, cachedInputTokens: 0 };
 const WORDS30 = Array.from({ length: 30 }, (_, i) => `word${i}`).join(" ");
@@ -47,25 +45,8 @@ function scripted(answers: unknown[]) {
   };
   return { generate, inputs };
 }
-const unit = (axis: number) => Array.from({ length: 40 }, (_, i) => (i === axis ? 1 : 0));
-/** Embeds texts to fixed vectors by text (unknown text: a distinct axis). */
-function fixedEmbedder(vectors: Record<string, number[]>): Embedder & { calls: string[][] } {
-  const calls: string[][] = [];
-  let axis = 10;
-  return {
-    model: "fixed",
-    calls,
-    embedTexts: async (texts) => {
-      calls.push(texts);
-      return {
-        embeddings: texts.map((t) => vectors[t] ?? unit(axis++)),
-        tokens: texts.length,
-      };
-    },
-  };
-}
-const run = (levels: LadderLevel[], generate: Generate, embedder: Embedder = mockEmbedder(), dedupeCosine = 0.92) =>
-  checkAndDedupe({ levels, chunks: CHUNKS, generate, embedder, dedupeCosine });
+const run = (levels: LadderLevel[], generate: Generate, dedupeJaccard = 0.8) =>
+  checkAndDedupe({ levels, chunks: CHUNKS, generate, dedupeJaccard });
 
 describe("checkAndDedupe", () => {
   test("Success Criterion 2 in the pipeline: a key that never passes is dropped key-check-failed after 2 regenerations", async () => {
@@ -104,57 +85,53 @@ describe("checkAndDedupe", () => {
     const [l0] = (await run([level("L0", { mcqs: [longKey] })], scripted([]).generate)) as GeneratedLevel[];
     expect(l0?.mcqs).toEqual([longKey]);
   });
-  test("Success Criterion 4 in the pipeline: two cards at cosine 0.95 -> the second is dropped duplicate", async () => {
-    const embedder = fixedEmbedder({ "Front A?": [1, 0, 0], "Front B?": [0.95, Math.sqrt(1 - 0.95 ** 2), 0] });
-    const [l3] = (await run(
-      [level("L3", { cards: [card("Front A?"), card("Front B?")] })],
-      scripted([]).generate,
-      embedder,
-    )) as GeneratedLevel[];
-    expect(l3?.cards).toEqual([card("Front A?")]);
-    expect(l3?.dropped).toEqual([{ item: card("Front B?"), reason: "duplicate" }]);
-    expect(embedder.calls).toEqual([["Front A?", "Front B?"]]); // one embedding call for the ladder
+  test("Success Criterion 3 in the pipeline: two cards that differ by one word -> the second is dropped duplicate", async () => {
+    const a = "Which structure does the emitter use to store every registered handler function?";
+    const b = "Which structure does the emitter use to store every registered listener function?";
+    const [l3] = (await run([level("L3", { cards: [card(a), card(b)] })], scripted([]).generate)) as GeneratedLevel[];
+    expect(l3?.cards).toEqual([card(a)]);
+    expect(l3?.dropped).toEqual([{ item: card(b), reason: "duplicate" }]);
   });
-  test("dedupe order is level order L0 -> L4, then MCQs before cards; config threshold is used", async () => {
-    const v = [1, 0, 0];
-    const embedder = fixedEmbedder({ "Same?": v, "What stores the handlers?": v });
+  test("two MCQs on different facts of one chunk are both kept", async () => {
+    const m1 = mcq("map", 2, "What stores the handlers?");
+    const m2 = mcq("each", 2, "What does emit do with them?");
+    const [l3] = (await run([level("L3", { mcqs: [m1, m2] })], scripted([]).generate)) as GeneratedLevel[];
+    expect(l3?.mcqs).toEqual([m1, m2]);
+    expect(l3?.dropped).toEqual([]);
+  });
+  test("dedupe order is level order L0 -> L4, then MCQs before cards; config cutoff is used", async () => {
     const levels: LadderLevel[] = [
-      level("L0", { cards: [card("Same?", 1)] }),
+      level("L0", { cards: [card("What stores the handlers?", 1)] }),
       skipped("L1"),
-      level("L3", { mcqs: [mcq("map")], cards: [card("Same?")] }),
+      level("L3", { mcqs: [mcq("map")], cards: [card("What stores the handlers?")] }),
     ];
-    const out = (await run(levels, scripted([]).generate, embedder)) as GeneratedLevel[];
+    const out = (await run(levels, scripted([]).generate)) as GeneratedLevel[];
     expect(out[0]?.cards).toHaveLength(1);
     expect(out[1]).toEqual(skipped("L1") as never);
     expect(out[2]?.mcqs).toEqual([]); // the L0 card came first
     expect(out[2]?.dropped.map((d) => d.reason)).toEqual(["duplicate", "duplicate"]);
-    const loose = (await run(
-      levels,
+    const strict = (await run(
+      [level("L0", { cards: [card("a b c d e f g h i j", 1), card("a b c d e f g h i k", 1)] })],
       scripted([]).generate,
-      fixedEmbedder({ "Same?": [1, 0], "What stores the handlers?": [0, 1] }),
       1,
     )) as GeneratedLevel[];
-    expect(loose[2]?.mcqs).toHaveLength(1); // different vectors at threshold 1: only the exact card repeats
+    expect(strict[0]?.cards).toHaveLength(2); // cutoff 1: only identical word sets repeat
   });
   test("drops from the generator (bad-citation, bad-options) are kept first; skipped levels pass through", async () => {
     const prior = [{ item: mcq("map", 99), reason: "bad-citation" }];
     const out = await run([level("L3", { dropped: prior }), skipped("L4")], scripted([]).generate);
     expect(out).toEqual([level("L3", { dropped: prior }), skipped("L4")]);
   });
-  test("costs: one usage per regeneration call and the embedding tokens once", async () => {
+  test("costs: one usage per regeneration call", async () => {
     const usages: CallUsage[] = [];
-    const tokens: number[] = [];
     const { generate } = scripted([{ mcq: mcq("map") }]);
     await checkAndDedupe({
       levels: [level("L3", { mcqs: [mcq("bitmap")], cards: [card("F?")] })],
       chunks: CHUNKS,
       generate,
-      embedder: mockEmbedder(),
-      dedupeCosine: 0.92,
+      dedupeJaccard: 0.8,
       onUsage: (u) => usages.push(u),
-      onEmbedTokens: (t) => tokens.push(t),
     });
     expect(usages).toEqual([USAGE]);
-    expect(tokens).toHaveLength(1);
   });
 });
