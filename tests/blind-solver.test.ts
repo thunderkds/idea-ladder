@@ -131,4 +131,28 @@ describe("blindSolveMcq (AC 4)", () => {
       }),
     ).rejects.toThrow(/not-installed/);
   });
+
+  test("a throwing onUsage propagates instead of counting as disagreement", async () => {
+    await expect(
+      run(solverOf("off"), () => {
+        throw new Error("cost log down");
+      }),
+    ).rejects.toThrow(/cost log down/);
+  });
+
+  test("a RetryError (SDK retries gave up) counts as disagreement", async () => {
+    const { RetryError } = await import("ai");
+    const r = await run(async () => {
+      throw new RetryError({ message: "gave up", reason: "maxRetriesExceeded", errors: [new Error("x")] });
+    });
+    expect(r.agree).toBe(false);
+  });
+
+  test("an unexpected error (TypeError) is rethrown", async () => {
+    await expect(
+      run(async () => {
+        throw new TypeError("undefined is not a function");
+      }),
+    ).rejects.toThrow(TypeError);
+  });
 });

@@ -121,13 +121,35 @@ describe("blindSolveLevels (AC 3, AC 4)", () => {
 
   test("a replacement that repeats another question of the ladder is not kept", async () => {
     const a = modelA([mcq("Which removes a handler?"), mcq("Which removes a handler?")]);
-    const b = modelB((q, options) => (q === "Which removes?" ? (options.find((o) => o !== "off") as string) : "off"));
+    const b = modelB((q, options) =>
+      q === "Which removes?"
+        ? (options.find((o) => o !== "off") as string)
+        : q === "Which removes a handler?"
+          ? "on"
+          : "off",
+    );
     const { levels } = await run(
       [level([mcq("Which removes?"), mcq("Which removes a handler?", "on")])],
       a.generate,
       b.generate,
     );
     expect((levels[0] as GeneratedLevel).dropped).toHaveLength(1);
+  });
+
+  test("a replacement that repeats an earlier accepted replacement is not kept", async () => {
+    const a = modelA([mcq("Which method removes a handler from the emitter?")]);
+    const b = modelB((q, options) =>
+      q.startsWith("Which method") ? "off" : (options.find((o) => o !== "off" && o !== "on") as string),
+    );
+    const { levels, results } = await run(
+      [level([mcq("Which removes?"), mcq("Name the one that detaches listeners", "off")])],
+      a.generate,
+      b.generate,
+    );
+    expect((levels[0] as GeneratedLevel).mcqs.map((m) => m.question)).toEqual([
+      "Which method removes a handler from the emitter?",
+    ]);
+    expect(results.map((r) => r.outcome)).toEqual(["regenerated", "dropped"]);
   });
 
   test("model B answerIndex out of range or a model error: dropped, never kept (Success Criterion 4)", async () => {
