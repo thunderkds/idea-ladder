@@ -48,3 +48,6 @@
 - [T031 merged](decisions.md#2026-11-19--t031-merged-no-embedder-chunks-without-vectors-word-overlap-dedupe) — 0010 drops chunk vectors; step `chunk`; Jaccard dedupe DEDUPE_JACCARD 0.8; no OpenAI key
 - [T012 merged](decisions.md#2026-11-19--t012-merged-mcq-pass-test-append-only-hashed-evidence-real-passedlevels) — MCQ attempt/submit routes; 0011 evidence_records append-only + SHA-256; real passedLevels; TRUNCATE gap for T018
 - [Parallel-task merge gotchas](learnings.md#gotchas) — merge gate waits for all open rows; migrate.test.ts chains conflict; security-review needs the worktree diff
+- [T032 merged](decisions.md#2026-11-19--t032-merged-generated-cards-go-to-review_cards-one-card-table) — 0012 moves `cards` into `review_cards` (+position, chunk_id); saveLadder writes review_cards; reviewCardIds rateable
+- [T009 merged](decisions.md#2026-11-19--t009-merged-blind-solver-as-a-separate-blind-claude-call) — step blind-solve, model B via createModelA (MODEL_B_BACKEND/ID); only model errors = disagreement; live 3-policy measurement is the owner's
+- [Board rows, step limit, cross-task contracts](learnings.md#gotchas) — hook adds the guide's board row; step limit counts all task calls; test write+read paths together

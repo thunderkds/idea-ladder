@@ -24,6 +24,9 @@
 
 ## Gotchas
 
+### 2026-11-19 — board rows, step limit and cross-task contracts
+(1) Committing a new TASK_GUIDE lets a hook add its board row with the guide's title; do not also add a row by hand, or a stale duplicate stays in In Progress and the merge gate blocks every merge. (2) The 90-call step limit counts every call attributed to the task — builder, fix and review agents and the Supervisor's own calls under the active-task state — so set the state file to the task you are working on and expect the counter to trip once on long tasks (it resets itself). (3) T008 and T011 each seeded their own card table by hand and both test suites passed while generated cards never reached review (T032): when a task writes data another task reads, add one test that goes through both code paths.
+
 ### 2026-11-19 — parallel tasks: merge gate, migrate.test.ts chains, security-review checkout
 Parallel tasks (T031 + T012): (1) the merge gate blocks every merge while any row is In Progress or Ready for Review, so parallel tasks merge together after the last auto verify pass; (2) two branches that each add a migration both edit the hard-coded down/up chains in tests/migrate.test.ts — at merge, put the higher number first in every down chain, list both in every up list, and add one `migrateDown` line to "down on an empty schema is a no-op"; give the second branch the next migration number at Stage 2; (3) the built-in `security-review` reads the main checkout diff, so run its scan as a sub-task on `git -C <worktree> diff main...HEAD`; (4) the main checkout has no node_modules: run `bun install --frozen-lockfile` there before testing a merge.
 
