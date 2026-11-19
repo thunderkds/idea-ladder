@@ -37,7 +37,13 @@ const SEED_SHA = "6b41670516ed8e8b738612f60491995470aa63b3";
 const LONG_GOAL = `${"Explain how the core loop works end to end, ".repeat(6)}https://example.com/${"x".repeat(120)}`;
 const LEVELS: [id: string, title: string, goal: string, kind: string, test: string][] = [
   ["L0", "Prerequisites", "Learn the concepts you are missing", "concept-ladder-tests", "Concept ladder tests"],
-  ["L1", "Run it", "Clone the repo and run it", "run-evidence", "Screenshot or log + 3-sentence explanation"],
+  [
+    "L1",
+    "Run it",
+    "Clone the repo and run it",
+    "run-mcq",
+    "MCQs on setting up and running it; a run log and a 3-sentence explanation are optional feedback",
+  ],
   [
     "L2",
     "Modify",
