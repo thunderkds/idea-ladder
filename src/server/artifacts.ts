@@ -3,9 +3,11 @@
 // Calls GitHub with the app's own token (the injected client). Never calls an LLM.
 import type { SQL } from "bun";
 import { LEVEL_IDS, levelLockState } from "../shared/levels.ts";
-import { parseBranchUrl } from "./artifact-url.ts";
+import { parseBranchUrl, parseL4Url } from "./artifact-url.ts";
+import { type EvidenceRecord, writeEvidenceRecord } from "./evidence.ts";
 import { GitHubError, type GithubRepoClient, RateLimitError } from "./github-repo.ts";
 import type { PassedLevels } from "./ladder-view.ts";
+import { VERIFIED_BY } from "./mcq-test.ts";
 
 /** Sent once an L2 branch is verified; T014 consumes it (diff questions read the diff at baseSha...headSha). */
 export const L2_ARTIFACT_EVENT = "ladder/l2-artifact.verified";
@@ -151,4 +153,73 @@ export async function verifyL2Branch(
     return { status: 503, error: "queue-unavailable" };
   }
   return { artifact };
+}
+
+/**
+ * AC 3, 4: a PR link passes iff the PR is in the ladder repo (by repo id), was opened by the learner's GitHub id and
+ * is merged (squash and rebase merges too); its merge_commit_sha is recorded. A repo link passes iff the repo is
+ * public, owned by the learner's id, not the ladder repo or a fork of it, and has a commit by the learner's id among
+ * the 100 newest of its default branch; that branch's head is recorded. A pass stores the artifact row and writes the
+ * L4 evidence record (test "artifact") in one transaction; the L4 record completes the ladder.
+ */
+export async function verifyL4Artifact(
+  deps: ArtifactDeps,
+  userId: string,
+  ladderId: string,
+  url: unknown,
+): Promise<{ artifact: Artifact; evidence: EvidenceRecord } | ArtifactProblem> {
+  const ref = parseL4Url(url);
+  if (!ref) return { status: 400, error: "invalid-url" };
+  const ctx = await levelContext(deps, userId, ladderId, "L4");
+  if (!ctx) return { status: 404, error: "not-found" };
+
+  let found: NewArtifact;
+  let extra: Record<string, unknown> = {};
+  try {
+    const { github } = deps;
+    const ladderRepo = await github.getRepo(ctx.repo);
+    if (!ladderRepo) return reject("not-found");
+    if (ref.kind === "pr") {
+      const pr = await github.getPull(`${ref.owner}/${ref.name}`, ref.number);
+      if (!pr) return reject("not-found");
+      if (pr.baseRepoId !== ladderRepo.id) return reject("wrong-repo");
+      if (pr.userId !== ctx.githubId) return reject("author-mismatch");
+      if (!pr.merged || !pr.mergeCommitSha) return reject("pr-not-merged");
+      found = { level: "L4", kind: "pr", url: ref.url, repo: ladderRepo.fullName, headSha: pr.mergeCommitSha };
+      extra = { pr: ref.number };
+    } else {
+      const repo = await github.getRepo(`${ref.owner}/${ref.name}`);
+      if (!repo || repo.private) return reject("not-found");
+      if (repo.ownerId !== ctx.githubId) return reject("author-mismatch");
+      if ([repo.id, repo.parentId, repo.sourceId].includes(ladderRepo.id)) return reject("not-from-scratch");
+      const commits = await github.listCommits(repo.fullName, repo.defaultBranch);
+      if (!commits) return reject("not-found");
+      if (commits.length === 0) return reject("no-new-commits");
+      if (!commits.some((c) => c.authorId === ctx.githubId)) return reject("author-mismatch");
+      found = {
+        level: "L4",
+        kind: "repo",
+        url: ref.url,
+        repo: repo.fullName,
+        headSha: (commits[0] as { sha: string }).sha,
+      };
+    }
+  } catch (err) {
+    return githubProblem(err);
+  }
+
+  const at = deps.now();
+  return await deps.sql.begin(async (tx) => {
+    const artifact = await storeArtifact(tx, userId, ladderId, found, at);
+    const { record } = await writeEvidenceRecord(tx, userId, ladderId, {
+      learner: `github:${ctx.login}`,
+      ladder: `repo:${ctx.repo}@${ctx.sha.slice(0, 7)}`,
+      level: "L4",
+      test: "artifact",
+      evidence: { kind: found.kind, url: found.url, repo: found.repo, ...extra, sha: found.headSha },
+      verifiedBy: VERIFIED_BY,
+      verifiedAt: at.toISOString(),
+    });
+    return { artifact, evidence: record };
+  });
 }
