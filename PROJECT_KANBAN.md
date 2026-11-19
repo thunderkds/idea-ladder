@@ -11,7 +11,6 @@
 > Task line format: **Txxx** — [title] | [agent] | C[0–3] | Risk: Low/Med/High | P[0–2]
 
 ### Todo
-- [ ] **T032** — Generated cards never reach the review queue (one card table: `review_cards`) | backend-developer | C2 | Risk: Medium | P0
 - [ ] **T013** — GitHub artifact verifiers — L2 branch, L4 repo or merged PR, L1 verifier design | backend-developer | C2 | Risk: High | P0 | Phase: v1 (after Gate 1) | HITL
 - [ ] **T014** — Diff questions after L2 — generated from the learner's diff (model A), blind-solved (model B), pass 4 of 5 | backend-developer | C2 | Risk: High | P1 | Phase: v1 (after Gate 1)
 - [ ] **T030** — Pass-test screens — MCQ attempt, artifact submit (L1/L2/L4), diff-question attempt, result view | frontend-developer | C2 | Risk: Medium | P0 | Phase: v1 (after Gate 1)
@@ -35,6 +34,7 @@
 - [ ] **T009** — Blind solver (separate blind Claude call), regenerate max 2; re-measure catch / false-reject on an independent seed set | backend-developer | C2 | Risk: Medium | P0 | Phase: v1 (after Gate 1) | Started 2026-11-19: branch `T009-blind-solver`, worktree `../wt-t009` ([admin], auto)
 
 ### Ready for Review
+- [ ] **T032** — Generated cards never reach the review queue (one card table: `review_cards`) | backend-developer | C2 | Risk: Medium | P0 · Ready for Review 2026-11-19: 7 commits on `T032-review-cards`; bun test 481 pass / 0 fail; code-review 0 P0/P1, 1 P2 fixed (885d48f), 3 P3 cut; security-review no findings; migration-safety GO (0012); auto verify started
 
 ### Blocked
 
