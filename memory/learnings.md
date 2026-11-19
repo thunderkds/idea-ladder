@@ -24,7 +24,9 @@
 
 ## Gotchas
 
-- 2026-11-19 — Parallel tasks (T031 + T012): (1) the merge gate blocks every merge while any row is In Progress or Ready for Review, so parallel tasks merge together after the last auto verify pass; (2) two branches that each add a migration both edit the hard-coded down/up chains in tests/migrate.test.ts — at merge, put the higher number first in every down chain, list both in every up list, and add one `migrateDown` line to "down on an empty schema is a no-op"; give the second branch the next migration number at Stage 2; (3) the built-in `security-review` reads the main checkout diff, so run its scan as a sub-task on `git -C <worktree> diff main...HEAD`; (4) the main checkout has no node_modules: run `bun install --frozen-lockfile` there before testing a merge.
+### 2026-11-19 — parallel tasks: merge gate, migrate.test.ts chains, security-review checkout
+Parallel tasks (T031 + T012): (1) the merge gate blocks every merge while any row is In Progress or Ready for Review, so parallel tasks merge together after the last auto verify pass; (2) two branches that each add a migration both edit the hard-coded down/up chains in tests/migrate.test.ts — at merge, put the higher number first in every down chain, list both in every up list, and add one `migrateDown` line to "down on an empty schema is a no-op"; give the second branch the next migration number at Stage 2; (3) the built-in `security-review` reads the main checkout diff, so run its scan as a sub-task on `git -C <worktree> diff main...HEAD`; (4) the main checkout has no node_modules: run `bun install --frozen-lockfile` there before testing a merge.
+
 ### 2026-11-17 — concepts eval overlap is exact-slug Jaccard, not a quality reading
 `eval/src/scorers.ts` scores concepts by Jaccard on slugs. The model paraphrases ("Publish/subscribe event emitter pattern" vs label `publish subscribe`), so a good map scores ~0: T007's golden run was 0.03 with 20/20 repos sensibly mapped. Read the Missed/Extra columns, not the mean; a semantic scorer is on the T007 cut list.
 
