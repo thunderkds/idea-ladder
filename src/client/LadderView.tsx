@@ -148,6 +148,9 @@ export function LadderPage({ ladderId }: { ladderId: string }) {
           <a className="button button-quiet" href="/review">
             Start review
           </a>
+          <a className="button button-quiet" href={`/ladders/${encodeURIComponent(ladderId)}/concepts`}>
+            Edit concepts
+          </a>
           <a
             className="button button-quiet"
             href={`https://deepwiki.com/${repoPath}`}

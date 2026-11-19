@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ConceptsPage } from "./Concepts.tsx";
 import { LadderPage } from "./LadderView.tsx";
 import { OfflineNotice, requireOnline } from "./offline.tsx";
 import { expireSession, signOut } from "./offline-store.ts";
@@ -217,6 +218,8 @@ export function App() {
   if (path === "/ladders") return <Ladders />;
   if (path === "/review") return <ReviewPage />;
   if (path === "/settings") return <SettingsPage />;
+  const concepts = /^\/ladders\/([^/]+)\/concepts$/.exec(path);
+  if (concepts?.[1]) return <ConceptsPage ladderId={decodeURIComponent(concepts[1])} />;
   if (path.startsWith("/ladders/")) return <LadderPage ladderId={path.slice("/ladders/".length)} />;
   if (path.startsWith("/jobs/")) return <JobStatus jobId={path.slice("/jobs/".length)} />;
   const root = document.getElementById("root");
