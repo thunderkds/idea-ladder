@@ -43,20 +43,36 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 
 -->
 
+## Auto decisions
+
+Mode: auto
+1. Requirement Fidelity Gate signed `auto (Supervisor)` before spawn — RULE: docs/claude-md/tracks.md:221 "| 13 | Stage 2/3: the Requirement Fidelity Gate ("Restated intent confirmed") | Signed `auto (Supervisor)`"
+2. A verified question is any saved `mcqs` row of the ladder + level (no status column in T012; T016 adds `removed`); asked = min(10, pool); `pool-too-small` below `MIN_MCQ_POOL` 8; pass iff correct*5 >= asked*4; retake avoidance when pool >= 2 x asked — DEBATED: no column, min(10, pool), floor 8, ratio 4/5 (Advocate 1: add `mcqs.status` in T012, min(10, pool) floor 8, ratio 4/5; Advocate 2: add `mcqs.status` in T012, min(10, pool) floor 8, ratio 4/5, retake avoidance at 2 x asked; Advocate 3: no column, min(10, pool) floor 8, ratio 4/5) ⚠ decided for you — please review
+3. Migration numbered 0011, because T031 owns 0010 — FACT: tasks/TASK_GUIDE_T031.md:71 "| 1 | New migration `0010_drop_chunk_embeddings` drops `chunks.embedding`"
+4. Spawn model claude-opus-5-5 (C2, Risk High) — FACT: PROJECT_SPEC.md:80 "| claude | `claude` | haiku-5-5 | sonnet-5-5 | sonnet-5-5 or opus-5-5 | opus-5-5 |"
+5. A fail returns the `cards` of the same ladder + level whose chunk a missed MCQ cites (the only card-to-question link) — FACT: migrations/0009_ladder_content.up.sql:13 "-- Kept review cards; chunk_id is the chunk the card cites (original text only, NFR-006)."
+6. `evidence.pass` holds the pass mark (a number), as in the source's evidence example — FACT: docs/REQUIREMENT_SOURCE.md:502 "diffQuestions":{"asked":5,"correct":4,"pass":4}},"verifiedBy":"verifier@1.3.0",
+7. Stage 4 fix set: fix the P2 (parallel-start test for the rate-limit lock); cut the 9 P3s (TRUNCATE bypass → T018 deploy role; 0011 round-trip with seeded rows; NFC storage; learner/ladder CHECK; 30 min / 24 h boundary tests; `signature?` field kept for T019; shared id regex; per-ladder passedLevels query; 200 vs 201) — DEBATED: fix the P2 only (Advocate 1: fix the P2 and the 0011 round-trip test, cut 8; Advocate 2: fix the P2 and the 0011 round-trip test, cut 8; Advocate 3: fix the P2 only, cut 9) ⚠ decided for you — please review
+8. Lane check EXCEEDS (15 files > 14; 1158 lines > 500) is accepted: 6 of the files are new tests — RULE: .claude/skills/code-review/SKILL.md:74 "It is warn-only"
+9. The append-only trigger covers UPDATE and DELETE only, as `review_log` does — FACT: migrations/0005_review.up.sql:56 "  BEFORE UPDATE OR DELETE ON review_log"
+Checks: tests `bun test` — 476 pass / 0 fail (fix agent, 9f74e5f); `bun test -t T012` — 33 pass / 0 fail (Supervisor, 9f74e5f); the parallel-start test fails 3 of 3 runs with the `FOR UPDATE` lock removed (`Expected length: 3, Received length: 4`); typecheck and lint clean; reviews code-review — 0 P0, 0 P1, 1 P2 fixed (9f74e5f), 9 P3 cut; security-review — no findings (confidence ≥ 8); migration-safety (0011) — GO; real run `bun test mcq-routes` — both routes through the app's HTTP handler: start 200 without keys, 4th start 429 + retryAt, submit pass, ladder view passed / open / locked (auto-checked, not /verify)
+Memory: memory/decisions.md — T012 merged entry (written at merge)
+Not done: the pass-test screens (T030); TRUNCATE hardening of `evidence_records` (T018 deploy role); auto verify: running (T182); merge (admin: after the auto verify pass)
+
 ## Evidence
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
 | **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | backend-developer 2026-11-19T10:33:05Z: `tests/evidence.test.ts` (SC 3, NFC), `tests/evidence-table.test.ts` (SC 4, AC 5 trigger + unique), `tests/mcq-pass-test.test.ts` (AC 1, AC 6, SC 1, SC 5, SC 7, locked 404), `tests/mcq-submit.test.ts` (AC 2-5, SC 2, SC 6, SC 7, concurrency), `tests/mcq-routes.test.ts` (routes, real passedLevels in ladder view, 401/404/422/429), `tests/mcq-no-llm.test.ts` (AC 7 / NFR-002); `tests/migrate.test.ts` updated for 0011 up/down/up. `bun test -t "T012"`: ` 32 pass / 443 filtered out / 0 fail / 180 expect() calls / Ran 32 tests across 46 files. [15.65s]`. Full `bun test` (before the no-LLM file): ` 473 pass / 0 fail / Ran 473 tests across 45 files. [54.99s]` |
 | Verification command run | ☑ pass | `bun install --frozen-lockfile && bun run typecheck && bun run lint && bun test -t "T012"` at 2026-11-19T10:33:05Z, exit 0: `Checked 390 installs across 347 packages (no changes)` / `$ tsc --noEmit` (no output) / `Checked 130 files in 69ms. No fixes applied.` / `check-tokens: 0 color literals outside src/client/tokens.css` / ` 32 pass  443 filtered out  0 fail  180 expect() calls  Ran 32 tests across 46 files. [15.65s]` |
-| Negative cases hold | ☐ pass / ☐ fail | |
+| Negative cases hold | ☑ pass | pool of 7 → `pool-too-small`, no attempt row; 7 of 9 fails; foreign question id 422, second submit 409, submit at 31 min 409, attempt unchanged; 4th start 429 + retryAt (sequential and parallel); UPDATE / DELETE on evidence_records rejected by the trigger; another learner's attempt and a locked level → 404; option text or index out of range → 400; an LLM mocked to throw is never called |
 | verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
-| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
-| Full smoke suite still green (no regression) | ☐ pass / ☐ fail | |
-| **Companion score (easy-verifier)** | ☐ pass / ☐ fail / ☐ N/A | [`overall` and `change_risk` as the tool returned them, the scope, the ref, and the absolute path of the verifier report after a literal `report:` label — e.g. "overall 86 (>= 80), change_risk pass, scope changes, ref `main...HEAD`, report: `/home/me/.easy-verifier-reports/kit/score_changes_20261028T0530Z.html`". The gate reads the path that follows `report:` and nothing else, so with no label, or a path that is absent, the row is unscored — write ☑ N/A instead. ☑ N/A with a reason when neither companion tool was run: the merge gate blocks on ☑ fail only, never on an absent or N/A row] |
-| **UI: Visual regression (diff or verdict pasted)** | ☐ pass / ☐ fail / ☐ N/A | [screenshot path or LLM verdict — required for UI tasks, Hard-Stop Gate 6] |
-| **UI: Design-system compliance (tokens/colors/typography verified)** | ☐ pass / ☐ fail / ☐ N/A | [method used + output] |
-| **UI: Responsiveness at target viewports** | ☐ pass / ☐ fail / ☐ N/A | [viewports tested, any overflow findings] |
+| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☑ pass | `git diff main...HEAD` (16 files) plus direct callers of `passedLevels` (review.ts, reminders.ts, progress.ts, offline.ts, ladder-view.ts), split between two independent reviewers (scoring/routes; evidence/migration) and one security reviewer |
+| Full smoke suite still green (no regression) | ☑ pass | `bun test` 476 pass / 0 fail on 9f74e5f; wiring the real `passedLevels` broke no existing test |
+| **Companion score (easy-verifier)** | ☑ N/A | Neither companion tool was run for this task |
+| **UI: Visual regression (diff or verdict pasted)** | ☑ N/A | Pure backend task: no UI section in the guide, no client file changed (the screens are T030) |
+| **UI: Design-system compliance (tokens/colors/typography verified)** | ☑ N/A | Pure backend task: no UI section in the guide, no client file changed (the screens are T030) |
+| **UI: Responsiveness at target viewports** | ☑ N/A | Pure backend task: no UI section in the guide, no client file changed (the screens are T030) |
 
 ---
 
