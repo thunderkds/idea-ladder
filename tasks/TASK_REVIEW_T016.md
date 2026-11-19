@@ -56,7 +56,7 @@ Mode: auto
 8. Lane check EXCEEDS (24 files > 6; 1027 lines > 250) accepted: migration, consumer, UI and 6 screenshots under a C1 label — RULE: .claude/skills/code-review/SKILL.md:74 "It is warn-only"
 Checks: tests `bun test --timeout 60000` — 546 pass / 0 fail (agents); `bun test -t T016` — 15 pass / 0 fail (Supervisor, 0d4e855); `bun run test:e2e -- --grep T016` — 5 passed; `bun run test:e2e -- e2e/review.e2e.ts` — 11 passed; typecheck and lint clean; reviews code-review — 0 P0, 1 P1 fixed (0d4e855), 2 P3 cut; migration-safety (0013) — GO (additive; down lossy, throwaway only); real run: the Playwright flow on the running app (e2e/serve.ts) — flag → "Flagged — thanks" → next card; screenshot e2e/artifacts/T016/flag-confirm-360.png checked by the Supervisor (auto-checked, not /verify)
 Memory: memory/decisions.md — T016 merged entry (written at merge)
-Not done: the flag button on the MCQ screen (T030); card regeneration (no card regenerator); the 2 pre-existing e2e/pwa.e2e.ts failures (fail on main too); auto verify: running (T182); merge (admin: after the auto verify pass)
+Not done: the first auto verify run (session e8507bea-d8aa-4008-92ab-f28c1425d3a5, commit 0bf3b92) was blocked by the account usage limit, not by the code — retried on the next commit; the flag button on the MCQ screen (T030); card regeneration (no card regenerator); the 2 pre-existing e2e/pwa.e2e.ts failures (fail on main too); auto verify: running (T182); merge (admin: after the auto verify pass)
 
 ## Evidence
 
