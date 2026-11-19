@@ -4,6 +4,7 @@ import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { InngestTestEngine } from "@inngest/test";
+import { APICallError } from "ai";
 import { githubRepoClient } from "../src/server/github-repo.ts";
 import {
   type CostEntry,
@@ -12,7 +13,7 @@ import {
   ladderGenerateFunction,
 } from "../src/server/ladder-generate.ts";
 import { migrateUp } from "../src/server/migrate.ts";
-import { createModelA, type ModelADeps, ModelAFailedError } from "../src/server/model-a.ts";
+import { createModelA, type ModelADeps, ModelAFailedError, ModelANotInstalledError } from "../src/server/model-a.ts";
 import { createTestDatabase } from "./support/db.ts";
 import { type Fixture, fixtureFetch, loadFixture, V0_REPOS } from "./support/github-fixtures.ts";
 import { TEST_CONCEPTS, testReader } from "./support/mock-model.ts";
@@ -219,5 +220,67 @@ describe("Inngest step map-concepts on the claude-code back end", () => {
     } finally {
       await rm(rec, { recursive: true, force: true });
     }
+  });
+
+  describe("failure paths (AC 3)", () => {
+    const failing = (error: Error, calls: { n: number }): ModelADeps => ({
+      backend: "api",
+      generate: async () => {
+        calls.n++;
+        throw error;
+      },
+    });
+    const failAfterRetries = async (jobId: string, error: Error) => {
+      const handler = ladderFn(jobId).opts.onFailure as unknown as (ctx: {
+        event: unknown;
+        error: Error;
+      }) => Promise<unknown>;
+      await handler({
+        event: {
+          name: "inngest/function.failed",
+          data: { event: { name: LADDER_GENERATE_EVENT, data: { ...DSET, jobId } } },
+        },
+        error,
+      });
+    };
+    const ladderFn = (jobId: string) =>
+      (engine(jobId, failing(new Error("x"), { n: 0 })) as unknown as { options: { function: never } }).options
+        .function as ReturnType<typeof ladderGenerateFunction>;
+
+    test("generate always throws ModelAFailedError: job stays mapping, onFailure after retries -> failed / mapper-error", async () => {
+      const jobId = await newJob();
+      const error = new ModelAFailedError("claude timed out");
+      const run = await engine(jobId, failing(error, { n: 0 })).execute();
+      expect((run as { error?: Error }).error?.message).toMatch(/claude timed out/);
+      expect((await jobRow(jobId)).status).toBe("mapping");
+      await failAfterRetries(jobId, error);
+      expect(await jobRow(jobId)).toEqual({ status: "failed", reason: "mapper-error" });
+    });
+
+    test("generate throws ModelANotInstalledError: failed / model-a-not-installed at once", async () => {
+      const jobId = await newJob();
+      const { result } = await engine(
+        jobId,
+        failing(new ModelANotInstalledError("claude not found"), { n: 0 }),
+      ).execute();
+      expect(result).toMatchObject({ status: "failed", reason: "model-a-not-installed" });
+      expect(await jobRow(jobId)).toEqual({ status: "failed", reason: "model-a-not-installed" });
+    });
+
+    test("generate throws a non-retryable APICallError (401): failed / mapper-error with exactly 1 generate call", async () => {
+      const jobId = await newJob();
+      const calls = { n: 0 };
+      const error = new APICallError({
+        message: "invalid x-api-key",
+        url: "https://api.anthropic.com/v1/messages",
+        requestBodyValues: {},
+        statusCode: 401,
+        isRetryable: false,
+      });
+      const { result } = await engine(jobId, failing(error, calls)).execute();
+      expect(result).toMatchObject({ status: "failed", reason: "mapper-error" });
+      expect(await jobRow(jobId)).toEqual({ status: "failed", reason: "mapper-error" });
+      expect(calls.n).toBe(1);
+    });
   });
 });
