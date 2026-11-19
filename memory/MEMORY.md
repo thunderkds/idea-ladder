@@ -44,3 +44,4 @@
 - [T006 merged](decisions.md#2026-11-17--t006-merged-repo-reader-on-two-back-ends-golden-set-recall-079) — pick-core-files + core_files (0003); claude-code default via MCP list/read/search; recall 0.79 PASS; gaps for T018
 - [T007 merged (rebuild)](decisions.md#2026-11-19--t007-merged-rebuild-concept-mapper-on-model-a-learner-concept-edits) — map-concepts + repo_concepts/learner_concepts (0007); model-a.ts generate for T008/T014; mapped is final; gaps listed
 - [T008 merged](decisions.md#2026-11-19--t008-merged-level-generators-answer-key-check-dedupe-save-ladder-unverified) — chunks (0008, vector 1536) + 5 parallel generators + key check/dedupe + save-ladder (0009); job done is final; live run needs OPENAI_API_KEY
+- [Claude subscription only](decisions.md#2026-11-19--claude-subscription-only-no-second-provider-no-embeddings-user) — user 2026-11-19: model B = blind Claude call, no embeddings (word-overlap dedupe), no OPENAI key; T031 removes the embedder

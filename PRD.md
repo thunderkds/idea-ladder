@@ -56,7 +56,7 @@ before v1 builds the MVP PWA (§ Roadmap, § First experiment and kill criteria)
 | FR-004 | The system must generate the repo-specific levels L1–L4 with the pass tests in § Repo to ladder engine (L1 screenshot/log + 3-sentence explanation; L2 branch/diff + diff questions; L3 verified MCQs; L4 repo or merged PR). | US-001, US-003 |
 <!-- FLAGGED (v1 only): L1 proof (screenshot/log + explanation) has no code verifier in § Proof architecture — define how L1 passes before v1 planning. Does not block v0. -->
 | FR-005 | The system must compute a confidence score (thin README or no issues = low) and fall back to concept-only ladders when low (§ Repo to ladder engine). | US-001 |
-| FR-006 | Every generated question must pass the verification pipeline: grounded chunks only; answer key present in / checkable against the cited chunk (code check); blind solve by a different model, mismatch = discard; near-duplicate removal by embedding similarity; learner flag (§ LLM strategy). | US-003, US-008 |
+| FR-006 | Every generated question must pass the verification pipeline: grounded chunks only; answer key present in / checkable against the cited chunk (code check); blind solve by a separate Claude call that does not see the key, mismatch = discard; near-duplicate removal by word-overlap similarity (user 2026-11-19: Claude subscription only, no second provider, no embeddings); learner flag (§ LLM strategy). | US-003, US-008 |
 <!-- FLAGGED (v1 only): "different model" depends on PRD Open Question 5 (AI provider). T001 measures the code check without any model. Does not block v0. -->
 | FR-007 | Level unlock and review scheduling must be deterministic code (FSRS); an LLM never decides a pass (§ LLM strategy). | US-002, US-003 |
 | FR-008 | Open-answer AI grading must be feedback only and never gate a level (§ LLM strategy). | US-003 |
@@ -125,6 +125,6 @@ they stay open (Phase 0 Step 1.5 materiality heuristic). They must be answered b
 | 2 | Core value (pick one): review habit, proof of skill, or community ladders? | Hung | before v1 |
 | 3 | Name: keep "Idea Ladder"? | Hung | before v1 |
 | 4 | ~~Backend~~ **Resolved 2026-11-01 by user: accounts from day one** (GitHub OAuth; progress, reviews, evidence in Postgres). | Hung | done |
-| 5 | ~~AI provider~~ **Resolved 2026-11-01 by user: Claude generates (model A); a second provider blind-solves (model B).** Cost cap: user asked why ladders cost money → not set; v1 task measures real cost per ladder on the golden set first. | Hung | cap after measurement |
+| 5 | ~~AI provider~~ **Resolved 2026-11-01 by user: Claude generates (model A); a second provider blind-solves (model B).** **Changed 2026-11-19 by user: "just using the claude subscription" — model B is a separate blind Claude call on the subscription; no second provider and no embedding model.** Cost cap: user asked why ladders cost money → not set; v1 task measures real cost per ladder on the golden set first. | Hung | cap after measurement |
 | 6 | Open source from v0, or only the ladder content repo at v2? | Hung | before v1 |
 | 7 | Assumption: the blind-solver check catches wrong keys — "Design choice, not yet tested" (§ LLM strategy). Measured by spike T001. | Supervisor | T001 |
