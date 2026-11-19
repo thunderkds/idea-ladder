@@ -126,8 +126,9 @@ function StartProblem({ error, resetAt, retryAt }: { error: string; resetAt?: st
 }
 
 type Job = {
-  status: "queued" | "running" | "fetched" | "picking" | "picked" | "mapping" | "mapped" | "failed";
+  status: "queued" | "running" | "fetched" | "picking" | "picked" | "mapping" | "mapped" | "done" | "failed";
   repo: string;
+  ladderId?: string;
   reason?: string;
   resetAt?: string;
 };
@@ -139,7 +140,8 @@ const STATUS_TEXT: Record<Job["status"], string> = {
   picking: "Picking core files",
   picked: "Picking core files",
   mapping: "Mapping concepts",
-  mapped: "Done",
+  mapped: "Generating the ladder",
+  done: "Done",
   failed: "Failed",
 };
 const FAILED_DETAIL: Record<string, (job: Job) => string> = {
@@ -148,7 +150,7 @@ const FAILED_DETAIL: Record<string, (job: Job) => string> = {
   "queue-unavailable": () => "The ladder queue was not available. Try again in a few minutes.",
 };
 
-/** /jobs/:jobId: polls the job every 2 s and stops on a final status (mapped, failed). */
+/** /jobs/:jobId: polls the job every 2 s and stops on a final status (done, failed). */
 function JobStatus({ jobId }: { jobId: string }) {
   const [job, setJob] = useState<Job>();
   const [missing, setMissing] = useState(false);
@@ -164,7 +166,7 @@ function JobStatus({ jobId }: { jobId: string }) {
           const next = (await res.json()) as Job;
           if (stopped) return;
           setJob(next);
-          if (next.status === "mapped" || next.status === "failed") return;
+          if (next.status === "done" || next.status === "failed") return;
         }
       } catch {
         // network blip: try again on the next tick
@@ -198,14 +200,21 @@ function JobStatus({ jobId }: { jobId: string }) {
     ? ""
     : job.status === "failed"
       ? (FAILED_DETAIL[job.reason ?? ""]?.(job) ?? "Something went wrong while reading the repo. Try again later.")
-      : job.status === "mapped"
-        ? "The repo is read and its concepts are mapped."
+      : job.status === "done"
+        ? "Your ladder is saved. Its questions are not verified yet."
         : "This page updates by itself.";
   return (
     <main className="page" aria-live="polite">
       <h1>{title}</h1>
       {job ? <p className="long-text">{job.repo}</p> : null}
       <p className="status-detail">{detail}</p>
+      {job?.status === "done" && job.ladderId ? (
+        <p>
+          <a className="button" href={`/ladders/${encodeURIComponent(job.ladderId)}`}>
+            Open your ladder
+          </a>
+        </p>
+      ) : null}
       <p>
         <a href="/ladders">Back to My ladders</a>
       </p>

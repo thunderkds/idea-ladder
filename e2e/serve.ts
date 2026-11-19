@@ -202,7 +202,10 @@ const fixtures = await Promise.all(Object.keys(V0_REPOS).map((r) => loadFixture(
 const gh = fixtureFetch(fixtures, (path) =>
   path.startsWith(`/repos/${RATE_LIMITED_REPO}`) && !path.endsWith("/commits?per_page=1")
     ? rateLimited(RESET_EPOCH_S)
-    : undefined,
+    : // T008 chunk-and-embed reads dependency and core files: the fixtures hold no file contents.
+      /^\/repos\/[^/]+\/[^/]+\/contents\//.test(path)
+      ? new Response(`${path}\n`.repeat(40))
+      : undefined,
 );
 const fixtureClient = githubRepoClient({ baseUrl: stub.url, token: "e2e-app-token", fetch: gh.impl });
 const github: GithubRepoClient = {
