@@ -243,7 +243,7 @@ describe("saveLadder (AC 7, AC 8, edge case: retried save-ladder)", () => {
     ]);
     expect(rows[0]).toMatchObject({ title: "Prerequisites", pass_test_description: "desc L0", skip_reason: null });
     const cards =
-      await db.sql`SELECT level, position, front, back, chunk_id::int AS chunk_id FROM cards ORDER BY level, position`;
+      await db.sql`SELECT level, position, front, back, chunk_id::int AS chunk_id FROM review_cards ORDER BY level, position`;
     expect(cards.map((r: { level: string; front: string }) => [r.level, r.front])).toEqual([
       ["L0", "front 0"],
       ["L1", "front 1"],

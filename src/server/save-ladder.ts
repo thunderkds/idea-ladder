@@ -91,7 +91,7 @@ export async function saveLadder(sql: SQL, input: SaveLadderInput): Promise<{ la
         if (!g) continue;
         for (const [p, c] of g.cards.entries())
           await tx`
-            INSERT INTO cards (ladder_id, level, position, front, back, chunk_id)
+            INSERT INTO review_cards (ladder_id, level, position, front, back, chunk_id)
             VALUES (${ladderId}, ${l.level}, ${p}, ${c.front}, ${c.back}, ${c.chunkId})`;
         for (const [p, m] of g.mcqs.entries())
           await tx`

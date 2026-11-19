@@ -24,3 +24,22 @@ Rules:
   a learner's data on request is a later decision (T018 hardening list).
 - Unlocked levels come from `levelLockState` (T010) over the `passedLevels` seam; "ladders the learner started" is the
   `generation_jobs.started_by` join of `listLadders`.
+
+## T032 amendment (2026-11-19): one card table
+
+T008 first saved generated cards in its own table `cards` (0009), which the review queue never read. Migration
+`0012_review_cards_content` moved them into `review_cards` and dropped `cards`. `review_cards` has two more columns,
+both nullable (a hand-seeded row has neither):
+
+| Column | Meaning |
+|---|---|
+| `position` integer, `>= 0` | order of the card inside its ladder level; unique with `ladder_id` and `level` (NULL positions never collide) |
+| `chunk_id` bigint FK to `chunks(id)` | the chunk the card cites; `mcq-test.ts` links a missed question to its cards by it |
+
+`saveLadder` writes `review_cards`; the review queue, rating, offline pack and the failed-test `reviewCardIds` all use
+that one table and one id space. Down for 0012 is lossy for ids and never deletes a `review_cards` row.
+Up does not only copy: it first pairs each `cards` row with an existing `review_cards` row of the same ladder,
+level, front and back (n-th with n-th) and fills that row's `position` and `chunk_id`, then copies the unpaired
+rest. This keeps a down then up cycle from doubling every card, because down drops the two columns and so no
+other stable key survives. In production it can adopt a hand-seeded row with identical text; that row keeps its
+id and review history.
