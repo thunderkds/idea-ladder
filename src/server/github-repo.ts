@@ -80,6 +80,29 @@ const DEP_FILES = new Set([
   "deno.json",
 ]);
 
+/** T013: the repo facts an artifact check needs. Ids are GitHub numeric ids (never logins or emails). */
+export type ArtifactRepo = {
+  id: number;
+  fullName: string;
+  private: boolean;
+  ownerId: number;
+  defaultBranch: string;
+  /** The repo this one was forked from, and the root of its fork network; null when not a fork. */
+  parentId: number | null;
+  sourceId: number | null;
+};
+/** T013: a compare range. `authorIds` lists every commit's author id (null: no linked account); empty when tooLarge. */
+export type CompareRange = { totalCommits: number; files: number; authorIds: (number | null)[]; tooLarge: boolean };
+export type PullFacts = { merged: boolean; userId: number; mergeCommitSha: string | null; baseRepoId: number };
+export type CommitFacts = { sha: string; authorId: number | null };
+
+const isId = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) > 0;
+/** `author` of a commit or PR: its numeric id, or null when GitHub links no account. */
+const authorId = (a: unknown): number | null => {
+  const id = (a as { id?: unknown } | null)?.id;
+  return isId(id) ? id : null;
+};
+
 export type GithubRepoClient = ReturnType<typeof githubRepoClient>;
 
 export function githubRepoClient(opts: { baseUrl: string; token: string; fetch?: typeof fetch }) {
@@ -123,7 +146,107 @@ export function githubRepoClient(opts: { baseUrl: string; token: string; fetch?:
     return (await res.json()) as T;
   }
 
+  /** GET that answers null on 404; any other non-2xx throws. Rate limits throw RateLimitError (in `get`). */
+  async function getJsonOrNull(path: string): Promise<unknown | null> {
+    const res = await get(path);
+    if (res.status === 404) return null;
+    if (!res.ok) throw new GitHubError(res.status, path);
+    return await res.json();
+  }
+  const repoPath = (fullName: string) => {
+    if (!FULL_NAME.test(fullName)) throw new Error(`expected owner/name, got: ${fullName}`);
+    return `/repos/${fullName}`;
+  };
+  /** A malformed answer from GitHub: treated like a failed call, never as a pass. */
+  const malformed = (path: string): never => {
+    throw new GitHubError(502, path);
+  };
+
   return {
+    /** T013: repo facts by owner/name, or null when GitHub answers 404 (missing, or private to this token). */
+    async getRepo(fullName: string): Promise<ArtifactRepo | null> {
+      const path = repoPath(fullName);
+      const r = (await getJsonOrNull(path)) as Record<string, unknown> | null;
+      if (!r) return null;
+      const owner = r.owner as { id?: unknown } | undefined;
+      if (!isId(r.id) || !isId(owner?.id) || typeof r.full_name !== "string") return malformed(path);
+      const parent = r.parent as { id?: unknown } | undefined;
+      const source = r.source as { id?: unknown } | undefined;
+      return {
+        id: r.id,
+        fullName: r.full_name,
+        private: r.private !== false,
+        ownerId: owner.id,
+        defaultBranch: typeof r.default_branch === "string" ? r.default_branch : "",
+        parentId: isId(parent?.id) ? parent.id : null,
+        sourceId: isId(source?.id) ? source.id : null,
+      };
+    },
+
+    /** T013: the head commit SHA of a branch, or null when the branch (or repo) is not found. */
+    async getBranchHead(fullName: string, branch: string): Promise<string | null> {
+      const path = `${repoPath(fullName)}/branches/${branch.split("/").map(encodeURIComponent).join("/")}`;
+      const b = (await getJsonOrNull(path)) as { commit?: { sha?: unknown } } | null;
+      if (!b) return null;
+      const sha = b.commit?.sha;
+      return typeof sha === "string" && SHA.test(sha) ? sha : malformed(path);
+    },
+
+    /**
+     * T013: the commits in `base...head` (both 40-hex SHAs) of one repo, 100 per page. Above `maxCommits` it stops after
+     * the first page and answers tooLarge. Null when GitHub answers 404 (a SHA not in this repo's network).
+     */
+    async compare(fullName: string, base: string, head: string, maxCommits: number): Promise<CompareRange | null> {
+      if (!SHA.test(base) || !SHA.test(head)) throw new Error("expected 40-hex SHAs");
+      const authorIds: (number | null)[] = [];
+      let totalCommits = 0;
+      let files = 0;
+      for (let page = 1; ; page++) {
+        const path = `${repoPath(fullName)}/compare/${base}...${head}?per_page=100&page=${page}`;
+        const c = (await getJsonOrNull(path)) as { total_commits?: unknown; commits?: unknown; files?: unknown } | null;
+        if (!c) return null;
+        if (!Number.isSafeInteger(c.total_commits) || !Array.isArray(c.commits)) return malformed(path);
+        totalCommits = c.total_commits as number;
+        if (page === 1) files = Array.isArray(c.files) ? c.files.length : 0;
+        if (totalCommits > maxCommits) return { totalCommits, files, authorIds: [], tooLarge: true };
+        for (const commit of c.commits as { author?: unknown }[]) authorIds.push(authorId(commit.author));
+        if (authorIds.length >= totalCommits || c.commits.length === 0) break;
+      }
+      if (authorIds.length !== totalCommits) return malformed(`${repoPath(fullName)}/compare/${base}...${head}`);
+      return { totalCommits, files, authorIds, tooLarge: false };
+    },
+
+    /** T013: pull request facts, or null when not found. */
+    async getPull(fullName: string, number: number): Promise<PullFacts | null> {
+      const path = `${repoPath(fullName)}/pulls/${number}`;
+      const p = (await getJsonOrNull(path)) as Record<string, unknown> | null;
+      if (!p) return null;
+      const userId = authorId(p.user);
+      const baseRepoId = (p.base as { repo?: { id?: unknown } } | undefined)?.repo?.id;
+      if (userId === null || !isId(baseRepoId) || typeof p.merged !== "boolean") return malformed(path);
+      const sha = p.merge_commit_sha;
+      return {
+        merged: p.merged,
+        userId,
+        mergeCommitSha: typeof sha === "string" && SHA.test(sha) ? sha : null,
+        baseRepoId,
+      };
+    },
+
+    /** T013: the 100 newest commits of a branch, newest first; [] for an empty repo (409); null when not found. */
+    async listCommits(fullName: string, branch: string): Promise<CommitFacts[] | null> {
+      const path = `${repoPath(fullName)}/commits?sha=${encodeURIComponent(branch)}&per_page=100`;
+      const res = await get(path);
+      if (res.status === 404) return null;
+      if (res.status === 409) return [];
+      if (!res.ok) throw new GitHubError(res.status, path);
+      const list = (await res.json()) as { sha?: unknown; author?: unknown }[];
+      if (!Array.isArray(list)) return malformed(path);
+      return list.map((c) =>
+        typeof c.sha === "string" && SHA.test(c.sha) ? { sha: c.sha, authorId: authorId(c.author) } : malformed(path),
+      );
+    },
+
     /** The default-branch HEAD commit and the canonical (lower-case) repo name, in one call. */
     async resolveHead(ref: RepoRef): Promise<RepoHead> {
       const requested = `${ref.owner}/${ref.name}`;

@@ -7,10 +7,10 @@ import { FIXED_LEVELS } from "../shared/levels.ts";
 import type { LadderLevel } from "./check-and-dedupe.ts";
 
 export const SAVE_LADDER_STEP = "save-ladder";
-/** AC 2: L0 and L3 keep at least 8 MCQs; every level at least 5 cards. Below that the level is flagged. */
+/** AC 2: L0, L1 (T013) and L3 keep at least 8 MCQs; every level at least 5 cards. Below that the level is flagged. */
 export const MIN_MCQ_POOL = 8;
 export const MIN_CARDS = 5;
-const POOL_LEVELS = new Set(["L0", "L3"]);
+export const POOL_LEVELS: ReadonlySet<string> = new Set(["L0", "L1", "L3"]);
 
 export type LevelFlag = "insufficient-pool" | "insufficient-cards";
 export type LevelReport = {

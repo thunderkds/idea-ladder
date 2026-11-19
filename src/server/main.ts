@@ -103,6 +103,10 @@ const app = createApp({
     // Event id = kind + question id, so Inngest drops a duplicate send for the same question.
     await inngest.send({ id: `regenerate-${data.kind}-${data.questionId}`, name: REGENERATE_EVENT, data });
   },
+  // T013: event id l2-artifact-<artifactId>, so a re-send for the same artifact is one event.
+  emitArtifact: async (event) => {
+    await inngest.send(event);
+  },
   inngestHandler: serve({
     client: inngest,
     functions: [
