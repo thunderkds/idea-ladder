@@ -29,9 +29,9 @@
 
 ### In Progress
 - [ ] **T013** — GitHub artifact verifiers — L2 branch, L4 repo or merged PR, L1 verifier design | backend-developer | C2 | Risk: High | P0 | Phase: v1 (after Gate 1) | HITL | L1 rule decided 2026-11-19 by Debate (option B: MCQ on setup, flagged for the user) | Started 2026-11-19: branch `T013-artifact-verifiers`, worktree `../wt-t013` ([admin], auto)
-- [ ] **T016** — "This question seems wrong" flag; frequently flagged cards regenerated or removed | backend-developer | C1 | Risk: Low | P2 | Phase: v1 (after Gate 1) | Started 2026-11-19: branch `T016-question-flag`, worktree `../wt-t016` ([admin], auto)
 
 ### Ready for Review
+- [ ] **T016** — "This question seems wrong" flag; frequently flagged cards regenerated or removed | backend-developer | C1 | Risk: Low | P2 | Phase: v1 (after Gate 1) | Started 2026-11-19: branch `T016-question-flag`, worktree `../wt-t016` ([admin], auto) · Ready for Review 2026-11-19: 9 commits on `T016-question-flag`; bun test 546 pass / 0 fail; e2e T016 5 passed; code-review 0 P0, 1 P1 fixed (0d4e855), 2 P3 cut; migration-safety GO (0013); UI evidence filled; auto verify started
 
 ### Blocked
 
