@@ -133,3 +133,30 @@ test("T016 flag: design checks, screenshots and no layout shift at 360 / 768 / 1
     await page.getByRole("button", { name: "Cancel" }).click();
   }
 });
+
+test("T016 flag: keys typed in the reason box do not reveal, rate or lose the text", async ({ page }) => {
+  const flags = await setup(page);
+  const rates: string[] = [];
+  await page.route("**/api/review/rate", (route) => {
+    rates.push(route.request().url());
+    return route.fulfill({ json: { ok: true } });
+  });
+  const reason = page.getByLabel("Reason (optional)");
+  const front = page.locator(".review-front");
+
+  // Before reveal: a space is typed, it does not show the answer.
+  await open(page).click();
+  await reason.pressSequentially("a b");
+  await expect(reason).toHaveValue("a b");
+  await expect(page.getByRole("button", { name: "Show answer" })).toBeVisible();
+  await expect(page.locator(".review-ratings button")).toHaveCount(0);
+
+  // After reveal: digits are typed, they do not rate.
+  await page.getByRole("button", { name: "Show answer" }).click();
+  await reason.fill("");
+  await reason.pressSequentially("line 3 is wrong");
+  await expect(reason).toHaveValue("line 3 is wrong");
+  await expect(front).toHaveText("First question?");
+  expect(rates).toEqual([]);
+  expect(flags).toEqual([]);
+});

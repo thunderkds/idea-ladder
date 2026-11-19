@@ -336,6 +336,14 @@ export function ReviewPage() {
   const onKey = useRef<(e: KeyboardEvent) => void>(() => {});
   onKey.current = (e) => {
     if (!running || e.altKey || e.ctrlKey || e.metaKey || e.repeat) return;
+    const t = e.target;
+    if (
+      t instanceof HTMLTextAreaElement ||
+      t instanceof HTMLInputElement ||
+      t instanceof HTMLSelectElement ||
+      (t instanceof HTMLElement && t.isContentEditable)
+    )
+      return;
     if (e.key === " ") {
       if (revealed || e.target instanceof HTMLButtonElement || e.target instanceof HTMLAnchorElement) return;
       e.preventDefault();
