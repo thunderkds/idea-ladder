@@ -28,7 +28,8 @@ const T0007 = ["learner_concepts", "repo_concepts"];
 const T0008 = ["chunks"];
 const T0009 = ["cards", "generation_reports", "mcqs"];
 const T0011 = ["evidence_records", "mcq_attempts"];
-const ALL = [
+/** Tables before 0012 dropped `cards`: the expected set of every partly migrated state. */
+const PRE12 = [
   "card_states",
   "cards",
   "chunks",
@@ -53,6 +54,8 @@ const ALL = [
   "sessions",
   "users",
 ];
+/** Tables after every migration. */
+const ALL = PRE12.filter((t) => t !== "cards");
 const extensions = async (sql: SQL) =>
   (await sql`SELECT extname FROM pg_extension`).map((r: { extname: string }) => r.extname);
 
@@ -86,6 +89,7 @@ describe("migrations (AC 1)", () => {
 
   test("down reverts to an empty schema, with rows present; up again succeeds", async () => {
     await db.sql`INSERT INTO users (github_id, github_login) VALUES (7, 'has-data')`;
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0012_review_cards_content");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0011_mcq_pass_test");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0010_drop_chunk_embeddings");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0009_ladder_content");
@@ -111,11 +115,13 @@ describe("migrations (AC 1)", () => {
       "0009_ladder_content",
       "0010_drop_chunk_embeddings",
       "0011_mcq_pass_test",
+      "0012_review_cards_content",
     ]);
     expect(await tables(db.sql)).toEqual(ALL);
   });
 
   test("down on an empty schema is a no-op", async () => {
+    await migrateDown(db.sql, undefined, ALLOW_DOWN);
     await migrateDown(db.sql, undefined, ALLOW_DOWN);
     await migrateDown(db.sql, undefined, ALLOW_DOWN);
     await migrateDown(db.sql, undefined, ALLOW_DOWN);
@@ -176,6 +182,7 @@ describe("down migration guard (destructive)", () => {
 
   test("allowed with MIGRATE_ALLOW_DOWN=1", async () => {
     await migrateUp(db.sql);
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0012_review_cards_content");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0011_mcq_pass_test");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0010_drop_chunk_embeddings");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0009_ladder_content");
@@ -184,7 +191,7 @@ describe("down migration guard (destructive)", () => {
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0006_push_subscriptions");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0005_review");
     expect(await tables(db.sql)).toEqual(
-      ALL.filter(
+      PRE12.filter(
         (t) =>
           !T0005.includes(t) &&
           !T0006.includes(t) &&
@@ -228,7 +235,7 @@ describe("0010_drop_chunk_embeddings (T031, AC 1)", () => {
     await db.sql`INSERT INTO chunks (repo_full_name, commit_sha, source, path, ordinal, start_line, end_line, text, embedding, embedding_model)
       VALUES ('developit/mitt', ${SHA}, 'core', 'src/index.ts', 0, 1, 2, 'hello', ${`[${Array(1536).fill(0.1).join(",")}]`}::vector, 'm')`;
 
-    expect(await migrateUp(db.sql)).toEqual(["0010_drop_chunk_embeddings", "0011_mcq_pass_test"]);
+    expect(await migrateUp(db.sql)).toEqual(["0010_drop_chunk_embeddings", "0011_mcq_pass_test", "0012_review_cards_content"]);
     expect(await chunkCols()).toEqual([
       "id",
       "repo_full_name",
@@ -244,13 +251,15 @@ describe("0010_drop_chunk_embeddings (T031, AC 1)", () => {
     const rows = await db.sql`SELECT path, start_line, end_line, text FROM chunks`;
     expect(rows).toEqual([{ path: "src/index.ts", start_line: 1, end_line: 2, text: "hello" }]);
 
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0012_review_cards_content");
+
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0011_mcq_pass_test");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0010_drop_chunk_embeddings");
     expect(await chunkCols()).toEqual(expect.arrayContaining(["embedding", "embedding_model"]));
     expect(await db.sql`SELECT embedding, embedding_model FROM chunks`).toEqual([
       { embedding: null, embedding_model: null },
     ]);
-    expect(await migrateUp(db.sql)).toEqual(["0010_drop_chunk_embeddings", "0011_mcq_pass_test"]);
+    expect(await migrateUp(db.sql)).toEqual(["0010_drop_chunk_embeddings", "0011_mcq_pass_test", "0012_review_cards_content"]);
     expect(await chunkCols()).not.toContain("embedding");
     expect(await db.sql`SELECT count(*)::int AS n FROM chunks`).toEqual([{ n: 1 }]);
   });
@@ -265,6 +274,7 @@ describe("0002_start_jobs (T005)", () => {
     await migrateUp(db.sql);
     await db.sql`INSERT INTO ladders (repo_full_name, commit_sha, status) VALUES ('developit/mitt', ${SHA}, 'unverified')`;
     await openJob("developit/mitt");
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0012_review_cards_content");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0011_mcq_pass_test");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0010_drop_chunk_embeddings");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0009_ladder_content");
@@ -287,6 +297,7 @@ describe("0002_start_jobs (T005)", () => {
       "0009_ladder_content",
       "0010_drop_chunk_embeddings",
       "0011_mcq_pass_test",
+      "0012_review_cards_content",
     ]);
     expect(await tables(db.sql)).toEqual(ALL);
   });
@@ -330,6 +341,7 @@ describe("0003_core_files (T006)", () => {
     await pick(1, "src/index.ts");
     await db.sql`INSERT INTO repo_file_cache (repo_full_name, commit_sha, path, content) VALUES ('a/b', ${SHA}, 'src/index.ts', 'x')`;
     await db.sql`INSERT INTO generation_jobs (repo_full_name, commit_sha, status) VALUES ('a/b', ${SHA}, 'picked')`;
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0012_review_cards_content");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0011_mcq_pass_test");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0010_drop_chunk_embeddings");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0009_ladder_content");
@@ -340,7 +352,7 @@ describe("0003_core_files (T006)", () => {
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0004_ladder_levels");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0003_core_files");
     expect(await tables(db.sql)).toEqual(
-      ALL.filter(
+      PRE12.filter(
         (t) =>
           t !== "core_files" &&
           t !== "repo_file_cache" &&
@@ -366,6 +378,7 @@ describe("0003_core_files (T006)", () => {
       "0009_ladder_content",
       "0010_drop_chunk_embeddings",
       "0011_mcq_pass_test",
+      "0012_review_cards_content",
     ]);
     expect(await tables(db.sql)).toEqual(ALL);
   });
@@ -421,6 +434,7 @@ describe("0004_ladder_levels (T010)", () => {
     const [ladder] =
       await db.sql`INSERT INTO ladders (repo_full_name, commit_sha, status) VALUES ('developit/mitt', ${SHA}, 'unverified') RETURNING id`;
     await level(ladder.id, "L0");
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0012_review_cards_content");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0011_mcq_pass_test");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0010_drop_chunk_embeddings");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0009_ladder_content");
@@ -430,7 +444,7 @@ describe("0004_ladder_levels (T010)", () => {
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0005_review");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0004_ladder_levels");
     expect(await tables(db.sql)).toEqual(
-      ALL.filter(
+      PRE12.filter(
         (t) =>
           t !== "ladder_levels" &&
           !T0005.includes(t) &&
@@ -450,6 +464,7 @@ describe("0004_ladder_levels (T010)", () => {
       "0009_ladder_content",
       "0010_drop_chunk_embeddings",
       "0011_mcq_pass_test",
+      "0012_review_cards_content",
     ]);
     expect(await tables(db.sql)).toEqual(ALL);
   });
@@ -483,6 +498,7 @@ describe("T011 0005_review", () => {
     await migrateUp(db.sql);
     const { user, card } = await seed();
     await log(user, card, "k1");
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0012_review_cards_content");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0011_mcq_pass_test");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0010_drop_chunk_embeddings");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0009_ladder_content");
@@ -491,7 +507,7 @@ describe("T011 0005_review", () => {
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0006_push_subscriptions");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0005_review");
     expect(await tables(db.sql)).toEqual(
-      ALL.filter(
+      PRE12.filter(
         (t) =>
           !T0005.includes(t) &&
           !T0006.includes(t) &&
@@ -510,6 +526,7 @@ describe("T011 0005_review", () => {
       "0009_ladder_content",
       "0010_drop_chunk_embeddings",
       "0011_mcq_pass_test",
+      "0012_review_cards_content",
     ]);
     expect(await tables(db.sql)).toEqual(ALL);
     await db.sql`TRUNCATE ladders, users CASCADE`;
@@ -545,6 +562,7 @@ describe("T015 0006_push_subscriptions", () => {
   test("up / down / up with rows present; down drops only push_subscriptions", async () => {
     await migrateUp(db.sql);
     await sub(await user(6006), "https://fcm.googleapis.com/fcm/send/a");
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0012_review_cards_content");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0011_mcq_pass_test");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0010_drop_chunk_embeddings");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0009_ladder_content");
@@ -552,7 +570,7 @@ describe("T015 0006_push_subscriptions", () => {
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0007_concepts");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0006_push_subscriptions");
     expect(await tables(db.sql)).toEqual(
-      ALL.filter(
+      PRE12.filter(
         (t) =>
           !T0006.includes(t) && !T0007.includes(t) && !T0008.includes(t) && !T0009.includes(t) && !T0011.includes(t),
       ),
@@ -564,6 +582,7 @@ describe("T015 0006_push_subscriptions", () => {
       "0009_ladder_content",
       "0010_drop_chunk_embeddings",
       "0011_mcq_pass_test",
+      "0012_review_cards_content",
     ]);
     expect(await tables(db.sql)).toEqual(ALL);
     await db.sql`TRUNCATE users CASCADE`;
@@ -613,6 +632,7 @@ describe("T007 0007_concepts", () => {
           VALUES ('a/b', ${SHA}, 2, 'Event emitter 2', 'event-emitter', 'why', '["readme"]'::jsonb)`)(),
     ).rejects.toThrow(/unique|duplicate/i);
     await db.sql`INSERT INTO generation_jobs (repo_full_name, commit_sha, status) VALUES ('a/b', ${SHA}, 'mapped')`;
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0012_review_cards_content");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0011_mcq_pass_test");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0010_drop_chunk_embeddings");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0009_ladder_content");
@@ -625,6 +645,7 @@ describe("T007 0007_concepts", () => {
       "0009_ladder_content",
       "0010_drop_chunk_embeddings",
       "0011_mcq_pass_test",
+      "0012_review_cards_content",
     ]);
     await db.sql`TRUNCATE repo_snapshots, generation_jobs CASCADE`;
     expect(await db.sql`SELECT count(*)::int AS n FROM repo_concepts`).toEqual([{ n: 0 }]);
@@ -644,18 +665,20 @@ describe("T008 0008_generation", () => {
     await db.sql`INSERT INTO repo_snapshots (repo_full_name, commit_sha, default_branch, archived, readme, topics, languages, dep_files, open_issues, good_first_issues, tree, tree_truncated)
       VALUES ('a/b', ${SHA}, 'main', false, 'r', '[]'::jsonb, '{}'::jsonb, '[]'::jsonb, 0, 0, '[]'::jsonb, false)`;
     await chunk(0);
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0012_review_cards_content");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0011_mcq_pass_test");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0010_drop_chunk_embeddings");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0009_ladder_content");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0008_generation");
     expect(await tables(db.sql)).toEqual(
-      ALL.filter((t) => !T0008.includes(t) && !T0009.includes(t) && !T0011.includes(t)),
+      PRE12.filter((t) => !T0008.includes(t) && !T0009.includes(t) && !T0011.includes(t)),
     );
     expect(await migrateUp(db.sql)).toEqual([
       "0008_generation",
       "0009_ladder_content",
       "0010_drop_chunk_embeddings",
       "0011_mcq_pass_test",
+      "0012_review_cards_content",
     ]);
     expect(await tables(db.sql)).toEqual(ALL);
   });
@@ -705,6 +728,7 @@ describe("T008 0009_ladder_content", () => {
 
   test("up / down / up with rows present; down drops only the new tables and the flags column; a done job goes back to mapped", async () => {
     const { ladderId, chunkId } = await seed();
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0012_review_cards_content");
     await db.sql`INSERT INTO cards (ladder_id, level, position, front, back, chunk_id) VALUES (${ladderId}, 'L3', 0, 'f', 'b', ${chunkId})`;
     await mcq(ladderId, chunkId, 0, ["a", "b", "c", "d"]);
     await db.sql`INSERT INTO generation_reports (ladder_id, report) VALUES (${ladderId}, ${{ levels: [] }}::jsonb)`;
@@ -712,7 +736,7 @@ describe("T008 0009_ladder_content", () => {
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0011_mcq_pass_test");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0010_drop_chunk_embeddings");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0009_ladder_content");
-    expect(await tables(db.sql)).toEqual(ALL.filter((t) => !T0009.includes(t) && !T0011.includes(t)));
+    expect(await tables(db.sql)).toEqual(PRE12.filter((t) => !T0009.includes(t) && !T0011.includes(t)));
     expect(await db.sql`SELECT status FROM generation_jobs`).toEqual([{ status: "mapped" }]);
     const cols = await db.sql`SELECT column_name FROM information_schema.columns WHERE table_name = 'ladder_levels'`;
     expect(cols.map((r: { column_name: string }) => r.column_name)).not.toContain("flags");
@@ -720,6 +744,7 @@ describe("T008 0009_ladder_content", () => {
       "0009_ladder_content",
       "0010_drop_chunk_embeddings",
       "0011_mcq_pass_test",
+      "0012_review_cards_content",
     ]);
     expect(await tables(db.sql)).toEqual(ALL);
   });
@@ -746,5 +771,57 @@ describe("T008 0009_ladder_content", () => {
     expect(
       await db.sql`SELECT (SELECT count(*)::int FROM mcqs) + (SELECT count(*)::int FROM generation_reports) AS n`,
     ).toEqual([{ n: 0 }]);
+  });
+});
+
+describe("T032 0012_review_cards_content", () => {
+  const rejects = (fn: () => Promise<unknown>, re: RegExp) => expect((async () => await fn())()).rejects.toThrow(re);
+  const SHA = "3f2a9c1".padEnd(40, "0");
+  async function seed() {
+    await db.sql`TRUNCATE ladders, repo_snapshots, users CASCADE`;
+    await db.sql`INSERT INTO repo_snapshots (repo_full_name, commit_sha, default_branch, archived, readme, topics, languages, dep_files, open_issues, good_first_issues, tree, tree_truncated)
+      VALUES ('a/b', ${SHA}, 'main', false, 'r', '[]'::jsonb, '{}'::jsonb, '[]'::jsonb, 0, 0, '[]'::jsonb, false)`;
+    const [c] = await db.sql`INSERT INTO chunks (repo_full_name, commit_sha, source, path, ordinal, start_line, end_line, text)
+      VALUES ('a/b', ${SHA}, 'core', 'a.ts', 0, 1, 2, 't') RETURNING id::text`;
+    const [l] =
+      await db.sql`INSERT INTO ladders (repo_full_name, commit_sha, status) VALUES ('a/b', ${SHA}, 'unverified') RETURNING id::text`;
+    return { ladderId: l.id as string, chunkId: c.id as string };
+  }
+  const content = () =>
+    db.sql`SELECT level, position, front, back, chunk_id::text AS chunk_id FROM review_cards WHERE chunk_id IS NOT NULL ORDER BY level, position`;
+
+  test("up keeps every card (front, back, level, position, chunk) and drops cards; hand-seeded rows keep their ids; a review_log row stays valid; down then up again does not duplicate", async () => {
+    const { ladderId, chunkId } = await seed();
+    await migrateDown(db.sql, undefined, ALLOW_DOWN); // 0012: back to the 0009 `cards` table
+    await db.sql`INSERT INTO cards (ladder_id, level, position, front, back, chunk_id)
+      VALUES (${ladderId}, 'L0', 0, 'f0', 'b0', ${chunkId}), (${ladderId}, 'L0', 1, 'f1', 'b1', ${chunkId}), (${ladderId}, 'L2', 0, 'f2', 'b2', ${chunkId})`;
+    const [seeded] = await db.sql`INSERT INTO review_cards (ladder_id, level, front, back) VALUES (${ladderId}, 'L1', 'seed', 'seed') RETURNING id::text`;
+    const [u] = await db.sql`INSERT INTO users (github_id, github_login) VALUES (1, 'u') RETURNING id::text`;
+    await db.sql`INSERT INTO review_log (learner_id, card_id, rating, state_before, state_after, reviewed_at, elapsed_ms, idempotency_key)
+      VALUES (${u.id}, ${seeded.id}, 'good', '{}'::jsonb, '{}'::jsonb, now(), 1, 'k')`;
+    expect(await migrateUp(db.sql)).toEqual(["0012_review_cards_content"]);
+    expect(await tables(db.sql)).toEqual(ALL);
+    const want = [
+      { level: "L0", position: 0, front: "f0", back: "b0", chunk_id: chunkId },
+      { level: "L0", position: 1, front: "f1", back: "b1", chunk_id: chunkId },
+      { level: "L2", position: 0, front: "f2", back: "b2", chunk_id: chunkId },
+    ];
+    expect(await content()).toEqual(want);
+    expect(await db.sql`SELECT id::text, front, position FROM review_cards WHERE id = ${seeded.id}`).toEqual([
+      { id: seeded.id, front: "seed", position: null },
+    ]);
+    expect(await db.sql`SELECT card_id::text FROM review_log`).toEqual([{ card_id: seeded.id }]);
+    await rejects(
+      () => db.sql`INSERT INTO review_cards (ladder_id, level, position, front, back) VALUES (${ladderId}, 'L0', 0, 'x', 'y')`,
+      /unique|duplicate/i,
+    );
+    // down never deletes a review_cards row; up again pairs the copies with the recreated cards, so nothing doubles
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0012_review_cards_content");
+    expect(await db.sql`SELECT count(*)::int AS n FROM cards`).toEqual([{ n: 3 }]);
+    expect(await db.sql`SELECT count(*)::int AS n FROM review_cards`).toEqual([{ n: 4 }]);
+    expect(await migrateUp(db.sql)).toEqual(["0012_review_cards_content"]);
+    expect(await db.sql`SELECT count(*)::int AS n FROM review_cards`).toEqual([{ n: 4 }]);
+    expect(await content()).toEqual(want);
+    expect(await db.sql`SELECT card_id::text FROM review_log`).toEqual([{ card_id: seeded.id }]);
   });
 });
