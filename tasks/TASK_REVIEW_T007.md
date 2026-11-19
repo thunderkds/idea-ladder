@@ -43,7 +43,6 @@ Memory: <each entry the memory pass wrote, as `file — entry` | nothing new>
 Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | /verify (yours), with [admin] only after the one retry also ended blocked>
 
 -->
-Paused: auto-mode check failed — extended track, but the trace has no `code-review` Skill call (Stage 4 runs in auto mode)
 
 ## Auto decisions
 
@@ -51,24 +50,34 @@ Mode: auto
 1. Requirement Fidelity Gate signed by the Supervisor before spawn (FR-002, FR-005, US-001 exist in PRD.md and every AC traces to them) — RULE: tasks/TASK_GUIDE_T007.md:54 "An agent must NOT start implementing until this gate is checked"
 2. T007 guide aligned with T006 as built before spawn (migration 0007, `mapping`/`mapped`, `src/server/model-a.ts`, `usd: null` on claude-code) — RULE: CLAUDE.md:205 "No TASK_GUIDE = no work"
 3. The golden-set run (AC 7) is run by the owner in their own terminal with `CLAUDE_CONFIG_DIR` set, as for T006; agents never run it — FACT: memory/learnings.md:28 "The owner's subscription login lives in `CLAUDE_CONFIG_DIR=/home/thunderkds/.claude-hung2`"
-Checks: tests — not yet run; reviews — not yet run; real run — not yet run
-Memory: nothing new
-Not done: auto verify: not started; merge (admin: after the auto verify pass)
+4. 2026-11-19: T007 rebuilt from this guide on a new `T007-concept-mapper` branch from main 467d538. The first build (review fixes 4f9c3c9, 3d72565, 4af71d0) was never pushed and its clone is not on this machine; the user chose "rebuild T007". The first build's review findings (reports/code-review_T007-concept-mapper_20261117T102941.html) went into the spawn prompts as known pitfalls — RULE: user instruction 2026-11-19 "rebuild T007"
+5. The build was split across 7 sequential agents (A core, B API, B2 eval subject, C screen, two server fix agents, one client fix agent), each told to commit per item, because the 90-call step limit is counted per session and task, so the Supervisor's and every sub-agent's calls share one budget — FACT: .claude/hooks/pre_agent_step_limit.py:5-6 "counts tool calls per Task ID and blocks once a task exceeds CLAUDE_STEP_LIMIT (default 90)" and :16-17 "keyed on both the event's session_id and the task ID"
+6. Added one `Edit concepts` link from the ladder view to `/ladders/:id/concepts`; the guide names the screen as the entry point but no way to reach it — SAFER OPTION: without it the screen is reachable only by typing the URL ⚠ decided for you — please review
+7. Fixed all 3 P2 review findings (usage lost on a rejected answer, slug collisions C/C++/C# and non-Latin names, focus after Add/Remove) although `code-review` applies only P0/P1 by itself; the first build had accepted the C/C++/C# collision as P3 — SAFER OPTION: each is a small, test-first fix, and the usage one under-reports paid calls that T017 measures ⚠ decided for you — please review
+8. 6 P3 findings go on the cut list (renamed row keeps its old reason until reload; a 401 on save loses unsaved edits; decodeURIComponent on a malformed id; Remove beside the input at 360 px instead of full-width; client max-length check before trim; two e2e tests share one seed) — RULE: .claude/skills/code-review/SKILL.md § Phase 4 "Do not apply P2/P3 fixes automatically"
+9. Accepted the new token `--color-error: #b42318` in src/client/tokens.css (the error text needed one and none existed; 6.1:1 on --color-bg, WCAG AA) — SAFER OPTION: a token keeps check-tokens green; a literal would break lint ⚠ decided for you — please review
+10. The 9 UI screenshots stay committed in e2e/artifacts/T007/ as the UI evidence (the folder is not git-ignored) — SAFER OPTION: the evidence rows below cite them by path ⚠ decided for you — please review
+11. Two T015 offline e2e tests (e2e/pwa.e2e.ts:584, :743) are not a T007 regression: they fail the same way on clean main 4b520a3 (2 failed / 18 passed on both); a separate bugfix task is proposed — FACT: Supervisor run 2026-11-19 on a detached main checkout, `bun run test:e2e -- pwa` printed "2 failed" and "18 passed"
+12. Process finding: 4 of 7 implementing agents did not read all Permanent-Rule startup files (one piped them to /dev/null and said so); mitigated by two independent reviewers checking the whole diff against the guide, not re-run — SAFER OPTION: a re-run would cost a full rebuild for no found defect ⚠ decided for you — please review
+13. The eval command runs from eval/ (`cd eval && bun run eval -- --step concepts --subject concept-mapper`); no root `eval` script was added — RULE: AGENTS.md § Karpathy Engineering Principles "Surgical Changes"
+Checks: tests `bun test` — 359 pass / 0 fail; `bun test concept-mapper learner-concepts` — 48 pass / 0 fail; `bun run test:e2e -- concepts-edit start-flow` — 17 passed; `bun run typecheck && bun run lint` — clean; reviews code-review — 0 P0, 1 P1 + 3 P2 fixed, 6 P3 on the cut list (reports/code-review_T007-concept-mapper_20261119T081600.html); migration-safety — GO; real run `cd eval && MODEL_A_BACKEND=api ANTHROPIC_API_KEY= MODEL_A_ID= bun run eval -- --step concepts --subject concept-mapper` — printed `eval failed: subject "concept-mapper" not found in src/subjects/: concept-mapper (MODEL_A_BACKEND=api) needs ANTHROPIC_API_KEY, MODEL_A_ID (paid run)` (auto-checked, not /verify)
+Memory: memory/learnings.md — step limit shared per session and task; agents skip startup reads under step pressure; push a task branch before leaving a machine
+Not done: golden-set run AC 7 (owner, paid); one live `/start` on `developit/mitt` (owner, real model call); auto verify: running (T182); merge (admin: after the auto verify pass)
 
 ## Evidence
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass / ☐ fail | [test file path(s) — required before Done] |
-| Verification command run | ☐ pass / ☐ fail | [paste actual output] |
-| Negative cases hold | ☐ pass / ☐ fail | [paste the red run against the prior content, or the mutation diff (`git diff --stat`, non-empty) before each verdict] |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | AC 1–2, SC 1–2: tests/concept-mapper.test.ts (both back ends); slug/name rules: tests/concept-mapper-shared.test.ts; AC 3 incl. failure paths: tests/concept-mapper-step.test.ts; AC 4–5 server, SC 3–4: tests/learner-concepts.test.ts; migration 0007: tests/migrate.test.ts; AC 7 subject: tests/concept-mapper-subject.test.ts; AC 5–6 screen, SC 5–6, focus, UI checks: e2e/concepts-edit.e2e.ts. `bun test concept-mapper learner-concepts` → 48 pass / 0 fail (2026-11-19T08:16:33Z) |
+| Verification command run | ☑ pass | On 2218681 (2026-11-19T08:13:47Z): `bun run typecheck && bun run lint` → "Checked 100 files in 57ms. No fixes applied." / "check-tokens: 0 color literals outside src/client/tokens.css"; `bun test concept-mapper learner-concepts` → 48 pass / 0 fail; `bun run test:e2e -- concepts-edit` (with start-flow) → 17 passed. `bun run eval -- --step concepts --subject concept-mapper` NOT run: paid / subscription run, owner's (Auto decision 3) |
+| Negative cases hold | ☑ pass | Red before green: map-concepts step test 0 pass / 5 fail before the step existed (agent A); usage on rejected answer "Expected length: 2 / Received length: 0" before 5cd665f; slug collisions 1 fail before 2218681; focus "toBeFocused() failed — Received: inactive" before a5f47be. 422 cases (2/7 concepts, empty, > 60 code points, duplicate slug, NUL/DEL) asserted in tests/learner-concepts.test.ts and on screen in e2e/concepts-edit.e2e.ts. Failure-path tests (4bcc80d) passed at once: the code was already correct |
 | verify | ☐ pass / ☐ fail / ☐ N/A | [leave it: the auto verify hook writes this row, with its run record. If you ran /verify yourself, tick pass and make the whole Notes cell "/verify by the user, session <id>, commit <sha>" (the full 40-character commit). The merge gate counts no other row, even with the word "pass" in it] |
-| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
-| Full smoke suite still green (no regression) | ☐ pass / ☐ fail | |
-| **Companion score (easy-verifier)** | ☐ pass / ☐ fail / ☐ N/A | [`overall` and `change_risk` as the tool returned them, the scope, the ref, and the absolute path of the verifier report after a literal `report:` label — e.g. "overall 86 (>= 80), change_risk pass, scope changes, ref `main...HEAD`, report: `/home/me/.easy-verifier-reports/kit/score_changes_20261028T0530Z.html`". The gate reads the path that follows `report:` and nothing else, so with no label, or a path that is absent, the row is unscored — write ☑ N/A instead. ☑ N/A with a reason when neither companion tool was run: the merge gate blocks on ☑ fail only, never on an absent or N/A row] |
-| **UI: Visual regression (diff or verdict pasted)** | ☐ pass / ☐ fail / ☐ N/A | [screenshot path or LLM verdict — required for UI tasks, Hard-Stop Gate 6] |
-| **UI: Design-system compliance (tokens/colors/typography verified)** | ☐ pass / ☐ fail / ☐ N/A | [method used + output] |
-| **UI: Responsiveness at target viewports** | ☐ pass / ☐ fail / ☐ N/A | [viewports tested, any overflow findings] |
+| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☑ pass | Reviewed: `git diff main...HEAD` (43 files) plus direct callers — server half (migrations, src/server, src/shared, eval, tests) and client half (src/client, e2e) by two independent reviewers. Skipped: kit files and modules the diff does not call |
+| Full smoke suite still green (no regression) | ☑ pass | `bun test` → 359 pass / 0 fail (baseline 310). Full e2e (agent C): 57 passed, 1 failed; `-- pwa`: 2 failed / 18 passed — the same 2 T015 tests fail identically on clean main 4b520a3, so not a T007 regression (Auto decision 11) |
+| **Companion score (easy-verifier)** | ☑ N/A | Neither companion tool was run for this task |
+| **UI: Visual regression (diff or verdict pasted)** | ☑ pass | e2e/artifacts/T007/concepts-{4,error,banner}-{mobile,tablet,desktop}.png, each read and judged by agent C and two read by the client reviewer: 4-concept list shows name input, reason, Remove; error "need 3 to 6 concepts, got 7" with all 7 inputs kept; banner `Low confidence: this ladder uses concepts only` above the list |
+| **UI: Design-system compliance (tokens/colors/typography verified)** | ☑ pass | Playwright computed-style assertions in e2e/concepts-edit.e2e.ts compare body, h1, labels, inputs, reason text, buttons, error text and banner colours, font sizes, weights, gaps and padding with the resolved token values; `check-tokens: 0 color literals outside src/client/tokens.css`; new token --color-error (Auto decision 9) |
+| **UI: Responsiveness at target viewports** | ☑ pass | 360×740, 768×1024, 1280×800: `scrollWidth <= viewport` for all three states; every button, link and input ≥ 44 px tall; `Save concepts` inside the viewport at all three sizes with 4 concepts and at 360×740 with 7 (sticky bar). Open P3: Remove sits beside the input at 360 px (Auto decision 8) |
 
 ---
 
@@ -93,9 +102,19 @@ note: Tests need ".test", "_test_", ".spec" or "_spec_" in the filename (ex: "My
 no 0007 migration
 ```
 
-**AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
+**AFTER** (same command, on 2218681):
 
-**DELTA**: [one sentence — what a user can now do that they could not before]
+```
+2026-11-19T08:16:33Z
 
-**WITNESS**: [who ran it and when — derived from `memory/event-trace/Txxx.jsonl`, never the
-implementing agent alone]
+ 48 pass
+ 0 fail
+ 209 expect() calls
+Ran 48 tests across 5 files. [2.96s]
+0007_concepts.down.sql
+0007_concepts.up.sql
+```
+
+**DELTA**: A finished repo job now maps the repo to 3–6 grounded concepts (`map-concepts`, job status `mapped`), and a signed-in learner can rename, remove and add their own concepts on `/ladders/:id/concepts` without changing the shared list.
+
+**WITNESS**: Supervisor session 98505c1f-ee35-4589-bb57-774f30f8b789 ran the AFTER command at 2026-11-19T08:16:33Z (trace: memory/event-trace/T007.jsonl); BEFORE by agent A at 2026-11-19T07:36:43Z, commit 1353c56.
