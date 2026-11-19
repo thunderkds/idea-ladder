@@ -261,7 +261,8 @@ describe("0003_core_files (T006)", () => {
           t !== "ladder_levels" &&
           !T0005.includes(t) &&
           !T0006.includes(t) &&
-          !T0007.includes(t) && !T0008.includes(t),
+          !T0007.includes(t) &&
+          !T0008.includes(t),
       ),
     );
     expect((await db.sql`SELECT status FROM generation_jobs`).map((r: { status: string }) => r.status)).toEqual([
@@ -335,7 +336,10 @@ describe("0004_ladder_levels (T010)", () => {
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0005_review");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0004_ladder_levels");
     expect(await tables(db.sql)).toEqual(
-      ALL.filter((t) => t !== "ladder_levels" && !T0005.includes(t) && !T0006.includes(t) && !T0007.includes(t) && !T0008.includes(t)),
+      ALL.filter(
+        (t) =>
+          t !== "ladder_levels" && !T0005.includes(t) && !T0006.includes(t) && !T0007.includes(t) && !T0008.includes(t),
+      ),
     );
     expect(await migrateUp(db.sql)).toEqual([
       "0004_ladder_levels",
@@ -384,7 +388,12 @@ describe("T011 0005_review", () => {
       ALL.filter((t) => !T0005.includes(t) && !T0006.includes(t) && !T0007.includes(t) && !T0008.includes(t)),
     );
     expect(await db.sql`SELECT to_regproc('review_log_append_only') AS f`).toEqual([{ f: null }]);
-    expect(await migrateUp(db.sql)).toEqual(["0005_review", "0006_push_subscriptions", "0007_concepts", "0008_generation"]);
+    expect(await migrateUp(db.sql)).toEqual([
+      "0005_review",
+      "0006_push_subscriptions",
+      "0007_concepts",
+      "0008_generation",
+    ]);
     expect(await tables(db.sql)).toEqual(ALL);
     await db.sql`TRUNCATE ladders, users CASCADE`;
   });
@@ -422,7 +431,9 @@ describe("T015 0006_push_subscriptions", () => {
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0008_generation");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0007_concepts");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0006_push_subscriptions");
-    expect(await tables(db.sql)).toEqual(ALL.filter((t) => !T0006.includes(t) && !T0007.includes(t) && !T0008.includes(t)));
+    expect(await tables(db.sql)).toEqual(
+      ALL.filter((t) => !T0006.includes(t) && !T0007.includes(t) && !T0008.includes(t)),
+    );
     expect(await migrateUp(db.sql)).toEqual(["0006_push_subscriptions", "0007_concepts", "0008_generation"]);
     expect(await tables(db.sql)).toEqual(ALL);
     await db.sql`TRUNCATE users CASCADE`;
