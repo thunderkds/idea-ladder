@@ -24,6 +24,9 @@
 
 ## Gotchas
 
+### 2026-11-19 — usage limit, verify retries, Advocate attribution
+(1) When the account usage limit hits, running agents stop (resume them with SendMessage after the reset) and a running auto verify ends `blocked`; the hook starts one run per commit, so a retry needs a new commit (record the blocked run in the report, commit, `--start` again). (2) Set the active-task state file to the task a Debate is for BEFORE spawning its Advocates: their calls are filed under the session's current task, and the auto-mode check counts only that task's trace (T013's L1 Debate landed in T016.jsonl). (3) Show the whole `git merge` output, not `tail`: a cut-off list hid a third conflicted file (app.ts).
+
 ### 2026-11-19 — board rows, step limit and cross-task contracts
 (1) Committing a new TASK_GUIDE lets a hook add its board row with the guide's title; do not also add a row by hand, or a stale duplicate stays in In Progress and the merge gate blocks every merge. (2) The 90-call step limit counts every call attributed to the task — builder, fix and review agents and the Supervisor's own calls under the active-task state — so set the state file to the task you are working on and expect the counter to trip once on long tasks (it resets itself). (3) T008 and T011 each seeded their own card table by hand and both test suites passed while generated cards never reached review (T032): when a task writes data another task reads, add one test that goes through both code paths.
 
