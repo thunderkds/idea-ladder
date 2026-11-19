@@ -11,6 +11,7 @@
 > Task line format: **Txxx** — [title] | [agent] | C[0–3] | Risk: Low/Med/High | P[0–2]
 
 ### Todo
+- [ ] **T033** — Thin MCQ pools: when a level in POOL_LEVELS (L0, L1, L3) saves fewer than MIN_MCQ_POOL questions, top it up or fall back to a concept-only ladder, so no ladder dead-ends at `pool-too-small` | backend-developer | C2 | Risk: Medium | P1 | Phase: v1 | Found 2026-11-19 in T013 Stage 4 (Debate); guide to write at Stage 2
 - [ ] **T014** — Diff questions after L2 — generated from the learner's diff (model A), blind-solved (model B), pass 4 of 5 | backend-developer | C2 | Risk: High | P1 | Phase: v1 (after Gate 1)
 - [ ] **T030** — Pass-test screens — MCQ attempt, artifact submit (L1/L2/L4), diff-question attempt, result view | frontend-developer | C2 | Risk: Medium | P0 | Phase: v1 (after Gate 1)
 - [ ] **T017** — Measure real cost per ladder on the golden set; set and enforce a cap with the user; provider prompt caching | backend-developer | C1 | Risk: Medium | P1 | Phase: v1 (after Gate 1) | HITL
