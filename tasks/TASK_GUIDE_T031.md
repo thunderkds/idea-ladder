@@ -186,3 +186,4 @@ bun test: migration up/down/up with a seeded chunk row (AC 1); step `chunk` idem
 ## Questions Log
 
 - 2026-11-19 DEBATE Which word-overlap measure, cutoff and env var replace cosine dedupe? → Jaccard on raw word sets (shared `words()` tokeniser), question/front only, `DEDUPE_JACCARD` 0.8, leftover `DEDUPE_COSINE` refused (Advocate 1: Jaccard on content words with stop-word removal and plural fold, cutoff 0.7; Advocate 2: Jaccard on raw word sets, cutoff 0.8) ⚠ decided for you — please review
+- 2026-11-19 DEBATE Which Stage 4 P2/P3 findings to fix before Ready for Review? → fix P2-a (migrate scratch filter), P2-b (chunk-failed test), P2-c (env assertion); cut P3-a, P3-b, P3-c (Advocate 1: fix the 3 P2s, cut the P3s; Advocate 2: fix the 3 P2s, cut the P3s) ⚠ decided for you — please review
