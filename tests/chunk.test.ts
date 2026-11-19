@@ -86,10 +86,10 @@ const modelA = testModelA(); // answers the mapper and the 8b level generators
 /** File text served for every contents read: 120 numbered lines, so each file gives 2+ chunks. */
 const fileText = (path: string) => Array.from({ length: 120 }, (_, i) => `${path} line ${i + 1}`).join("\n");
 
-function engine(jobId: string, costs: CostEntry[] = []) {
+function engine(jobId: string, costs: CostEntry[] = [], contents?: () => Response) {
   const gh = fixtureFetch(fixtures, (path) => {
     const m = path.match(/^\/repos\/developit\/mitt\/contents\/([^?]+)\?ref=/);
-    return m ? new Response(fileText(decodeURIComponent(m[1] as string))) : undefined;
+    return m ? (contents?.() ?? new Response(fileText(decodeURIComponent(m[1] as string)))) : undefined;
   });
   const fn = ladderGenerateFunction(createInngest(), {
     sql: db.sql,
@@ -97,15 +97,26 @@ function engine(jobId: string, costs: CostEntry[] = []) {
     reader: { ...testReader(), logCost: (e) => costs.push(e) },
     modelA,
   });
-  return new InngestTestEngine({ function: fn, events: [{ name: LADDER_GENERATE_EVENT, data: { ...MITT, jobId } }] });
+  const t = new InngestTestEngine({
+    function: fn,
+    events: [{ name: LADDER_GENERATE_EVENT, data: { ...MITT, jobId } }],
+  });
+  return Object.assign(t, { t, fn });
 }
 
 describe("Inngest step chunk (T031 AC 2, Success Criterion 2)", () => {
   test("developit/mitt, no OPENAI_API_KEY in env: chunks stored with line ranges and no vector; a re-run adds 0 rows", async () => {
-    expect(process.env.OPENAI_API_KEY).toBeUndefined();
+    const savedKey = process.env.OPENAI_API_KEY; // Bun loads .env: the step must run without the key
+    delete process.env.OPENAI_API_KEY;
     const jobId = await newJob();
     const costs: CostEntry[] = [];
-    const { result, ctx } = await engine(jobId, costs).execute();
+    let run: Awaited<ReturnType<ReturnType<typeof engine>["execute"]>>;
+    try {
+      run = await engine(jobId, costs).execute();
+    } finally {
+      if (savedKey !== undefined) process.env.OPENAI_API_KEY = savedKey;
+    }
+    const { result, ctx } = run;
     expect(ctx.step.run.mock.calls.map((c) => c[0])).toEqual([
       "fetch-repo",
       "pick-core-files",
@@ -141,5 +152,25 @@ describe("Inngest step chunk (T031 AC 2, Success Criterion 2)", () => {
     // Re-run for the same repo + SHA: no new row.
     await engine(jobId, costs).executeStep("chunk");
     expect((await chunkRows()).length).toBe(rows.length);
+  });
+
+  test("chunk throws on every attempt: the job stays mapped, then onFailure marks it failed / chunk-failed", async () => {
+    const jobId = await newJob();
+    const down = new Error("GitHub down");
+    const { fn, t } = engine(jobId, [], () => new Response("boom", { status: 500 }));
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const run = await t.execute();
+      expect((run as { error?: Error }).error?.message).toMatch(/chunk|500|GitHub/i);
+      expect((await jobRow(jobId)).status).toBe("mapped");
+    }
+    const onFailure = fn.opts.onFailure as unknown as (ctx: { event: unknown; error: Error }) => Promise<unknown>;
+    await onFailure({
+      event: {
+        name: "inngest/function.failed",
+        data: { event: { name: LADDER_GENERATE_EVENT, data: { ...MITT, jobId } } },
+      },
+      error: down,
+    });
+    expect(await jobRow(jobId)).toEqual({ status: "failed", reason: "chunk-failed" });
   });
 });

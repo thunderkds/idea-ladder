@@ -205,8 +205,9 @@ describe("0010_drop_chunk_embeddings (T031, AC 1)", () => {
     // Build the 0009 schema in a scratch dir (0001-0009 only), seed a chunk with an embedding, then apply 0010.
     while (await migrateDown(db.sql, undefined, ALLOW_DOWN)) {}
     const dir = await mkdtemp(join(tmpdir(), "il-mig-0009-"));
-    for (const f of (await readdir("migrations")).filter((f) => !f.startsWith("0010"))) {
-      await copyFile(join("migrations", f), join(dir, f));
+    const src = join(import.meta.dir, "..", "migrations");
+    for (const f of (await readdir(src)).filter((f) => f < "0010")) {
+      await copyFile(join(src, f), join(dir, f));
     }
     await migrateUp(db.sql, dir);
     expect(await chunkCols()).toContain("embedding");
