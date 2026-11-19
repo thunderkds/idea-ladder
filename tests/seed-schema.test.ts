@@ -66,7 +66,7 @@ describe("blind-solver seed set (AC 5)", () => {
   });
 
   test("the file matches its sha256 lock", async () => {
-    const lock = (await Bun.file(new URL("blind-solver-seed.sha256", dir)).text()).trim().split(/\s+/)[0];
+    const lock = (await Bun.file(new URL("blind-solver-seed.sha256", dir)).text()).trim().split(/\s+/)[0] ?? "";
     expect(createHash("sha256").update(raw).digest("hex")).toBe(lock);
   });
 });
