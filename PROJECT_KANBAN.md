@@ -31,9 +31,9 @@
 
 ### In Progress
 - [ ] **T032** — Bug: generated cards never reach the review queue (save-ladder writes `cards`, review reads `review_cards`); one table `review_cards` (0012) | backend-developer | C2 | Risk: Medium | P0 | Phase: v1 | Found 2026-11-19 by the Supervisor planning T016 | Started 2026-11-19: branch `T032-review-cards`, worktree `../wt-t032` ([admin], auto)
-- [ ] **T009** — Blind solver (separate blind Claude call), regenerate max 2; re-measure catch / false-reject on an independent seed set | backend-developer | C2 | Risk: Medium | P0 | Phase: v1 (after Gate 1) | Started 2026-11-19: branch `T009-blind-solver`, worktree `../wt-t009` ([admin], auto)
 
 ### Ready for Review
+- [ ] **T009** — Blind solver (separate blind Claude call), regenerate max 2; re-measure catch / false-reject on an independent seed set | backend-developer | C2 | Risk: Medium | P0 | Phase: v1 (after Gate 1) | Started 2026-11-19: branch `T009-blind-solver`, worktree `../wt-t009` ([admin], auto) · Ready for Review 2026-11-19: 12 commits on `T009-blind-solver`; bun test 528 pass / 0 fail; code-review 0 P0/P1, 2 P2 fixed (2d69600), 3 P3 cut; security-review no findings; live 3-policy measurement (SC 7, twice) paused for the owner (Claude subscription); auto verify started
 
 ### Blocked
 
