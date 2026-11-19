@@ -77,7 +77,7 @@ export type PickCoreFilesClaudeCodeInput = {
   timeoutMs?: number;
 };
 
-type CliResult = {
+export type CliResult = {
   is_error?: boolean;
   subtype?: string;
   result?: string;
@@ -254,7 +254,7 @@ export function childEnv(parent: Record<string, string | undefined>): Record<str
   return env;
 }
 
-/** One `claude -p` run; resolves the parsed JSON result, rejects on timeout, non-zero exit or unparsable output. */
+/** One reader `claude -p` run: the reader's argv, then spawnClaude. */
 async function runClaude(
   input: PickCoreFilesClaudeCodeInput,
   cwd: string,
@@ -288,8 +288,13 @@ async function runClaude(
     "--allowedTools",
     ...ALLOWED_TOOLS,
   ];
+  return spawnClaude(argv, cwd, input.timeoutMs ?? CLAUDE_CODE_TIMEOUT_MS);
+}
+
+/** Spawns `argv` (argv[0] = the claude binary) in `cwd` with the allowlisted env; resolves the parsed JSON result,
+ *  rejects on timeout, non-zero exit or unparsable output. Shared with model A (src/server/model-a.ts). */
+export async function spawnClaude(argv: string[], cwd: string, timeoutMs: number): Promise<CliResult> {
   const env = childEnv(process.env);
-  const timeoutMs = input.timeoutMs ?? CLAUDE_CODE_TIMEOUT_MS;
   // Its own process group, so the timeout kills claude and its MCP server child together.
   let proc: Bun.Subprocess<"ignore", "pipe", "pipe">;
   try {

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ConceptsPage } from "./Concepts.tsx";
 import { LadderPage } from "./LadderView.tsx";
 import { OfflineNotice, requireOnline } from "./offline.tsx";
 import { expireSession, signOut } from "./offline-store.ts";
@@ -125,7 +126,7 @@ function StartProblem({ error, resetAt, retryAt }: { error: string; resetAt?: st
 }
 
 type Job = {
-  status: "queued" | "running" | "fetched" | "picking" | "picked" | "failed";
+  status: "queued" | "running" | "fetched" | "picking" | "picked" | "mapping" | "mapped" | "failed";
   repo: string;
   reason?: string;
   resetAt?: string;
@@ -136,7 +137,9 @@ const STATUS_TEXT: Record<Job["status"], string> = {
   running: "Reading the repo",
   fetched: "Picking core files",
   picking: "Picking core files",
-  picked: "Done",
+  picked: "Picking core files",
+  mapping: "Mapping concepts",
+  mapped: "Done",
   failed: "Failed",
 };
 const FAILED_DETAIL: Record<string, (job: Job) => string> = {
@@ -145,7 +148,7 @@ const FAILED_DETAIL: Record<string, (job: Job) => string> = {
   "queue-unavailable": () => "The ladder queue was not available. Try again in a few minutes.",
 };
 
-/** /jobs/:jobId: polls the job every 2 s and stops on a final status (picked, failed). */
+/** /jobs/:jobId: polls the job every 2 s and stops on a final status (mapped, failed). */
 function JobStatus({ jobId }: { jobId: string }) {
   const [job, setJob] = useState<Job>();
   const [missing, setMissing] = useState(false);
@@ -161,7 +164,7 @@ function JobStatus({ jobId }: { jobId: string }) {
           const next = (await res.json()) as Job;
           if (stopped) return;
           setJob(next);
-          if (next.status === "picked" || next.status === "failed") return;
+          if (next.status === "mapped" || next.status === "failed") return;
         }
       } catch {
         // network blip: try again on the next tick
@@ -195,8 +198,8 @@ function JobStatus({ jobId }: { jobId: string }) {
     ? ""
     : job.status === "failed"
       ? (FAILED_DETAIL[job.reason ?? ""]?.(job) ?? "Something went wrong while reading the repo. Try again later.")
-      : job.status === "picked"
-        ? "The repo is read and its core files are picked."
+      : job.status === "mapped"
+        ? "The repo is read and its concepts are mapped."
         : "This page updates by itself.";
   return (
     <main className="page" aria-live="polite">
@@ -215,6 +218,8 @@ export function App() {
   if (path === "/ladders") return <Ladders />;
   if (path === "/review") return <ReviewPage />;
   if (path === "/settings") return <SettingsPage />;
+  const concepts = /^\/ladders\/([^/]+)\/concepts$/.exec(path);
+  if (concepts?.[1]) return <ConceptsPage ladderId={decodeURIComponent(concepts[1])} />;
   if (path.startsWith("/ladders/")) return <LadderPage ladderId={path.slice("/ladders/".length)} />;
   if (path.startsWith("/jobs/")) return <JobStatus jobId={path.slice("/jobs/".length)} />;
   const root = document.getElementById("root");

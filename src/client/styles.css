@@ -418,3 +418,87 @@ a.button {
     width: 100%;
   }
 }
+/* T007: concept edit screen. */
+.concepts-page .back-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-min);
+}
+.banner {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  font-weight: var(--font-weight-strong);
+}
+.concept-list {
+  list-style: none;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.concept-row {
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background-color: var(--color-surface);
+}
+.concept-label {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-strong);
+}
+.concept-edit {
+  display: flex;
+  gap: var(--space-2);
+}
+.text-input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--tap-min);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-body);
+}
+.text-input[aria-invalid="true"] {
+  border-color: var(--color-error);
+}
+.concept-count,
+.concept-reason {
+  margin: var(--space-2) 0 0;
+}
+.concept-reason {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+.field-error {
+  margin: var(--space-2) 0 0;
+  color: var(--color-error);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-strong);
+}
+.concepts-page > .field-error {
+  margin: 0 0 var(--space-4);
+}
+.save-bar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+  padding: var(--space-3) 0;
+  background-color: var(--color-bg);
+}
+.save-bar .save-status {
+  margin: 0;
+}

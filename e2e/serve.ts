@@ -15,7 +15,7 @@ import { type PushTarget, reminderTick } from "../src/server/reminders.ts";
 import { adminUrl } from "../tests/support/db.ts";
 import { fixtureFetch, loadFixture, rateLimited, V0_REPOS, type V0Repo } from "../tests/support/github-fixtures.ts";
 import { startGithubStub } from "../tests/support/github-stub.ts";
-import { testReader } from "../tests/support/mock-model.ts";
+import { testModelA, testReader } from "../tests/support/mock-model.ts";
 
 export const APP_PORT = 54401;
 const STUB_PORT = 54400;
@@ -68,6 +68,31 @@ const seeded = {
   klona: await seedLadder("lukeed/klona", "2f3c9d1e8a7b4c5d6e7f8091a2b3c4d5e6f70812", true, reader.id),
   plain: await seedLadder("sindresorhus/p-map", "3".repeat(40), false),
 };
+
+// T007 seeds (e2e/concepts-edit.e2e.ts): shared concepts (with reasons) for three ladders. `edit` and `invalid` are not
+// low confidence; `fallback` is. `plain` (above) has no concepts: the 404 case.
+const CONCEPT_SEEDS: Record<"edit" | "invalid" | "fallback", [repo: string, sha: string, fallback: boolean]> = {
+  edit: ["rust-lang/futures-rs", "7".repeat(40), false],
+  invalid: ["tokio-rs/tokio", "8".repeat(40), false],
+  fallback: ["sindresorhus/is", "9".repeat(40), true],
+};
+const CONCEPT_NAMES = ["Rust async", "Embeddings", "CRDT", "Event emitter"];
+const conceptSeeds = {} as Record<keyof typeof CONCEPT_SEEDS, string>;
+for (const [key, [repo, sha, fallback]] of Object.entries(CONCEPT_SEEDS) as [
+  keyof typeof CONCEPT_SEEDS,
+  (typeof CONCEPT_SEEDS)[keyof typeof CONCEPT_SEEDS],
+][]) {
+  conceptSeeds[key] = await seedLadder(repo, sha, true);
+  await sql`INSERT INTO repo_snapshots (repo_full_name, commit_sha, default_branch, archived, readme, topics, languages, dep_files,
+      open_issues, good_first_issues, tree, tree_truncated)
+    VALUES (${repo}, ${sha}, 'main', false, 'r', '[]'::jsonb, '{}'::jsonb, '[]'::jsonb, 0, 0, '[]'::jsonb, false)`;
+  await sql`INSERT INTO repo_confidence (repo_full_name, commit_sha, score, level, fallback_to_concepts, reasons)
+    VALUES (${repo}, ${sha}, 0.2, ${fallback ? "low" : "high"}, ${fallback}, '[]'::jsonb)`;
+  for (const [i, name] of CONCEPT_NAMES.entries()) {
+    await sql`INSERT INTO repo_concepts (repo_full_name, commit_sha, position, name, slug, reason, basis)
+      VALUES (${repo}, ${sha}, ${i + 1}, ${name}, ${name.toLowerCase().replace(/ /g, "-")}, ${`Why ${name} matters in this repo.`}, '["readme"]'::jsonb)`;
+  }
+}
 
 // T011 seeds (e2e/review.e2e.ts). octo keeps no ladders (the sign-in e2e expects "No ladders yet"), so octo is the
 // "No cards yet" learner. `reviewer` has 3 New (due now) cards in open L0 and 2 in locked L1 (no passes). `waiter` has
@@ -200,7 +225,7 @@ const slowReader = {
     },
   }),
 };
-const fn = ladderGenerateFunction(createInngest(), { sql, github, reader: slowReader });
+const fn = ladderGenerateFunction(createInngest(), { sql, github, reader: slowReader, modelA: testModelA() });
 
 const passedLevels: PassedLevels = async (ladderId) => (ladderId === seeded.klona ? ["L0", "L1"] : []);
 const app = createApp({
@@ -239,6 +264,7 @@ Bun.serve({
   fetch(req) {
     const url = new URL(req.url);
     if (url.pathname === "/ladders") return Response.json(seeded);
+    if (url.pathname === "/concept-seeds") return Response.json(conceptSeeds);
     if (url.pathname === "/review-seeds") return Response.json(reviewSeeds);
     if (url.pathname === "/sync-seeds") return Response.json(syncSeeds);
     if (url.pathname === "/push-sent") return Response.json(pushSent);

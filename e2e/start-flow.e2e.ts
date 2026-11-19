@@ -70,7 +70,7 @@ test("SC 7: signed out /start?url=lukeed/dset -> sign-in -> /jobs/:id shows Queu
   await expectTokens(page, STATUS_TOKENS);
   await shootAll(page, "job-picking");
   await expect(heading(page)).toHaveText("Done", { timeout: 15_000 });
-  await expect(page.locator(".status-detail")).toHaveText("The repo is read and its core files are picked.");
+  await expect(page.locator(".status-detail")).toHaveText("The repo is read and its concepts are mapped.");
   await expectTokens(page, STATUS_TOKENS);
   await shootAll(page, "job-done");
 

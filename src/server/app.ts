@@ -27,6 +27,7 @@ import {
   RepoNotFoundError,
 } from "./github-repo.ts";
 import { getLadderView, ladderExists, listLadders, noPasses, type PassedLevels } from "./ladder-view.ts";
+import { checkConceptsBody, getConcepts, putConcepts } from "./learner-concepts.ts";
 import { offlinePack, syncRatings } from "./offline.ts";
 import { exportProgress, importProgress, MAX_IMPORT_BYTES, parseProgressFile } from "./progress.ts";
 import { checkSubscribe, isEndpoint, pushStatus, subscribe, unsubscribe } from "./push.ts";
@@ -58,7 +59,7 @@ const safeDecode = (value: string) => {
     return "\x00"; // malformed escapes: treat as hostile
   }
 };
-const LADDER_PATH = /^\/ladders\/[1-9][0-9]{0,17}$/;
+const LADDER_PATH = /^\/ladders\/[1-9][0-9]{0,17}(\/concepts)?$/;
 const REVIEW_PATH = "/review";
 const SETTINGS_PATH = "/settings";
 function returnPath(value: string | undefined): string | undefined {
@@ -157,18 +158,35 @@ export function createApp(opts: {
     return view ? c.json(view) : c.json({ error: "not-found" }, 404);
   });
 
-  // The client page; an unknown id still gets the client (it draws the 404 page) with status 404.
-  app.get("/ladders/:ladderId", async (c) => {
-    const ladderId = c.req.param("ladderId");
+  app.get("/api/ladders/:ladderId/concepts", async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const view = await getConcepts(sql, c.req.param("ladderId"), user.userId);
+    return typeof view === "string" ? c.json({ error: view }, 404) : c.json(view);
+  });
+
+  app.put("/api/ladders/:ladderId/concepts", async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const checked = await checkConceptsBody(await c.req.json().catch(() => undefined));
+    if ("field" in checked) return c.json(checked, 422);
+    const saved = await putConcepts(sql, c.req.param("ladderId"), user.userId, checked.names);
+    return saved === "ok" ? c.json({ ok: true }) : c.json({ error: saved }, 404);
+  });
+
+  // The client pages; an unknown id still gets the client (it draws the 404 page) with status 404.
+  const ladderPage = (suffix: "" | "/concepts") => async (c: Context) => {
+    const ladderId = c.req.param("ladderId") ?? "";
+    const path = `/ladders/${ladderId}${suffix}`;
     const user = await currentUser(c);
     if (!user) {
-      const next = LADDER_PATH.test(`/ladders/${ladderId}`)
-        ? `?next=${encodeURIComponent(`/ladders/${ladderId}`)}`
-        : "";
+      const next = LADDER_PATH.test(path) ? `?next=${encodeURIComponent(path)}` : "";
       return c.redirect(`/auth/github${next}`, 302);
     }
     return c.html(await indexHtml(), (await ladderExists(sql, ladderId)) ? 200 : 404);
-  });
+  };
+  app.get("/ladders/:ladderId", ladderPage(""));
+  app.get("/ladders/:ladderId/concepts", ladderPage("/concepts"));
 
   app.get("/api/me", async (c) => {
     const user = await currentUser(c);

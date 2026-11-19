@@ -185,8 +185,12 @@ describe("HTTP (AC 6, signed-in gate, no-store)", () => {
         .getSetCookie()
         .find((c) => c.startsWith("il_return_to="));
     expect(await returnCookie("/ladders/42")).toContain("il_return_to=%2Fladders%2F42");
+    expect(await returnCookie("/ladders/42/concepts")).toContain("il_return_to=%2Fladders%2F42%2Fconcepts");
     for (const bad of [
       "/ladders/42/x",
+      "/ladders/42/concepts/x",
+      "/ladders/abc/concepts",
+      "/ladders/0/concepts",
       "/ladders/abc",
       "//evil.example/ladders/1",
       "/ladders/1%0d%0aX: y",
