@@ -29,13 +29,17 @@ function hash8(text: string): string {
 
 /** Lower-case ASCII words joined by `-`. A name with no ASCII letter or digit gets `c-<hash>`, never an empty slug. */
 export function conceptSlug(name: string): string {
-  const ascii = name
+  const folded = name
+    .replace(/\+/g, "-plus-")
+    .replace(/#/g, "-sharp-")
     .normalize("NFKD")
     .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return ascii || `c-${hash8(name.trim().toLowerCase())}`;
+    .toLowerCase();
+  const ascii = folded.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  const hash = hash8(name.trim().toLowerCase());
+  if (!ascii) return `c-${hash}`;
+  // A non-ASCII letter or digit the fold could not keep: tell names apart that differ only by it.
+  return /[\u0080-\u{10ffff}]/u.test(folded.replace(/[^\p{L}\p{N}]/gu, "")) ? `${ascii}-${hash}` : ascii;
 }
 
 export type ListProblem = { field: string; message: string };

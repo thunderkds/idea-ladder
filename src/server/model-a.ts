@@ -81,7 +81,10 @@ function parseWith<T>(schema: z.ZodType<T>, text: string, usage: CallUsage): T {
   }
   const r = schema.safeParse(json);
   if (!r.success)
-    throw new ModelAInvalidOutputError(r.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "), usage);
+    throw new ModelAInvalidOutputError(
+      r.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+      usage,
+    );
   return r.data;
 }
 

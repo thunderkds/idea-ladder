@@ -7,6 +7,16 @@ describe("conceptSlug", () => {
     expect(conceptSlug("Rust async/await")).toBe("rust-async-await");
     expect(conceptSlug("  Pub/Sub!! ")).toBe("pub-sub");
   });
+  test("names that differ only by symbols or non-Latin letters keep distinct slugs", () => {
+    const slugs = ["C", "C++", "C#"].map(conceptSlug);
+    expect(new Set(slugs).size).toBe(3);
+    expect(conceptSlug("C++")).toBe("c-plus-plus");
+    expect(conceptSlug("C#")).toBe("c-sharp");
+    expect(conceptSlug("日本語 API")).not.toBe(conceptSlug("中文 API"));
+    expect(conceptSlug("日本語 API")).toMatch(/^api-[0-9a-f]{8}$/);
+    expect(conceptSlug("Café")).toBe(conceptSlug("cafe"));
+    expect(conceptSlug("Embeddings")).toBe(conceptSlug("embeddings"));
+  });
   test("names with no ASCII slug chars get a stable, non-empty hash slug", () => {
     const a = conceptSlug("日本語");
     expect(a).toMatch(/^c-[0-9a-f]{8}$/);
