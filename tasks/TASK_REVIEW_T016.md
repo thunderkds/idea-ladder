@@ -67,8 +67,14 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 > **before any implementation commit exists**; if it does not (docs, templates, skill-instruction
 > text), BEFORE is the **verbatim prior content** of what changed — a quoted excerpt, not a command.
 
-**BEFORE**: [pasted timestamped command output showing the thing absent/failing, captured before the
-first implementation commit] OR [verbatim excerpt of the prior content, for non-executable changes]
+**BEFORE**: (command: `date -u +%Y-%m-%dT%H:%M:%SZ; bun test -t "T016" 2>&1 | tail -4; ls migrations | grep 0013 || echo "no 0013 migration"`)
+```
+2026-11-19T11:26:06Z
+bun test v1.4.4 (38afee6c8)
+
+error: regex "T016" matched 0 tests. Searched 51 files (skipping 531 tests) [155.00ms]
+no 0013 migration
+```
 
 **AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
 
