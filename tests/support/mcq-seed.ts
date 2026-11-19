@@ -60,7 +60,7 @@ export async function seedPool(sql: SQL, ladder: SeededLadder, level: string, co
       VALUES (${ladder.ladderId}, ${level}, ${p}, ${`Question ${level} ${p}?`}, ${options}::jsonb, ${`key-${p}`}, ${chunkId})
       RETURNING id::text AS id`;
     const [{ id: cardId }] = await sql`
-      INSERT INTO cards (ladder_id, level, position, front, back, chunk_id)
+      INSERT INTO review_cards (ladder_id, level, position, front, back, chunk_id)
       VALUES (${ladder.ladderId}, ${level}, ${p}, ${`front ${p}`}, ${`back ${p}`}, ${chunkId}) RETURNING id::text AS id`;
     out.push({ id, cardId });
   }

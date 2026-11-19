@@ -5,6 +5,7 @@ import { type EvidenceRecord, evidencePassedLevels, hashRecord } from "../src/se
 import type { PassedLevels } from "../src/server/ladder-view.ts";
 import { type McqAttempt, type McqResult, startMcqAttempt, submitMcqAttempt } from "../src/server/mcq-test.ts";
 import { migrateUp } from "../src/server/migrate.ts";
+import { rateCard } from "../src/server/review.ts";
 import { createTestDatabase } from "./support/db.ts";
 import { type SeededLadder, type SeededMcq, seedLadder, seedLearner, seedPool } from "./support/mcq-seed.ts";
 
@@ -70,6 +71,19 @@ describe("T012 submitMcqAttempt scoring", () => {
     const missed = new Set(a.questions.slice(7).map((q) => q.id));
     const expected = s.pool.filter((m) => missed.has(m.id)).map((m) => m.cardId);
     expect([...r.reviewCardIds].sort()).toEqual([...expected].sort());
+    // T032: these are review_cards ids, so rateCard accepts each one
+    await sql()`INSERT INTO generation_jobs (repo_full_name, commit_sha, status, started_by)
+      VALUES (${s.ladder.repo}, ${s.ladder.sha}, 'done', ${s.learner})`;
+    for (const [i, cardId] of r.reviewCardIds.entries())
+      expect(
+        await rateCard(
+          sql(),
+          s.learner,
+          { cardId, rating: "again", idempotencyKey: `k${i}`, elapsedMs: 1 },
+          at(10 * MIN),
+          passedUpTo2,
+        ),
+      ).toBeDefined();
     expect(await evidenceRows()).toBe(0);
     expect(await evidencePassedLevels(sql())(s.ladder.ladderId, s.learner)).toEqual([]);
   });

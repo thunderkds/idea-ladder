@@ -59,11 +59,11 @@ export async function offlinePack(sql: SQL, userId: string, now: Date, passed: P
     ) u ON u.ladder_id = c.ladder_id AND u.level = c.level
     LEFT JOIN card_states s ON s.card_id = c.id AND s.learner_id = ${userId}`;
   const rows = await sql`
-    WITH cards AS (${cards})
+    WITH queue_cards AS (${cards})
     SELECT q.*, q.id::text AS card_id, q.ladder_id::text AS ladder_text FROM (
-      (SELECT * FROM cards WHERE due <= ${until} ORDER BY due, id LIMIT ${OFFLINE_PACK_LIMIT})
+      (SELECT * FROM queue_cards WHERE due <= ${until} ORDER BY due, id LIMIT ${OFFLINE_PACK_LIMIT})
       UNION ALL
-      (SELECT * FROM cards WHERE due IS NULL ORDER BY id LIMIT ${NEW_CARDS_PER_QUEUE})
+      (SELECT * FROM queue_cards WHERE due IS NULL ORDER BY id LIMIT ${NEW_CARDS_PER_QUEUE})
     ) q
     ORDER BY coalesce(q.due, ${now}), q.due IS NULL, q.id
     LIMIT ${OFFLINE_PACK_LIMIT}`;

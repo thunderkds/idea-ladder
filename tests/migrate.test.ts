@@ -235,7 +235,11 @@ describe("0010_drop_chunk_embeddings (T031, AC 1)", () => {
     await db.sql`INSERT INTO chunks (repo_full_name, commit_sha, source, path, ordinal, start_line, end_line, text, embedding, embedding_model)
       VALUES ('developit/mitt', ${SHA}, 'core', 'src/index.ts', 0, 1, 2, 'hello', ${`[${Array(1536).fill(0.1).join(",")}]`}::vector, 'm')`;
 
-    expect(await migrateUp(db.sql)).toEqual(["0010_drop_chunk_embeddings", "0011_mcq_pass_test", "0012_review_cards_content"]);
+    expect(await migrateUp(db.sql)).toEqual([
+      "0010_drop_chunk_embeddings",
+      "0011_mcq_pass_test",
+      "0012_review_cards_content",
+    ]);
     expect(await chunkCols()).toEqual([
       "id",
       "repo_full_name",
@@ -259,7 +263,11 @@ describe("0010_drop_chunk_embeddings (T031, AC 1)", () => {
     expect(await db.sql`SELECT embedding, embedding_model FROM chunks`).toEqual([
       { embedding: null, embedding_model: null },
     ]);
-    expect(await migrateUp(db.sql)).toEqual(["0010_drop_chunk_embeddings", "0011_mcq_pass_test", "0012_review_cards_content"]);
+    expect(await migrateUp(db.sql)).toEqual([
+      "0010_drop_chunk_embeddings",
+      "0011_mcq_pass_test",
+      "0012_review_cards_content",
+    ]);
     expect(await chunkCols()).not.toContain("embedding");
     expect(await db.sql`SELECT count(*)::int AS n FROM chunks`).toEqual([{ n: 1 }]);
   });
@@ -729,7 +737,7 @@ describe("T008 0009_ladder_content", () => {
   test("up / down / up with rows present; down drops only the new tables and the flags column; a done job goes back to mapped", async () => {
     const { ladderId, chunkId } = await seed();
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0012_review_cards_content");
-    await db.sql`INSERT INTO cards (ladder_id, level, position, front, back, chunk_id) VALUES (${ladderId}, 'L3', 0, 'f', 'b', ${chunkId})`;
+    await db.sql`INSERT INTO public.cards (ladder_id, level, position, front, back, chunk_id) VALUES (${ladderId}, 'L3', 0, 'f', 'b', ${chunkId})`;
     await mcq(ladderId, chunkId, 0, ["a", "b", "c", "d"]);
     await db.sql`INSERT INTO generation_reports (ladder_id, report) VALUES (${ladderId}, ${{ levels: [] }}::jsonb)`;
     await db.sql`INSERT INTO generation_jobs (repo_full_name, commit_sha, status) VALUES ('a/b', ${SHA}, 'done')`;
@@ -781,7 +789,8 @@ describe("T032 0012_review_cards_content", () => {
     await db.sql`TRUNCATE ladders, repo_snapshots, users CASCADE`;
     await db.sql`INSERT INTO repo_snapshots (repo_full_name, commit_sha, default_branch, archived, readme, topics, languages, dep_files, open_issues, good_first_issues, tree, tree_truncated)
       VALUES ('a/b', ${SHA}, 'main', false, 'r', '[]'::jsonb, '{}'::jsonb, '[]'::jsonb, 0, 0, '[]'::jsonb, false)`;
-    const [c] = await db.sql`INSERT INTO chunks (repo_full_name, commit_sha, source, path, ordinal, start_line, end_line, text)
+    const [c] =
+      await db.sql`INSERT INTO chunks (repo_full_name, commit_sha, source, path, ordinal, start_line, end_line, text)
       VALUES ('a/b', ${SHA}, 'core', 'a.ts', 0, 1, 2, 't') RETURNING id::text`;
     const [l] =
       await db.sql`INSERT INTO ladders (repo_full_name, commit_sha, status) VALUES ('a/b', ${SHA}, 'unverified') RETURNING id::text`;
@@ -793,9 +802,10 @@ describe("T032 0012_review_cards_content", () => {
   test("up keeps every card (front, back, level, position, chunk) and drops cards; hand-seeded rows keep their ids; a review_log row stays valid; down then up again does not duplicate", async () => {
     const { ladderId, chunkId } = await seed();
     await migrateDown(db.sql, undefined, ALLOW_DOWN); // 0012: back to the 0009 `cards` table
-    await db.sql`INSERT INTO cards (ladder_id, level, position, front, back, chunk_id)
+    await db.sql`INSERT INTO public.cards (ladder_id, level, position, front, back, chunk_id)
       VALUES (${ladderId}, 'L0', 0, 'f0', 'b0', ${chunkId}), (${ladderId}, 'L0', 1, 'f1', 'b1', ${chunkId}), (${ladderId}, 'L2', 0, 'f2', 'b2', ${chunkId})`;
-    const [seeded] = await db.sql`INSERT INTO review_cards (ladder_id, level, front, back) VALUES (${ladderId}, 'L1', 'seed', 'seed') RETURNING id::text`;
+    const [seeded] =
+      await db.sql`INSERT INTO review_cards (ladder_id, level, front, back) VALUES (${ladderId}, 'L1', 'seed', 'seed') RETURNING id::text`;
     const [u] = await db.sql`INSERT INTO users (github_id, github_login) VALUES (1, 'u') RETURNING id::text`;
     await db.sql`INSERT INTO review_log (learner_id, card_id, rating, state_before, state_after, reviewed_at, elapsed_ms, idempotency_key)
       VALUES (${u.id}, ${seeded.id}, 'good', '{}'::jsonb, '{}'::jsonb, now(), 1, 'k')`;
@@ -812,12 +822,13 @@ describe("T032 0012_review_cards_content", () => {
     ]);
     expect(await db.sql`SELECT card_id::text FROM review_log`).toEqual([{ card_id: seeded.id }]);
     await rejects(
-      () => db.sql`INSERT INTO review_cards (ladder_id, level, position, front, back) VALUES (${ladderId}, 'L0', 0, 'x', 'y')`,
+      () =>
+        db.sql`INSERT INTO review_cards (ladder_id, level, position, front, back) VALUES (${ladderId}, 'L0', 0, 'x', 'y')`,
       /unique|duplicate/i,
     );
     // down never deletes a review_cards row; up again pairs the copies with the recreated cards, so nothing doubles
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0012_review_cards_content");
-    expect(await db.sql`SELECT count(*)::int AS n FROM cards`).toEqual([{ n: 3 }]);
+    expect(await db.sql`SELECT count(*)::int AS n FROM public.cards`).toEqual([{ n: 3 }]);
     expect(await db.sql`SELECT count(*)::int AS n FROM review_cards`).toEqual([{ n: 4 }]);
     expect(await migrateUp(db.sql)).toEqual(["0012_review_cards_content"]);
     expect(await db.sql`SELECT count(*)::int AS n FROM review_cards`).toEqual([{ n: 4 }]);

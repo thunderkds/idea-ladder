@@ -204,7 +204,7 @@ export async function submitMcqAttempt(
     };
     if (!pass) {
       const cards = await tx`
-        SELECT id::text AS id FROM cards
+        SELECT id::text AS id FROM review_cards
         WHERE ladder_id = ${attempt.ladder_id} AND level = ${attempt.level}
           AND chunk_id IN (SELECT x::bigint FROM jsonb_array_elements_text(${missedChunks}::jsonb) AS x)
         ORDER BY id`;
