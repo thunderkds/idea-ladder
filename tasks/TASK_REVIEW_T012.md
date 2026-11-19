@@ -47,8 +47,8 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass / ☐ fail | [test file path(s) — required before Done] |
-| Verification command run | ☐ pass / ☐ fail | [paste actual output] |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | backend-developer 2026-11-19T10:33:05Z: `tests/evidence.test.ts` (SC 3, NFC), `tests/evidence-table.test.ts` (SC 4, AC 5 trigger + unique), `tests/mcq-pass-test.test.ts` (AC 1, AC 6, SC 1, SC 5, SC 7, locked 404), `tests/mcq-submit.test.ts` (AC 2-5, SC 2, SC 6, SC 7, concurrency), `tests/mcq-routes.test.ts` (routes, real passedLevels in ladder view, 401/404/422/429), `tests/mcq-no-llm.test.ts` (AC 7 / NFR-002); `tests/migrate.test.ts` updated for 0011 up/down/up. `bun test -t "T012"`: ` 32 pass / 443 filtered out / 0 fail / 180 expect() calls / Ran 32 tests across 46 files. [15.65s]`. Full `bun test` (before the no-LLM file): ` 473 pass / 0 fail / Ran 473 tests across 45 files. [54.99s]` |
+| Verification command run | ☑ pass | `bun install --frozen-lockfile && bun run typecheck && bun run lint && bun test -t "T012"` at 2026-11-19T10:33:05Z, exit 0: `Checked 390 installs across 347 packages (no changes)` / `$ tsc --noEmit` (no output) / `Checked 130 files in 69ms. No fixes applied.` / `check-tokens: 0 color literals outside src/client/tokens.css` / ` 32 pass  443 filtered out  0 fail  180 expect() calls  Ran 32 tests across 46 files. [15.65s]` |
 | Negative cases hold | ☐ pass / ☐ fail | |
 | verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
 | Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
@@ -78,7 +78,19 @@ error: regex "T012" matched 0 tests. Searched 40 files (skipping 443 tests) [155
 no 0011 migration
 ```
 
-**AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
+**AFTER**: same command, run by backend-developer after commit deb179e:
+
+```
+2026-11-19T10:33:05Z
+bun test v1.4.4 (38afee6c8)
+ 32 pass
+ 443 filtered out
+ 0 fail
+ 180 expect() calls
+Ran 32 tests across 46 files. [15.65s]
+0011_mcq_pass_test.down.sql
+0011_mcq_pass_test.up.sql
+```
 
 **DELTA**: [one sentence — what a user can now do that they could not before]
 
