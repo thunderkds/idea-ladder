@@ -47,8 +47,8 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass / ☐ fail | [test file path(s) — required before Done] |
-| Verification command run | ☐ pass / ☐ fail | [paste actual output] |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass / ☐ fail | Filled by backend-developer (implementer; reviewer to confirm). AC 1, 2, 4, 5: `tests/verify-l2-branch.test.ts`; AC 3, 4, 5: `tests/verify-l4-artifact.test.ts`; AC 5: `tests/github-artifacts.test.ts`, `tests/artifact-routes.test.ts`; AC 6: `tests/l1-run-mcq.test.ts`, `tests/artifact-routes.test.ts` (run-feedback); AC 7: `tests/artifacts-no-llm.test.ts`; Success Criterion 7: `tests/artifact-url.test.ts`; migration 0014: `tests/artifacts-migration.test.ts`, `tests/migrate.test.ts`. Full suite `bun test --timeout 60000`: ` 593 pass` / ` 0 fail` / ` 3336 expect() calls` / `Ran 593 tests across 59 files. [72.19s]` |
+| Verification command run | ☑ pass / ☐ fail | `bun install --frozen-lockfile && bun run typecheck && bun run lint && bun test -t "T013"` at 2026-11-19T11:42:30Z: `Checked 388 installs across 345 packages (no changes) [6.00ms]` / `$ tsc --noEmit` / `Checked 146 files in 77ms. No fixes applied.` / `check-tokens: 0 color literals outside src/client/tokens.css` / ` 64 pass` / ` 529 filtered out` / ` 0 fail` / ` 255 expect() calls` / `Ran 64 tests across 59 files. [7.76s]` |
 | Negative cases hold | ☐ pass / ☐ fail | |
 | verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
 | Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
@@ -82,7 +82,22 @@ src/server/level-generator.ts:26:const MCQ_LEVELS: ReadonlySet<LevelId> = new Se
 src/server/level-generator.ts:73:  const mcqs = MCQ_LEVELS.has(level)
 ```
 
-**AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
+**AFTER**: same command, after the last implementation commit (2643d03), by backend-developer
+
+```
+2026-11-19T11:42:38Z
+ 529 filtered out
+ 0 fail
+ 255 expect() calls
+Ran 64 tests across 59 files. [9.89s]
+0014_artifacts.down.sql
+0014_artifacts.up.sql
+src/server/save-ladder.ts:13:export const POOL_LEVELS: ReadonlySet<string> = new Set(["L0", "L1", "L3"]);
+src/server/save-ladder.ts:44:  if (POOL_LEVELS.has(l.level) && l.mcqs.length < MIN_MCQ_POOL) flags.push("insufficient-pool");
+src/server/level-generator.ts:27:export const MCQ_LEVELS: ReadonlySet<LevelId> = new Set(["L0", "L1", "L3"]);
+src/server/level-generator.ts:78:  const mcqs = MCQ_LEVELS.has(level)
+```
+(`tail -4` cuts the ` 64 pass` line; the verification command run above shows it.)
 
 **DELTA**: [one sentence — what a user can now do that they could not before]
 
