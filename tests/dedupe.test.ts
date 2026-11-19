@@ -17,10 +17,10 @@ describe("dedupe (word overlap)", () => {
     expect(jaccard("What stores the `handlers`?", "what STORES the handlers")).toBe(1);
     expect(keepDistinct(["What stores the handlers?", "what stores the handlers!"], 0.8)).toEqual([true, false]);
   });
-  test("two questions that differ by one word of eleven: the second is dropped (10/12 >= 0.8)", () => {
+  test("two questions that differ by one word of twelve: the second is dropped (11/13 >= 0.8)", () => {
     const a = "which structure does the emitter use to store every registered handler function";
     const b = "which structure does the emitter use to store every registered listener function";
-    expect(jaccard(a, b)).toBeCloseTo(10 / 12, 10);
+    expect(jaccard(a, b)).toBeCloseTo(11 / 13, 10);
     expect(keepDistinct([a, b], 0.8)).toEqual([true, false]);
   });
   test("two questions on different facts of one chunk are both kept", () => {
