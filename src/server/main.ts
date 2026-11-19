@@ -5,9 +5,9 @@ import { loadPrices } from "../../eval/src/cost.ts";
 import { createApp } from "./app.ts";
 import { ConfigError, loadConfig } from "./config.ts";
 import { readerCostLogger } from "./cost-wiring.ts";
+import { evidencePassedLevels } from "./evidence.ts";
 import { githubRepoClient } from "./github-repo.ts";
 import { createInngest, LADDER_GENERATE_EVENT, ladderGenerateFunction, type ReaderDeps } from "./ladder-generate.ts";
-import { noPasses } from "./ladder-view.ts";
 import { createModelA } from "./model-a.ts";
 import { reminderFunction, webPushSender } from "./reminders.ts";
 
@@ -66,7 +66,7 @@ const inngest = createInngest();
 const reminders = reminderFunction(inngest, {
   sql,
   sendPush: config.vapid ? webPushSender(config.vapid) : async () => {},
-  passedLevels: noPasses, // the app's default seam until T012
+  passedLevels: evidencePassedLevels(sql), // T012: the levels with an evidence record
   configured: !!config.vapid,
   now: () => new Date(),
 });
