@@ -174,18 +174,19 @@ export function createApp(opts: {
     return saved === "ok" ? c.json({ ok: true }) : c.json({ error: saved }, 404);
   });
 
-  // The client page; an unknown id still gets the client (it draws the 404 page) with status 404.
-  app.get("/ladders/:ladderId", async (c) => {
-    const ladderId = c.req.param("ladderId");
+  // The client pages; an unknown id still gets the client (it draws the 404 page) with status 404.
+  const ladderPage = (suffix: "" | "/concepts") => async (c: Context) => {
+    const ladderId = c.req.param("ladderId") ?? "";
+    const path = `/ladders/${ladderId}${suffix}`;
     const user = await currentUser(c);
     if (!user) {
-      const next = LADDER_PATH.test(`/ladders/${ladderId}`)
-        ? `?next=${encodeURIComponent(`/ladders/${ladderId}`)}`
-        : "";
+      const next = LADDER_PATH.test(path) ? `?next=${encodeURIComponent(path)}` : "";
       return c.redirect(`/auth/github${next}`, 302);
     }
     return c.html(await indexHtml(), (await ladderExists(sql, ladderId)) ? 200 : 404);
-  });
+  };
+  app.get("/ladders/:ladderId", ladderPage(""));
+  app.get("/ladders/:ladderId/concepts", ladderPage("/concepts"));
 
   app.get("/api/me", async (c) => {
     const user = await currentUser(c);

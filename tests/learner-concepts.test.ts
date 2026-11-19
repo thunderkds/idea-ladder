@@ -159,3 +159,18 @@ describe("PUT /api/ladders/:id/concepts (Success Criteria 3 and 4)", () => {
     expect((await sql()`SELECT 1 FROM learner_concepts`).length).toBe(0);
   });
 });
+
+describe("GET /ladders/:id/concepts (page)", () => {
+  test("signed out -> sign-in returning to the concepts page; signed in -> client 200; unknown -> client 404", async () => {
+    const id = await seed();
+    const out = await h.get(`/ladders/${id}/concepts`);
+    expect(out.status).toBe(302);
+    expect(out.headers.get("location")).toBe(`/auth/github?next=${encodeURIComponent(`/ladders/${id}/concepts`)}`);
+    const cookie = await h.learner();
+    const ok = await h.get(`/ladders/${id}/concepts`, cookie);
+    expect(ok.status).toBe(200);
+    expect(ok.headers.get("cache-control")).toBe("no-store");
+    expect(await ok.text()).toContain('<div id="root">');
+    expect((await h.get("/ladders/9999/concepts", cookie)).status).toBe(404);
+  });
+});
