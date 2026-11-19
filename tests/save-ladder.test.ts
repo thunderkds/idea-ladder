@@ -1,5 +1,5 @@
 // T008 (8d) AC 7 / AC 8 / Success Criteria 6 and 7: step save-ladder writes the ladder, job done; no partial ladder.
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { InngestTestEngine } from "@inngest/test";
 import type { GeneratedLevel, LadderLevel } from "../src/server/check-and-dedupe.ts";
 import { type GithubRepoClient, githubRepoClient } from "../src/server/github-repo.ts";
@@ -15,6 +15,7 @@ import { buildReport, saveLadder } from "../src/server/save-ladder.ts";
 import { jobForLearner, startLadder } from "../src/server/start.ts";
 import { createTestDatabase } from "./support/db.ts";
 import { type Fixture, fixtureFetch, loadFixture, V0_REPOS } from "./support/github-fixtures.ts";
+import { drainInngestRuns } from "./support/inngest-drain.ts";
 import { mockEmbedder } from "./support/mock-embedder.ts";
 import { promptData, testModelA, testReader } from "./support/mock-model.ts";
 
@@ -28,6 +29,8 @@ beforeAll(async () => {
 afterAll(async () => {
   await db.drop();
 });
+// A test's parallel run keeps steps going after `execute()` returns: let them end before the next test truncates.
+afterEach(drainInngestRuns);
 beforeEach(async () => {
   await db.sql`TRUNCATE generation_jobs, repo_snapshots, ladders, users CASCADE`;
 });
@@ -362,6 +365,7 @@ describe("step save-ladder in ladder-generate (AC 7, AC 8, SC 6, SC 7)", () => {
   test("Success Criterion 7: fallbackToConcepts -> concept-only ladder saved, L1-L4 concept-only-skipped", async () => {
     const first = await newJob();
     await engine(first, failingModelA()).t.execute();
+    await drainInngestRuns(); // a stray save-ladder of the first run must not write after the DELETE
     await db.sql`DELETE FROM ladders`;
     await db.sql`UPDATE generation_jobs SET status = 'failed' WHERE id = ${first}`;
     await db.sql`UPDATE repo_confidence SET fallback_to_concepts = true WHERE repo_full_name = ${MITT.repo}`;

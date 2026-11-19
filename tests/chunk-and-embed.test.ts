@@ -1,5 +1,5 @@
 // T008 (8a) AC 1 / Success Criterion 1: chunker, embedder and the Inngest step chunk-and-embed after map-concepts.
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { InngestTestEngine } from "@inngest/test";
 import { MockEmbeddingModelV3 } from "ai/test";
 import { CHUNK_OVERLAP, CHUNK_SIZE, chunkFiles, chunkText } from "../src/server/chunker.ts";
@@ -21,6 +21,7 @@ import {
 import { migrateUp } from "../src/server/migrate.ts";
 import { createTestDatabase } from "./support/db.ts";
 import { type Fixture, fixtureFetch, loadFixture, V0_REPOS } from "./support/github-fixtures.ts";
+import { drainInngestRuns } from "./support/inngest-drain.ts";
 import { mockEmbedder } from "./support/mock-embedder.ts";
 import { testModelA, testReader } from "./support/mock-model.ts";
 
@@ -131,6 +132,8 @@ beforeAll(async () => {
 afterAll(async () => {
   await db.drop();
 });
+// A test's parallel run keeps steps going after `execute()` returns: let them end before the next test truncates.
+afterEach(drainInngestRuns);
 beforeEach(async () => {
   await db.sql`TRUNCATE generation_jobs, repo_snapshots CASCADE`;
 });

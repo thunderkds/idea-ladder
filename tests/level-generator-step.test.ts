@@ -1,5 +1,5 @@
 // T008 (8b) AC 2 / AC 8 / Success Criteria 6 (first half) and 7: steps generate-level-L0..L4 after chunk-and-embed.
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { InngestTestEngine } from "@inngest/test";
 import { githubRepoClient } from "../src/server/github-repo.ts";
 import {
@@ -12,6 +12,7 @@ import { migrateUp } from "../src/server/migrate.ts";
 import { type ModelADeps, ModelAFailedError, ModelANotInstalledError } from "../src/server/model-a.ts";
 import { createTestDatabase } from "./support/db.ts";
 import { type Fixture, fixtureFetch, loadFixture, V0_REPOS } from "./support/github-fixtures.ts";
+import { drainInngestRuns } from "./support/inngest-drain.ts";
 import { mockEmbedder } from "./support/mock-embedder.ts";
 import { promptData, testModelA, testReader } from "./support/mock-model.ts";
 
@@ -25,6 +26,8 @@ beforeAll(async () => {
 afterAll(async () => {
   await db.drop();
 });
+// A test's parallel run keeps steps going after `execute()` returns: let them end before the next test truncates.
+afterEach(drainInngestRuns);
 beforeEach(async () => {
   await db.sql`TRUNCATE generation_jobs, repo_snapshots CASCADE`;
 });
@@ -138,6 +141,7 @@ describe("Inngest steps generate-level-L0..L4 (AC 2, AC 3)", () => {
   test("Success Criterion 7: fallbackToConcepts -> only L0 is generated, L1-L4 concept-only-skipped", async () => {
     const first = await newJob();
     await engine(first, levelModelA().modelA).t.execute();
+    await drainInngestRuns(); // the first run's stray steps end before the job and the confidence change
     await db.sql`UPDATE generation_jobs SET status = 'failed' WHERE id = ${first}`;
     await db.sql`UPDATE repo_confidence SET fallback_to_concepts = true WHERE repo_full_name = ${MITT.repo}`;
     const jobId = await newJob();
