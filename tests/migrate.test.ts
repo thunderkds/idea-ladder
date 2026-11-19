@@ -800,6 +800,7 @@ describe("T032 0012_review_cards_content", () => {
     db.sql`SELECT level, position, front, back, chunk_id::text AS chunk_id FROM review_cards WHERE chunk_id IS NOT NULL ORDER BY level, position`;
 
   test("up keeps every card (front, back, level, position, chunk) and drops cards; hand-seeded rows keep their ids; a review_log row stays valid; down then up again does not duplicate", async () => {
+    await migrateUp(db.sql); // runs alone under `-t T032`
     const { ladderId, chunkId } = await seed();
     await migrateDown(db.sql, undefined, ALLOW_DOWN); // 0012: back to the 0009 `cards` table
     await db.sql`INSERT INTO public.cards (ladder_id, level, position, front, back, chunk_id)

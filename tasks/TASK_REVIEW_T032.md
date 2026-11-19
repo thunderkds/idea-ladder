@@ -47,8 +47,8 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass / ☐ fail | [test file path(s) — required before Done] |
-| Verification command run | ☐ pass / ☐ fail | [paste actual output] |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | AC1 tests/review-generated-cards.test.ts; AC2 tests/mcq-submit.test.ts (SC 2); AC3 tests/migrate.test.ts "T032 0012_review_cards_content"; AC4 grep empty. `bun test -t T032`: 3 pass 0 fail |
+| Verification command run | ☑ pass | typecheck + lint clean; `bun test migrate save-ladder mcq review offline`: 115 pass 0 fail; `bun test`: 481 pass, 0 fail (Ran 481 tests across 47 files); grep: "no cards table use left" |
 | Negative cases hold | ☐ pass / ☐ fail | |
 | verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
 | Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
@@ -58,7 +58,7 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 | **UI: Design-system compliance (tokens/colors/typography verified)** | ☐ pass / ☐ fail / ☐ N/A | [method used + output] |
 | **UI: Responsiveness at target viewports** | ☐ pass / ☐ fail / ☐ N/A | [viewports tested, any overflow findings] |
 | Repro loop | ☑ pass | `bun test tests/review-generated-cards.test.ts` at 2026-11-19T10:53:39Z: 0 pass / 2 fail, reviewQueue returns [] after saveLadder (see Demonstration BEFORE) |
-| Regression test | ☐ pass / ☐ fail | [test file path(s) added to lock the fix in] |
+| Regression test | ☑ pass | tests/review-generated-cards.test.ts (red before, 2 pass after); tests/mcq-submit.test.ts SC 2 now rates each reviewCardId; tests/migrate.test.ts T032 0012 describe |
 | Smoke suite | ☐ pass / ☐ fail | [bug-specific smoke check beyond the full suite row above] |
 
 ---
@@ -79,7 +79,7 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
  0 pass / 2 fail
 ```
 
-**AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
+**AFTER**: same command after commit f300533: `bun test tests/review-generated-cards.test.ts` gives 2 pass / 0 fail (queue returns the two L0 cards of the saved ladder; rateCard accepts a saved card id).
 
 **DELTA**: [one sentence — what a user can now do that they could not before]
 
