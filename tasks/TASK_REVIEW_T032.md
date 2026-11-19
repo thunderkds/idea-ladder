@@ -57,7 +57,7 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 | **UI: Visual regression (diff or verdict pasted)** | ☐ pass / ☐ fail / ☐ N/A | [screenshot path or LLM verdict — required for UI tasks, Hard-Stop Gate 6] |
 | **UI: Design-system compliance (tokens/colors/typography verified)** | ☐ pass / ☐ fail / ☐ N/A | [method used + output] |
 | **UI: Responsiveness at target viewports** | ☐ pass / ☐ fail / ☐ N/A | [viewports tested, any overflow findings] |
-| Repro loop | ☐ pass / ☐ fail | [command/observation that reproduced the bug before the fix] |
+| Repro loop | ☑ pass | `bun test tests/review-generated-cards.test.ts` at 2026-11-19T10:53:39Z: 0 pass / 2 fail, reviewQueue returns [] after saveLadder (see Demonstration BEFORE) |
 | Regression test | ☐ pass / ☐ fail | [test file path(s) added to lock the fix in] |
 | Smoke suite | ☐ pass / ☐ fail | [bug-specific smoke check beyond the full suite row above] |
 
@@ -70,8 +70,14 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 > **before any implementation commit exists**; if it does not (docs, templates, skill-instruction
 > text), BEFORE is the **verbatim prior content** of what changed — a quoted excerpt, not a command.
 
-**BEFORE**: [pasted timestamped command output showing the thing absent/failing, captured before the
-first implementation commit] OR [verbatim excerpt of the prior content, for non-executable changes]
+**BEFORE**: 2026-11-19T10:53:39Z, `bun test tests/review-generated-cards.test.ts` on main code (no fix commit yet):
+```
+- [["1","L0","front L0 0"],["1","L0","front L0 1"]]   (expected)
++ []                                                  (received: reviewQueue empty after saveLadder)
+(fail) T032 generated cards reach the review queue > AC 1: the review queue returns the saved ladder's L0 cards for a learner with L0 open
+(fail) T032 generated cards reach the review queue > a saved card id is accepted by rateCard   (queue first card undefined)
+ 0 pass / 2 fail
+```
 
 **AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
 
