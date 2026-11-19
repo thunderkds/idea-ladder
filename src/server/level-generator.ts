@@ -37,6 +37,10 @@ export type LevelChunk = {
 };
 export type Card = { front: string; back: string; chunkId: number };
 export type Mcq = { question: string; options: string[]; key: string; chunkId: number };
+export type Dropped = { item: Card | Mcq; reason: string };
+
+/** T001 keycheck's normalise (NFKC, lower case, collapsed spaces); 8c's answer-key check uses the same rule. */
+export const normalise = (s: string): string => s.normalize("NFKC").toLowerCase().replace(/\s+/g, " ").trim();
 
 /** After one retry the answer still does not fit the schema: a step retry would repeat the paid calls. */
 export class LevelGeneratorInvalidOutputError extends Error {
@@ -123,12 +127,24 @@ export async function generateLevel(input: GenerateLevelInput) {
     try {
       const { value, usage } = await generate({ schema: LevelSchema, system: systemFor(level), prompt: prompt(note) });
       input.onUsage?.(usage);
+      // AC 3: only a chunk given to this level counts (all given chunks belong to this repo + SHA).
+      const given = new Set(sent.map((c) => c.id));
+      const dropped: Dropped[] = [];
+      const cards = value.cards.filter(
+        (c) => given.has(c.chunkId) || !dropped.push({ item: c, reason: "bad-citation" }),
+      );
+      const mcqs = value.mcqs.filter((m) => {
+        if (!given.has(m.chunkId)) return !dropped.push({ item: m, reason: "bad-citation" });
+        if (new Set(m.options.map(normalise)).size !== m.options.length)
+          return !dropped.push({ item: m, reason: "bad-options" });
+        return true;
+      });
       return {
         goal: value.goal,
         passTest: { kind: PASS_TEST_KIND[level], description: value.passTest.description },
-        cards: value.cards as Card[],
-        mcqs: value.mcqs as Mcq[],
-        dropped: [] as { item: Card | Mcq; reason: string }[],
+        cards,
+        mcqs,
+        dropped,
       };
     } catch (err) {
       if ((err instanceof ModelAInvalidOutputError || err instanceof ModelAFailedError) && err.usage)

@@ -136,3 +136,42 @@ describe("generateLevel (AC 2)", () => {
     expect(twice.inputs).toHaveLength(2);
   });
 });
+
+describe("citation and options checks (AC 3, Edge Case Checklist)", () => {
+  test("Success Criterion 3: an MCQ or card citing another level's chunk is dropped bad-citation", async () => {
+    const readmeChunk = 7; // a README chunk of the same repo + SHA, given to L0/L1, not to L3
+    const { generate } = scripted([
+      answer({
+        cards: [card(11), card(readmeChunk)],
+        mcqs: [mcq(12, ["handler", "map", "set", "list"], "handler"), mcq(readmeChunk)],
+      }),
+    ]);
+    const out = await generateLevel({ level: "L3", chunks: CORE, generate });
+    expect(out.cards).toEqual([card(11)]);
+    expect(out.mcqs.map((m) => m.chunkId)).toEqual([12]);
+    expect(out.dropped).toEqual([
+      { item: card(readmeChunk), reason: "bad-citation" },
+      { item: mcq(readmeChunk), reason: "bad-citation" },
+    ]);
+  });
+
+  test("a chunk cut by the per-level cap was not given: citing it is bad-citation", async () => {
+    const big = Array.from({ length: 30 }, (_, i) => chunk(100 + i, "x".repeat(1_500)));
+    const { generate } = scripted([answer({ cards: [card(129)], mcqs: [] })]);
+    const out = await generateLevel({ level: "L3", chunks: big, generate });
+    expect(out.cards).toEqual([]);
+    expect(out.dropped).toEqual([{ item: card(129), reason: "bad-citation" }]);
+  });
+
+  test("options that repeat after normalisation (case, spaces, NFKC) are dropped bad-options", async () => {
+    const dup = mcq(11, ["Map", " map ", "set", "array"], "Map");
+    const nfkc = mcq(11, ["ｍａｐ", "map", "set", "array"], "map");
+    const { generate } = scripted([answer({ mcqs: [dup, nfkc, mcq(11)] })]);
+    const out = await generateLevel({ level: "L3", chunks: CORE, generate });
+    expect(out.mcqs).toEqual([mcq(11)]);
+    expect(out.dropped).toEqual([
+      { item: dup, reason: "bad-options" },
+      { item: nfkc, reason: "bad-options" },
+    ]);
+  });
+});
