@@ -176,13 +176,13 @@ describe("save-ladder report and flags (AC 7, AC 8)", () => {
     });
   });
 
-  test("insufficient-pool only for an L0/L3 pool below 8; insufficient-cards below 5 cards; a skipped level has no flag", () => {
+  test("insufficient-pool only for an L0/L1/L3 pool below 8 (L1: T013); insufficient-cards below 5 cards; a skipped level has no flag", () => {
     const five = Array.from({ length: 5 }, (_, i) => card(i));
     const seven = Array.from({ length: 7 }, (_, i) => mcq(i));
     const flags = buildReport(
       [
         generated("L0", { cards: five, mcqs: seven }),
-        generated("L1", { cards: five }),
+        generated("L1", { cards: five, mcqs: [...seven, mcq(8)] }),
         generated("L2", { cards: five.slice(1) }),
         generated("L3", { cards: five, mcqs: [...seven, mcq(8)] }),
         skipped("L4"),
@@ -237,7 +237,7 @@ describe("saveLadder (AC 7, AC 8, edge case: retried save-ladder)", () => {
       ]),
     ).toEqual([
       ["L0", "goal L0", "kind-L0", ["insufficient-pool", "insufficient-cards"]],
-      ["L1", "goal L1", "kind-L1", ["insufficient-cards"]],
+      ["L1", "goal L1", "kind-L1", ["insufficient-pool", "insufficient-cards"]],
       ["L2", "goal L2", "kind-L2", ["insufficient-cards"]],
       ["L3", "goal L3", "kind-L3", ["insufficient-pool", "insufficient-cards"]],
       ["L4", "goal L4", "kind-L4", ["insufficient-cards"]],
@@ -280,7 +280,7 @@ describe("saveLadder (AC 7, AC 8, edge case: retried save-ladder)", () => {
       SELECT level, pass_test_kind, skip_reason, flags FROM ladder_levels WHERE ladder_id = ${ladderId} ORDER BY level`;
     expect(rows).toEqual([
       { level: "L0", pass_test_kind: "kind-L0", skip_reason: null, flags: ["insufficient-pool", "insufficient-cards"] },
-      { level: "L1", pass_test_kind: "run-evidence", skip_reason: "concept-only-skipped", flags: [] },
+      { level: "L1", pass_test_kind: "run-mcq", skip_reason: "concept-only-skipped", flags: [] },
       { level: "L2", pass_test_kind: "diff-questions", skip_reason: "concept-only-skipped", flags: [] },
       { level: "L3", pass_test_kind: "core-mcq", skip_reason: "concept-only-skipped", flags: [] },
       { level: "L4", pass_test_kind: "repo-or-pr-link", skip_reason: "concept-only-skipped", flags: [] },

@@ -65,7 +65,7 @@ describe("generateLevel (AC 2)", () => {
     expect(out.mcqs).toEqual([mcq(11)]);
     expect(PASS_TEST_KIND).toEqual({
       L0: "concept-mcq",
-      L1: "run-log-and-explanation",
+      L1: "run-mcq",
       L2: "branch-diff-and-diff-questions",
       L3: "verified-mcq",
       L4: "repo-or-merged-pr",
@@ -78,7 +78,7 @@ describe("generateLevel (AC 2)", () => {
     expect(String(err)).toMatch(/options/);
   });
 
-  test("prompt: the level's chunks with their ids as data, literal-span keys, an MCQ pool only for L0 and L3", async () => {
+  test("prompt: the level's chunks with their ids as data, literal-span keys, an MCQ pool only for L0, L1 (T013) and L3", async () => {
     const l3 = scripted([answer()]);
     await generateLevel({ level: "L3", chunks: CORE, generate: l3.generate });
     const p3 = l3.inputs[0] as GenerateInput<unknown>;
@@ -91,9 +91,9 @@ describe("generateLevel (AC 2)", () => {
     expect(p3.system).toContain(`${MCQ_POOL_TARGET} multiple-choice`);
     expect(p3.system).toMatch(/5 to 10 review cards/);
 
-    const l1 = scripted([answer({ mcqs: [] })]);
-    await generateLevel({ level: "L1", chunks: [chunk(1, "npm install mitt", "readme")], generate: l1.generate });
-    expect(l1.inputs[0]?.system).not.toContain("multiple-choice");
+    const l2 = scripted([answer({ mcqs: [] })]);
+    await generateLevel({ level: "L2", chunks: CORE, generate: l2.generate });
+    expect(l2.inputs[0]?.system).not.toContain("multiple-choice");
 
     const l0 = scripted([answer()]);
     await generateLevel({

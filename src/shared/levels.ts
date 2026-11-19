@@ -12,7 +12,10 @@ export const FIXED_LEVELS: Record<LevelId, { title: string; passTest: PassTest }
   L0: { title: "Prerequisites", passTest: { kind: "concept-ladder-tests", description: "Concept ladder tests" } },
   L1: {
     title: "Run it",
-    passTest: { kind: "run-evidence", description: "Screenshot or log + 3-sentence explanation" },
+    passTest: {
+      kind: "run-mcq",
+      description: "MCQs on setting up and running it; a run log and a 3-sentence explanation are optional feedback",
+    },
   },
   L2: {
     title: "Modify",

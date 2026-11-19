@@ -10,7 +10,7 @@ import type { CallUsage } from "./repo-reader.ts";
 /** AC 2: the pass-test kind of each level, set in code. */
 export const PASS_TEST_KIND: Record<LevelId, string> = {
   L0: "concept-mcq",
-  L1: "run-log-and-explanation",
+  L1: "run-mcq",
   L2: "branch-diff-and-diff-questions",
   L3: "verified-mcq",
   L4: "repo-or-merged-pr",
@@ -23,7 +23,12 @@ export const LEVEL_SOURCES: Record<LevelId, ChunkSource[]> = {
   L3: ["core"],
   L4: ["core"],
 };
-const MCQ_LEVELS: ReadonlySet<LevelId> = new Set(["L0", "L3"]);
+/** Levels whose generator writes an MCQ pool (T013 AC 6: L1 passes through the MCQ pass test, option B). */
+export const MCQ_LEVELS: ReadonlySet<LevelId> = new Set(["L0", "L1", "L3"]);
+/** What each MCQ level's questions are about, beyond "grounded in the chunks". */
+const MCQ_TOPIC: Partial<Record<LevelId, string>> = {
+  L1: " Ask about installing, starting and configuring the repository, and what running it shows (the port it listens on, its first output, a required environment variable).",
+};
 export const MCQ_POOL_TARGET = 15;
 /** Chunk text sent to one level's generator at most (whole chunks in id order), like T006's token budget. */
 export const LEVEL_CHUNK_CHARS = 24_000;
@@ -71,7 +76,7 @@ export const OneMcqSchema = z.object({ mcq: McqSchema });
 function systemFor(level: LevelId): string {
   const { title, passTest } = FIXED_LEVELS[level];
   const mcqs = MCQ_LEVELS.has(level)
-    ? `mcqs: about ${MCQ_POOL_TARGET} multiple-choice questions, each with 4 different options. The key is one of the options, copied exactly, and it must be a literal span of the cited chunk's text (copy the words, do not paraphrase).`
+    ? `mcqs: about ${MCQ_POOL_TARGET} multiple-choice questions, each with 4 different options. The key is one of the options, copied exactly, and it must be a literal span of the cited chunk's text (copy the words, do not paraphrase).${MCQ_TOPIC[level] ?? ""}`
     : "mcqs: an empty list.";
   return [
     `You write level ${level} "${title}" of a learning ladder for one code repository. The learner passes this level with: ${passTest.description}.`,

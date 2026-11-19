@@ -124,7 +124,7 @@ describe("Inngest steps generate-level-L0..L4 (AC 2, AC 3)", () => {
     const levels = (result as { levels: { level: string; status: string; passTest: { kind: string } }[] }).levels;
     expect(levels.map((l) => [l.level, l.status, l.passTest.kind])).toEqual([
       ["L0", "generated", "concept-mcq"],
-      ["L1", "generated", "run-log-and-explanation"],
+      ["L1", "generated", "run-mcq"],
       ["L2", "generated", "branch-diff-and-diff-questions"],
       ["L3", "generated", "verified-mcq"],
       ["L4", "generated", "repo-or-merged-pr"],
@@ -246,7 +246,7 @@ describe("retry and failure (NFR-005, AC 8)", () => {
     ).checked;
     expect(checked.map((l) => [l.level, l.status, l.passTest.kind])).toEqual([
       ["L0", "generated", "concept-mcq"],
-      ["L1", "generated", "run-log-and-explanation"],
+      ["L1", "generated", "run-mcq"],
       ["L2", "generated", "branch-diff-and-diff-questions"],
       ["L3", "generated", "verified-mcq"],
       ["L4", "generated", "repo-or-merged-pr"],
