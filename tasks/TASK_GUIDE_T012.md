@@ -50,10 +50,10 @@ Source (`docs/REQUIREMENT_SOURCE.md`):
 
 ### Requirement Fidelity Gate (sign off BEFORE implementation)
 
-- [ ] Restated intent confirmed to match the user's request (by Supervisor / user — not the implementing agent)
-- [ ] Domain terms align with `PROJECT_SPEC.md` glossary (`grill-with-docs` run if terminology was fuzzy)
-- [ ] Every Acceptance Criterion below traces to a line in the Requirement
-- [ ] All Requirement Refs exist in `PRD.md` and are fully covered by the Acceptance Criteria above
+- [x] Restated intent confirmed to match the user's request (by Supervisor / user — not the implementing agent) — auto (Supervisor) 2026-11-19: matches US-003, FR-007/010/011/016, NFR-002 and the user's "complete all task [admin]"
+- [x] Domain terms align with `PROJECT_SPEC.md` glossary (`grill-with-docs` run if terminology was fuzzy)
+- [x] Every Acceptance Criterion below traces to a line in the Requirement
+- [x] All Requirement Refs exist in `PRD.md` and are fully covered by the Acceptance Criteria above
 
 > An agent must NOT start implementing until this gate is checked. If anything here is unclear,
 > STOP and ask the Supervisor (Karpathy: Think Before Coding).
@@ -62,8 +62,8 @@ Source (`docs/REQUIREMENT_SOURCE.md`):
 
 ## Dependencies & Reachability
 
-**Depends on**: T008 — stored MCQs with answer keys and a verification status per question; T011 — the review cards a failed test points back to, and the learner's level lock state.
-**Entry point**: `startMcqAttempt` and `submitMcqAttempt` (server handlers; route paths follow the app layout set by T003)
+**Depends on**: T008 — stored MCQs with answer keys (table `mcqs`; every saved row passed the code checks, and after T009 the blind solve); T011 — the review cards a failed test points back to, and the learner's level lock state.
+**Entry point**: `startMcqAttempt` and `submitMcqAttempt` (server handlers; route paths follow the app layout set by T003); the real `passedLevels` (levels with an evidence record for this learner + ladder) replaces the `noPasses` default injected in `src/server/app.ts` (T010 seam), so the ladder view and the review queue see passes
 
 ---
 
@@ -71,12 +71,12 @@ Source (`docs/REQUIREMENT_SOURCE.md`):
 
 | # | Criterion (testable) | Traces to requirement |
 |---|----------------------|-----------------------|
-| 1 | `startMcqAttempt(learner, level)` draws `MCQ_TEST_SIZE = 10` distinct questions at random from the level's pool of questions with status `verified` only, shuffles each question's options, stores the attempt (question ids, option order, `started_at`), and returns questions and options **without keys**. A pool with fewer than 10 verified questions → error `pool-too-small`; no attempt is created. | "MCQs are drawn from a randomized pool"; "score against verified keys" |
-| 2 | `submitMcqAttempt(attemptId, answers)` scores in code against the stored keys: pass iff correct ≥ `MCQ_PASS_MIN = 8` of 10. Answers for question ids not in the attempt, a second submit of the same attempt, or a submit after `MCQ_ATTEMPT_TTL = 30 min` → rejected, attempt unchanged. | "score with stored keys (code, no LLM)" |
+| 1 | `startMcqAttempt(learner, level)` draws `asked = min(MCQ_TEST_SIZE = 10, pool)` distinct questions at random from the level's pool — every saved `mcqs` row of that ladder + level (a saved MCQ is a verified one; never filter on `ladders.status`, which is always `unverified` in v1; T016 later adds a `removed` status and its filter) — shuffles each question's options, stores the attempt (question ids, option order, `started_at`), and returns questions and options **without keys**. A pool with fewer than `MIN_MCQ_POOL` (8, imported from `src/server/save-ladder.ts`) questions → error `pool-too-small`; no attempt is created. | "MCQs are drawn from a randomized pool"; "score against verified keys" |
+| 2 | `submitMcqAttempt(attemptId, answers)` scores in code against the stored keys: pass iff `correct * 5 >= asked * 4` (`MCQ_PASS_RATIO` 4/5: 8 of 10, 8 of 9, 7 of 8). Answers for question ids not in the attempt, a second submit of the same attempt, or a submit after `MCQ_ATTEMPT_TTL = 30 min` → rejected, attempt unchanged. | "score with stored keys (code, no LLM)" |
 | 3 | A pass unlocks the next level for that learner in the same database transaction that writes the evidence record. A fail unlocks nothing and returns the ids of the review cards linked to the missed questions ("back to review cards"). | "L3 unlocked (fail: back to review cards)"; US-003 |
 | 4 | A pass writes exactly one evidence record per learner + ladder + level, shaped like the source example: `{ learner: "github:<login>", ladder: "repo:<owner/name>@<sha7>", level, test: "mcq", evidence: { asked, correct, pass, questionIds }, verifiedBy: "verifier@<app version>", verifiedAt, hash }`. `hash = "sha256:" + hex(SHA-256(canonicalJson(record without hash)))`. A second pass of the same level writes no second record. | FR-011; evidence record example |
 | 5 | The evidence table is append-only: UPDATE and DELETE are rejected by the database (trigger), not only by app code. Recomputing the hash of any stored record equals its stored `hash`. | "One append-only record per level passed" |
-| 6 | Retakes are rate-limited: at most `MCQ_ATTEMPTS_PER_DAY = 3` started attempts per learner per level per rolling 24 h; the 4th → HTTP 429 with the time the next attempt is allowed. A retake avoids questions of the previous attempt when the pool has ≥ 20 verified questions. | "retakes are rate-limited" |
+| 6 | Retakes are rate-limited: at most `MCQ_ATTEMPTS_PER_DAY = 3` started attempts per learner per level per rolling 24 h; the 4th → HTTP 429 with the time the next attempt is allowed. A retake avoids questions of the previous attempt when the pool has ≥ 2 × `asked` questions. | "retakes are rate-limited" |
 | 7 | No LLM call is reachable from `startMcqAttempt` or `submitMcqAttempt` (test: the AI SDK client and the `generate` interface are mocked to throw; both pass). A level that is locked for the learner, or another learner's attempt id → 404. | NFR-002; FR-007 |
 
 ---
@@ -87,13 +87,13 @@ Source (`docs/REQUIREMENT_SOURCE.md`):
 
 | # | Given (input/state) | Expect (output/behavior) | How it's checked |
 |---|---------------------|--------------------------|------------------|
-| 1 | Level with 12 verified + 5 unverified questions | attempt holds 10 questions, all verified; response JSON has no `key` field at any depth | integration test |
+| 1 | Level with 17 saved questions (and another level's questions in the table) | attempt holds 10 questions, all of this ladder + level; response JSON has no `key` field at any depth | integration test |
 | 2 | Answers with 8 correct; then a separate attempt with 7 correct | pass + next level unlocked + 1 evidence record; fail + 0 records + review card ids | integration test |
 | 3 | Stored evidence record with keys in another order | recomputed hash equals stored `hash`; changing `level` gives another hash | bun test (canonical JSON) |
 | 4 | `UPDATE evidence_record SET level = 'L4'` | database error; row unchanged | integration test |
 | 5 | 4th attempt start within 24 h | 429 with `retryAt` | integration test with fake clock |
 | 6 | Submit at `started_at + 31 min`; second submit; answer for a foreign question id | each rejected; attempt and evidence unchanged | integration test |
-| 7 | Level with 9 verified questions | `pool-too-small`; no attempt row | integration test |
+| 7 | Level with 7 saved questions; level with 9 | `pool-too-small`, no attempt row; attempt of 9, 8 correct passes, 7 fails | integration test |
 
 ### Verification Command (exact, runnable)
 
@@ -125,7 +125,7 @@ bun install --frozen-lockfile && bun run typecheck && bun run lint && bun test -
 - question difficulty weighting
 - partial credit
 
-Constants `MCQ_TEST_SIZE = 10`, `MCQ_PASS_MIN = 8` (80%, the same ratio as the diff-question threshold 4 of 5 in the source's evidence example), `MCQ_ATTEMPTS_PER_DAY = 3` and `MCQ_ATTEMPT_TTL = 30 min` are Supervisor choices; the source sets no MCQ numbers. Keep them in one config module. Use `crypto.randomInt` for the draw and the shuffle (Fisher–Yates), not `Math.random`. Keys stay in the database; the attempt row stores the option order so scoring maps the learner's choice back to the stored option. `verifiedBy` = `verifier@` + the app version from `package.json`. Write the migration (attempt table, evidence table, append-only trigger, unique `(learner, ladder, level)` on evidence); it must pass `Skill({ skill: "migration-safety" })` and Common-Infrastructure applies it.
+Constants `MCQ_TEST_SIZE = 10`, `MCQ_PASS_RATIO = 4/5` (80%, the same ratio as the diff-question threshold 4 of 5 in the source's evidence example), `MCQ_ATTEMPTS_PER_DAY = 3` and `MCQ_ATTEMPT_TTL = 30 min` are Supervisor choices; the source sets no MCQ numbers. Keep them in one config module. Use `crypto.randomInt` for the draw and the shuffle (Fisher–Yates), not `Math.random`. Keys stay in the database; the attempt row stores the option order so scoring maps the learner's choice back to the stored option. `verifiedBy` = `verifier@` + the app version from `package.json`. Write the migration as `migrations/0011_*` (0010 is T031's; attempt table, evidence table, append-only trigger, unique `(learner, ladder, level)` on evidence); it must pass `Skill({ skill: "migration-safety" })` and Common-Infrastructure applies it.
 
 ---
 
@@ -181,3 +181,9 @@ Unit (bun test): canonical JSON and hash (key order, NFC/NFD, excluded `hash`), 
 - [ ] Tests written AND pass — output pasted into `tasks/TASK_REVIEW_T012.md` Evidence (Hard-Stop Gate 5)
 - [ ] `Skill({ skill: "verify" })` run — headless auto verify
 - [ ] Supervisor notified: task ready for Stage 4 review
+
+---
+
+## Questions Log
+
+- 2026-11-19 DEBATE `mcqs` has no status column and T008 saves pools of 8–9: what is a verified question, and how big is the test? → every saved `mcqs` row is verified (no column in T012; T016 adds `removed`); asked = min(10, pool), `pool-too-small` below 8, pass iff correct*5 ≥ asked*4; retake avoidance at pool ≥ 2×asked (Advocate 1: add `mcqs.status` in T012, min(10, pool) floor 8, ratio 4/5; Advocate 2: add `mcqs.status` in T012, min(10, pool) floor 8, ratio 4/5, retake avoidance at 2×asked; Advocate 3: no column, min(10, pool) floor 8, ratio 4/5) ⚠ decided for you — please review

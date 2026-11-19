@@ -12,7 +12,6 @@
 
 ### Todo
 - [ ] **T009** — Blind solver (separate blind Claude call), regenerate max 2; re-measure catch / false-reject on an independent seed set | backend-developer | C2 | Risk: Medium | P0 | Phase: v1 (after Gate 1)
-- [ ] **T012** — MCQ pass test — score vs stored keys, randomized pool, rate-limited retakes, append-only evidence record + SHA-256 | backend-developer | C2 | Risk: High | P0 | Phase: v1 (after Gate 1)
 - [ ] **T013** — GitHub artifact verifiers — L2 branch, L4 repo or merged PR, L1 verifier design | backend-developer | C2 | Risk: High | P0 | Phase: v1 (after Gate 1) | HITL
 - [ ] **T014** — Diff questions after L2 — generated from the learner's diff (model A), blind-solved (model B), pass 4 of 5 | backend-developer | C2 | Risk: High | P1 | Phase: v1 (after Gate 1)
 - [ ] **T030** — Pass-test screens — MCQ attempt, artifact submit (L1/L2/L4), diff-question attempt, result view | frontend-developer | C2 | Risk: Medium | P0 | Phase: v1 (after Gate 1)
@@ -32,6 +31,7 @@
 - [ ] **T029** — "Learn what's trending" weekly pick | backend-developer | C1 | Risk: Low | P2 | Phase: v3 (after Gate 3)
 
 ### In Progress
+- [ ] **T012** — MCQ pass test — score vs stored keys, randomized pool, rate-limited retakes, append-only evidence record + SHA-256 | backend-developer | C2 | Risk: High | P0 | Phase: v1 (after Gate 1) | Started 2026-11-19: branch `T012-mcq-pass-test`, worktree `../wt-t012` ([admin], auto)
 - [ ] **T031** — Remove embeddings: drop the embedder, `chunks.embedding` and `@ai-sdk/openai`; dedupe by word overlap (user 2026-11-19: Claude subscription only) | backend-developer | C2 | Risk: Medium | P0 | Phase: v1 | Started 2026-11-19: branch `T031-remove-embeddings`, worktree `../wt-t031` ([admin], auto)
 
 ### Ready for Review
