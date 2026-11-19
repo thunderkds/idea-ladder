@@ -123,6 +123,22 @@ export async function rateOffline(
   await tx.done;
 }
 
+/** T016: a flagged card leaves the cached pack of this learner, so it is not shown offline either. */
+export async function dropCard(cardId: string) {
+  try {
+    const tx = (await db()).transaction(["packs", "meta"], "readwrite");
+    const learnerId = await tx.objectStore("meta").get("learner");
+    const pack = learnerId ? await tx.objectStore("packs").get(learnerId) : undefined;
+    if (pack) {
+      pack.cards = pack.cards.filter((c) => c.cardId !== cardId);
+      await tx.objectStore("packs").put(pack);
+    }
+    await tx.done;
+  } catch {
+    // IndexedDB unavailable: nothing was cached
+  }
+}
+
 /** Applies one sync answer: every answered item leaves the queue; a returned `card` replaces the local state. */
 async function applySync(learnerId: string, sent: QueuedRating[], body: SyncResponse) {
   const tx = (await db()).transaction(["packs", "queue"], "readwrite");

@@ -54,9 +54,9 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 | Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
 | Full smoke suite still green (no regression) | ☐ pass / ☐ fail | |
 | **Companion score (easy-verifier)** | ☐ pass / ☐ fail / ☐ N/A | [`overall` and `change_risk` as the tool returned them, the scope, the ref, and the absolute path of the verifier report after a literal `report:` label — e.g. "overall 86 (>= 80), change_risk pass, scope changes, ref `main...HEAD`, report: `/home/me/.easy-verifier-reports/kit/score_changes_20261028T0530Z.html`". The gate reads the path that follows `report:` and nothing else, so with no label, or a path that is absent, the row is unscored — write ☑ N/A instead. ☑ N/A with a reason when neither companion tool was run: the merge gate blocks on ☑ fail only, never on an absent or N/A row] |
-| **UI: Visual regression (diff or verdict pasted)** | ☐ pass / ☐ fail / ☐ N/A | [screenshot path or LLM verdict — required for UI tasks, Hard-Stop Gate 6] |
-| **UI: Design-system compliance (tokens/colors/typography verified)** | ☐ pass / ☐ fail / ☐ N/A | [method used + output] |
-| **UI: Responsiveness at target viewports** | ☐ pass / ☐ fail / ☐ N/A | [viewports tested, any overflow findings] |
+| **UI: Visual regression (diff or verdict pasted)** | ☑ pass | Screenshots in e2e/artifacts/T016/: flag-button-{360,768,1280}.png and flag-confirm-{360,768,1280}.png. Own visual verdict (rubric: secondary, low-emphasis button below the card; does not compete with the rating buttons; label exactly `This question seems wrong`): matches spec at 360, 768 and 1280 (underlined muted text, no fill, below Again/Hard/Good/Easy; confirmation shows Reason field + Send/Cancel, rating buttons stay put). The MCQ screen does not exist yet (T030), so only the review card was checked. |
+| **UI: Design-system compliance (tokens/colors/typography verified)** | ☑ pass | Playwright computed style (test "T016 flag: design checks..."): fontSize 14px (>= 14), font-family `system-ui, -apple-system, "Segoe UI", Roboto, sans-serif` (theme stack), color rgb(90, 93, 102) == var(--color-text-muted), height 44px (>= 44), width 328/225/225 px (>= 44), gap to rating buttons 24px (>= 16) at 360/768/1280. `bun run lint`: `check-tokens: 0 color literals outside src/client/tokens.css`. |
+| **UI: Responsiveness at target viewports** | ☑ pass | 360/768/1280 px: scrollWidth 360/768/1280 (<= viewport) in both states; button width 328 of 360 main (full width) at 360, 225 px (not full width) at 768 and 1280; rating buttons top stayed at y=424 after opening the confirmation (no shift). |
 
 ---
 
@@ -76,7 +76,15 @@ error: regex "T016" matched 0 tests. Searched 51 files (skipping 531 tests) [155
 no 0013 migration
 ```
 
-**AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
+**AFTER**: (command: `bun run test:e2e -- --grep T016`)
+```
+  ✓  1 e2e/question-flag.e2e.ts:47:1 › T016 flag: Send shows 'Flagged — thanks' and the next card, with the reason sent as text (397ms)
+  ✓  2 e2e/question-flag.e2e.ts:58:1 › T016 flag: Cancel closes the confirmation and sends nothing (269ms)
+  ✓  3 e2e/question-flag.e2e.ts:68:1 › T016 flag: an error shows a message and keeps the card; Send can be retried (374ms)
+  ✓  4 e2e/question-flag.e2e.ts:79:1 › T016 flag: design checks, screenshots and no layout shift at 360 / 768 / 1280 px (748ms)
+  4 passed (5.4s)
+```
+`bun test --timeout 60000`: 546 pass, 0 fail.
 
 **DELTA**: [one sentence — what a user can now do that they could not before]
 

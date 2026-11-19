@@ -6,10 +6,19 @@
 // A session started online switches to the cached pack when a rating hits a network error (not an HTTP status).
 // Online, ratings still queued are sent before the queue request (at most 5 s), and a card still queued is never shown.
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { FLAG_REASON_MAX } from "../shared/flags.ts";
 import type { OfflinePack } from "../shared/offline.ts";
 import { RATINGS, type RateRequest, type Rating, type ReviewCard, type ReviewQueue } from "../shared/review.ts";
 import { useOnline } from "./offline.tsx";
-import { currentPack, expireSession, pendingCardIds, rateOffline, refresh, syncBeforeReview } from "./offline-store.ts";
+import {
+  currentPack,
+  dropCard,
+  expireSession,
+  pendingCardIds,
+  rateOffline,
+  refresh,
+  syncBeforeReview,
+} from "./offline-store.ts";
 import { installAvailable, onInstallChange, promptInstall } from "./pwa.ts";
 
 const LABELS: Record<Rating, string> = { again: "Again", hard: "Hard", good: "Good", easy: "Easy" };
@@ -90,6 +99,61 @@ function InstallOffer() {
   );
 }
 
+/** T016: "This question seems wrong". Always rendered under the ratings, so opening it moves nothing above it. */
+function FlagControl({ onFlag }: { onFlag: (reason: string) => Promise<string | undefined> }) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string>();
+  const send = async () => {
+    setSending(true);
+    setError(undefined);
+    const problem = await onFlag(reason.trim());
+    // On success the card is gone and this control is replaced by the next card's; only an error stays here.
+    if (problem) setError(problem);
+    setSending(false);
+  };
+  if (!open)
+    return (
+      <button className="button button-quiet flag-open" type="button" onClick={() => setOpen(true)}>
+        This question seems wrong
+      </button>
+    );
+  return (
+    <form
+      className="flag-form"
+      aria-label="Flag this question"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void send();
+      }}
+    >
+      <label htmlFor="flag-reason">Reason (optional)</label>
+      <textarea
+        id="flag-reason"
+        className="flag-reason"
+        maxLength={FLAG_REASON_MAX}
+        rows={3}
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+      />
+      {error ? (
+        <p className="flag-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <div className="flag-actions">
+        <button className="button" type="submit" disabled={sending}>
+          Send
+        </button>
+        <button className="button button-quiet" type="button" disabled={sending} onClick={() => setOpen(false)}>
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
+
 function BackLink({ primary = false }: { primary?: boolean }) {
   return (
     <p>
@@ -107,6 +171,7 @@ export function ReviewPage() {
   const [revealed, setRevealed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [failedRating, setFailedRating] = useState<Rating>();
+  const [flagNotice, setFlagNotice] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   /** Set when the session runs from the cached offline pack of this learner. */
   const [offlineLearner, setOfflineLearner] = useState<string>();
@@ -183,6 +248,7 @@ export function ReviewPage() {
     if (!card || !idempotencyKey) return;
     setSaving(true);
     setFailedRating(undefined);
+    setFlagNotice(false);
     const body: RateRequest = { cardId: card.cardId, rating, idempotencyKey, elapsedMs: Date.now() - session.shownAt };
     try {
       let saved: boolean;
@@ -226,6 +292,44 @@ export function ReviewPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  /** T016: flags the card on screen. Returns an error text, or undefined after the card is dropped from the queue. */
+  const flag = async (reason: string): Promise<string | undefined> => {
+    if (!session || session.ended) return undefined;
+    const card = session.cards[session.index];
+    if (!card) return undefined;
+    try {
+      const res = await fetch("/api/flags", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ kind: "card", id: card.cardId, ...(reason ? { reason } : {}) }),
+      });
+      if (res.status === 401) {
+        void expireSession();
+        return undefined;
+      }
+      if (!res.ok)
+        return res.status === 503
+          ? "The flag could not be saved right now. Try again in a moment."
+          : "Could not send the flag. Try again.";
+    } catch {
+      return "Could not reach the server. Check your connection and try again.";
+    }
+    void dropCard(card.cardId);
+    const at = Date.now();
+    const cards = session.cards.filter((_, i) => i !== session.index);
+    const keys = session.keys.filter((_, i) => i !== session.index);
+    const timeUp = at - session.startedAt >= (queue?.sessionLimitMs ?? 0);
+    setFlagNotice(true);
+    setRevealed(false);
+    setNow(at);
+    setSession(
+      session.index >= cards.length || timeUp
+        ? { ...session, cards, keys, ended: true }
+        : { ...session, cards, keys, shownAt: at },
+    );
+    return undefined;
   };
 
   // Space shows the answer, 1-4 rate. A focused button keeps its own Space behaviour.
@@ -309,6 +413,11 @@ export function ReviewPage() {
       <main className="page">
         {banner}
         <h1>Session done</h1>
+        {flagNotice ? (
+          <p className="flag-notice" role="status">
+            Flagged — thanks
+          </p>
+        ) : null}
         <p>
           You rated {session.rated} {session.rated === 1 ? "card" : "cards"} this session.
         </p>
@@ -384,6 +493,12 @@ export function ReviewPage() {
           </button>
         </div>
       ) : null}
+      {flagNotice ? (
+        <p className="flag-notice" role="status">
+          Flagged — thanks
+        </p>
+      ) : null}
+      <FlagControl key={card.cardId} onFlag={flag} />
       <p className="muted">Keys: Space shows the answer, 1 to 4 rate.</p>
       <p className="visually-hidden" aria-live="polite">
         {announcement(remaining)}
