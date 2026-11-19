@@ -10,7 +10,7 @@ import { createLevelGeneratorsSubject } from "../level-generators-subject.ts";
 
 const env = process.env;
 const missing = ["GITHUB_TOKEN"].filter((n) => !env[n]);
-if (missing.length) throw new Error(`level-generators needs ${missing.join(", ")} ; no model call was made`);
+if (missing.length) throw new Error(`level-generators needs ${missing.join(", ")}; no model call was made`);
 const backend = env.MODEL_A_BACKEND || "claude-code";
 if (backend !== "claude-code" && backend !== "api") throw new Error("MODEL_A_BACKEND must be claude-code or api");
 const runId = `eval-level-generators-${new Date().toISOString().replace(/[-:.]/g, "")}`;
