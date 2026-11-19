@@ -11,7 +11,7 @@ import { MIN_MCQ_POOL } from "./save-ladder.ts";
 
 const DAY_MS = 86_400_000;
 /** The verifier that signs off an evidence record: this app at its package.json version. */
-const VERIFIED_BY = `verifier@${pkg.version}`;
+export const VERIFIED_BY = `verifier@${pkg.version}`;
 const ID = /^[1-9][0-9]{0,17}$/; // fits a bigint
 
 /** One question as the learner sees it: the options in the attempt's shuffled order, never the key. */
