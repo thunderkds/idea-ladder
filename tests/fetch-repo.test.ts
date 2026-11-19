@@ -13,7 +13,7 @@ import {
   rateLimited,
   V0_REPOS,
 } from "./support/github-fixtures.ts";
-import { testModelA, testReader } from "./support/mock-model.ts";
+import { testModelA, testModelB, testReader } from "./support/mock-model.ts";
 
 let db: Awaited<ReturnType<typeof createTestDatabase>>;
 let fixtures: Fixture[];
@@ -49,6 +49,7 @@ function engine(jobId: string, override?: Override) {
     github,
     reader: testReader(),
     modelA: testModelA(),
+    modelB: testModelB(),
   });
   const t = new InngestTestEngine({
     function: fn,
@@ -216,6 +217,7 @@ describe("fetch-repo: other GitHub answers", () => {
       github,
       reader: testReader(),
       modelA: testModelA(),
+      modelB: testModelB(),
     });
     const forged = { repo: "developit/mitt", sha: V0_REPOS["developit/mitt"], jobId };
     const t = new InngestTestEngine({ function: fn, events: [{ name: LADDER_GENERATE_EVENT, data: forged }] });
@@ -235,6 +237,7 @@ describe("fetch-repo: other GitHub answers", () => {
       github,
       reader: testReader(),
       modelA: testModelA(),
+      modelB: testModelB(),
     });
     const data = { ...DSET, jobId: "00000000-0000-4000-8000-000000000000" };
     const t = new InngestTestEngine({ function: fn, events: [{ name: LADDER_GENERATE_EVENT, data }] });
@@ -360,6 +363,7 @@ describe("retry (AC 8, NFR-005)", () => {
       github: githubRepoClient({ baseUrl: "https://api.github.com", token: "t", fetch: fixtureFetch(fixtures).impl }),
       reader: testReader(),
       modelA: testModelA(),
+      modelB: testModelB(),
     });
     expect(fn.opts.retries).toBe(3);
     await failJobAfterRetries(fn, jobId);

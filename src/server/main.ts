@@ -63,6 +63,21 @@ const modelA = createModelA(
         ),
       },
 );
+// Model B (T009 blind solver): its own back end and model, a separate fresh call; no key for the default claude-code.
+if (config.modelBBackend === "api" && !Object.hasOwn(loadPrices(), config.modelBId as string)) {
+  console.error(`Invalid configuration: MODEL_B_ID "${config.modelBId}" has no price in eval/prices.json`);
+  process.exit(1);
+}
+const modelB = createModelA(
+  config.modelBBackend === "claude-code"
+    ? { backend: "claude-code", modelId: config.modelBId }
+    : {
+        backend: "api",
+        model: createAnthropic({ apiKey: config.anthropicApiKey, baseURL: "https://api.anthropic.com/v1" })(
+          config.modelBId as string,
+        ),
+      },
+);
 const github = githubRepoClient({ baseUrl: config.githubApiBaseUrl, token: config.githubAppToken });
 const inngest = createInngest();
 // T015: reminders are off (the tick does nothing) unless all three VAPID variables are set.
@@ -85,7 +100,7 @@ const app = createApp({
   inngestHandler: serve({
     client: inngest,
     functions: [
-      ladderGenerateFunction(inngest, { sql, github, reader, modelA, dedupeJaccard: config.dedupeJaccard }),
+      ladderGenerateFunction(inngest, { sql, github, reader, modelA, modelB, dedupeJaccard: config.dedupeJaccard }),
       reminders,
     ],
     // Never derive the callback origin from the request Host header (required in production by loadConfig).

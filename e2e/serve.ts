@@ -15,7 +15,7 @@ import { type PushTarget, reminderTick } from "../src/server/reminders.ts";
 import { adminUrl } from "../tests/support/db.ts";
 import { fixtureFetch, loadFixture, rateLimited, V0_REPOS, type V0Repo } from "../tests/support/github-fixtures.ts";
 import { startGithubStub } from "../tests/support/github-stub.ts";
-import { testModelA, testReader } from "../tests/support/mock-model.ts";
+import { testModelA, testModelB, testReader } from "../tests/support/mock-model.ts";
 
 export const APP_PORT = 54401;
 const STUB_PORT = 54400;
@@ -233,6 +233,7 @@ const fn = ladderGenerateFunction(createInngest(), {
   github,
   reader: slowReader,
   modelA: testModelA(),
+  modelB: testModelB(),
 });
 
 const passedLevels: PassedLevels = async (ladderId) => (ladderId === seeded.klona ? ["L0", "L1"] : []);

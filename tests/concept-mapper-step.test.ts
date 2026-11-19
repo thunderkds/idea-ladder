@@ -16,7 +16,7 @@ import { migrateUp } from "../src/server/migrate.ts";
 import { createModelA, type ModelADeps, ModelAFailedError, ModelANotInstalledError } from "../src/server/model-a.ts";
 import { createTestDatabase } from "./support/db.ts";
 import { type Fixture, fixtureFetch, loadFixture, V0_REPOS } from "./support/github-fixtures.ts";
-import { TEST_CONCEPTS, testReader } from "./support/mock-model.ts";
+import { TEST_CONCEPTS, testModelB, testReader } from "./support/mock-model.ts";
 
 let db: Awaited<ReturnType<typeof createTestDatabase>>;
 let fixtures: Fixture[];
@@ -53,6 +53,7 @@ function engine(jobId: string, modelA: ModelADeps, costs: CostEntry[] = [], read
     github: githubRepoClient({ baseUrl: "https://api.github.com", token: "t", fetch: gh.impl }),
     reader: { ...reader, logCost: (e) => costs.push(e) },
     modelA,
+    modelB: testModelB(),
   });
   return new InngestTestEngine({ function: fn, events: [{ name: LADDER_GENERATE_EVENT, data: { ...DSET, jobId } }] });
 }

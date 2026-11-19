@@ -16,7 +16,7 @@ import { jobForLearner, startLadder } from "../src/server/start.ts";
 import { createTestDatabase } from "./support/db.ts";
 import { type Fixture, fixtureFetch, loadFixture, V0_REPOS } from "./support/github-fixtures.ts";
 import { drainInngestRuns } from "./support/inngest-drain.ts";
-import { promptData, testModelA, testReader } from "./support/mock-model.ts";
+import { promptData, testModelA, testModelB, testReader } from "./support/mock-model.ts";
 
 let db: Awaited<ReturnType<typeof createTestDatabase>>;
 let fixtures: Fixture[];
@@ -80,6 +80,7 @@ function engine(jobId: string, modelA: ModelADeps, opts: { costs?: CostEntry[] }
     github: githubRepoClient({ baseUrl: "https://api.github.com", token: "t", fetch: gh.impl }),
     reader: { ...testReader(), logCost: (e) => costs.push(e) },
     modelA,
+    modelB: testModelB(),
     // This job's cost entries per step (main.ts reads them from the job's cost log).
     stepCosts: () => {
       const byStep: Record<
@@ -295,7 +296,11 @@ describe("step save-ladder in ladder-generate (AC 7, AC 8, SC 6, SC 7)", () => {
     const jobId = await newJob(user.id);
     await db.sql`INSERT INTO generation_job_waiters (job_id, user_id) VALUES (${jobId}, ${user.id})`;
     const { result, ctx } = await engine(jobId, failingModelA()).t.execute();
-    expect(ctx.step.run.mock.calls.map((c) => c[0]).slice(-2)).toEqual(["check-and-dedupe", "save-ladder"]);
+    expect(ctx.step.run.mock.calls.map((c) => c[0]).slice(-3)).toEqual([
+      "check-and-dedupe",
+      "blind-solve",
+      "save-ladder",
+    ]);
     const [ladder] = await db.sql`SELECT id::text AS id, status FROM ladders`;
     expect(ladder.status).toBe("unverified");
     expect(result).toMatchObject({ status: "done", ladderId: ladder.id });
