@@ -1,13 +1,15 @@
-// Background ladder generation (Inngest). Steps: fetch-repo (T005), pick-core-files (T006), map-concepts (T007), chunk-and-embed (T008); later tasks append more.
+// Background ladder generation (Inngest). Steps: fetch-repo (T005), pick-core-files (T006), map-concepts (T007), chunk-and-embed and generate-level-L0..L4 (T008); later tasks append more.
 import { APICallError, type LanguageModel } from "ai";
 import type { SQL } from "bun";
 import { Inngest, NonRetriableError } from "inngest";
+import { LEVEL_IDS, type LevelId } from "../shared/levels.ts";
 import { chunkFiles, type SourceFile } from "./chunker.ts";
 import { pickCoreFilesClaudeCode, ReaderNotInstalledError } from "./claude-code-reader.ts";
 import { MAP_CONCEPTS_STEP, MapperInvalidOutputError, mapConcepts } from "./concept-mapper.ts";
 import { type Confidence, confidenceScore } from "./confidence.ts";
 import { EMBEDDING_DIMENSIONS, type Embedder, EmbedderNotConfiguredError, type EmbedResult } from "./embedder.ts";
 import { GitHubError, type GithubRepoClient, RateLimitError, RepoNotFoundError } from "./github-repo.ts";
+import { generateLevel, LEVEL_SOURCES, type LevelChunk, LevelGeneratorInvalidOutputError } from "./level-generator.ts";
 import { type ModelADeps, ModelANotInstalledError } from "./model-a.ts";
 import {
   type CallUsage,
@@ -391,6 +393,86 @@ async function chunkAndEmbedStep(
   return { status: "chunked", chunks } as const;
 }
 
+export const generateLevelStepId = (level: LevelId) => `generate-level-${level}` as const;
+/** Tree paths sent to the L2 generator at most. */
+const MAX_TREE_PATHS = 200;
+const LEVEL_STEP = /generate-level-L[0-4]/;
+
+/** One model A generator for one level, grounded in that level's chunks. Stores nothing: save-ladder (8d) writes. */
+async function generateLevelStep(
+  { sql, reader, modelA }: Deps,
+  { jobId }: GenerateRequested,
+  level: LevelId,
+  concepts: { name: string; reason: string }[],
+) {
+  const stepId = generateLevelStepId(level);
+  const [job] = await sql`SELECT repo_full_name, commit_sha, status FROM generation_jobs WHERE id = ${jobId}`;
+  if (!job) throw new NonRetriableError(`unknown job ${jobId}`);
+  const repo = job.repo_full_name as string;
+  const sha = job.commit_sha as string;
+  if (job.status === "failed") return { status: "failed", reason: "job-failed" } as const;
+  const rows = await sql`
+    SELECT id::text AS id, source, path, start_line, end_line, text FROM chunks
+    WHERE repo_full_name = ${repo} AND commit_sha = ${sha} AND source IN ${sql(LEVEL_SOURCES[level])} ORDER BY chunks.id`;
+  const chunks: LevelChunk[] = rows.map(
+    (r: {
+      id: string;
+      source: LevelChunk["source"];
+      path: string;
+      start_line: number;
+      end_line: number;
+      text: string;
+    }) => ({
+      id: Number(r.id),
+      source: r.source,
+      path: r.path,
+      startLine: r.start_line,
+      endLine: r.end_line,
+      text: r.text,
+    }),
+  );
+  let snapshotExtras: Record<string, unknown> | undefined;
+  if (level === "L2" || level === "L4") {
+    const [snap] = await sql`
+      SELECT tree, open_issues, good_first_issues FROM repo_snapshots WHERE repo_full_name = ${repo} AND commit_sha = ${sha}`;
+    if (!snap) throw new NonRetriableError(`no snapshot for ${repo}@${sha}`);
+    snapshotExtras =
+      level === "L2"
+        ? {
+            tree: (snap.tree as TreeEntry[])
+              .filter((t) => t.type === "blob")
+              .map((t) => t.path)
+              .slice(0, MAX_TREE_PATHS),
+            openIssues: snap.open_issues,
+          }
+        : { goodFirstIssues: snap.good_first_issues };
+  }
+  try {
+    const out = await generateLevel({
+      level,
+      chunks,
+      ...(level === "L0" ? { concepts } : {}),
+      snapshotExtras,
+      generate: modelA.generate,
+      onUsage: (u) => reader.logCost({ ...u, jobId, repo, sha, step: stepId, backend: modelA.backend }),
+    });
+    return { status: "generated", level, ...out } as const;
+  } catch (err) {
+    // A retry cannot help these: fail now, no paid re-run.
+    if (
+      err instanceof LevelGeneratorInvalidOutputError ||
+      err instanceof ModelANotInstalledError ||
+      (APICallError.isInstance(err) && !err.isRetryable)
+    ) {
+      console.warn(JSON.stringify({ event: "level-generator-error", jobId, repo, sha, level, error: String(err) }));
+      await failJob(sql, jobId, `${stepId}-failed`);
+      return { status: "failed", reason: `${stepId}-failed` } as const;
+    }
+    // Inngest retries this step alone; the step id in the message lets onFailure name the level.
+    throw new Error(`${stepId}: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
+  }
+}
+
 export function ladderGenerateFunction(inngest: Inngest, deps: Deps) {
   return inngest.createFunction(
     {
@@ -398,16 +480,25 @@ export function ladderGenerateFunction(inngest: Inngest, deps: Deps) {
       retries: 3,
       triggers: { event: LADDER_GENERATE_EVENT },
       // After the last retry of a transient error: the job must not stay "running" forever.
-      onFailure: async ({ event }) => {
+      onFailure: async ({ event, error }) => {
         const data = eventData(event.data.event.data);
         const [job] = await deps.sql`SELECT status FROM generation_jobs WHERE id = ${data.jobId}`;
         const inReader = job?.status === "fetched" || job?.status === "picking";
         const inMapper = job?.status === "picked" || job?.status === "mapping";
         const inChunks = job?.status === "mapped";
+        const inLevel = LEVEL_STEP.exec(error?.message ?? "")?.[0];
         await failJob(
           deps.sql,
           data.jobId,
-          inReader ? "reader-error" : inMapper ? "mapper-error" : inChunks ? "embedder-error" : "github-error",
+          inLevel
+            ? `${inLevel}-failed`
+            : inReader
+              ? "reader-error"
+              : inMapper
+                ? "mapper-error"
+                : inChunks
+                  ? "embedder-error"
+                  : "github-error",
         );
       },
     },
@@ -421,7 +512,25 @@ export function ladderGenerateFunction(inngest: Inngest, deps: Deps) {
       const { embedder } = deps;
       if (mapped.status !== "mapped" || !embedder) return mapped;
       const chunked = await step.run(CHUNK_AND_EMBED_STEP, () => chunkAndEmbedStep({ ...deps, embedder }, data));
-      return chunked.status === "chunked" ? { ...mapped, chunks: chunked.chunks } : chunked;
+      if (chunked.status !== "chunked") return chunked;
+      const concepts = mapped.concepts.map((c: { name: string; reason: string }) => ({
+        name: c.name,
+        reason: c.reason,
+      }));
+      // AC 2: one generator step per level, in parallel; a concept-only ladder (AC 8) generates L0 only.
+      const levels = await Promise.all(
+        LEVEL_IDS.map((level) =>
+          mapped.fallbackToConcepts && level !== "L0"
+            ? ({ level, status: "skipped", kind: "concept-only-skipped" } as const)
+            : step.run(generateLevelStepId(level), () => generateLevelStep(deps, data, level, concepts)),
+        ),
+      );
+      // A level that ran after another level failed the job answers job-failed: report the level that failed it.
+      const failed =
+        levels.find((l) => l.status === "failed" && l.reason !== "job-failed") ??
+        levels.find((l) => l.status === "failed");
+      if (failed) return failed;
+      return { ...mapped, chunks: chunked.chunks, levels };
     },
   );
 }

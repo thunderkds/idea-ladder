@@ -17,11 +17,10 @@ import {
   ladderGenerateFunction,
 } from "../src/server/ladder-generate.ts";
 import { migrateUp } from "../src/server/migrate.ts";
-import type { ModelADeps } from "../src/server/model-a.ts";
 import { createTestDatabase } from "./support/db.ts";
 import { type Fixture, fixtureFetch, loadFixture, V0_REPOS } from "./support/github-fixtures.ts";
 import { mockEmbedder } from "./support/mock-embedder.ts";
-import { TEST_CONCEPTS, testReader } from "./support/mock-model.ts";
+import { testModelA, testReader } from "./support/mock-model.ts";
 
 const letters = (n: number) => Array.from({ length: n }, (_, i) => String.fromCharCode(97 + (i % 26))).join("");
 
@@ -117,13 +116,7 @@ const jobRow = async (id: string) =>
 const chunkRows = async () =>
   await db.sql`SELECT source, path, ordinal, start_line, end_line, text, embedding_model, vector_dims(embedding) AS dims
     FROM chunks WHERE repo_full_name = ${MITT.repo} AND commit_sha = ${MITT.sha} ORDER BY id`;
-const modelA: ModelADeps = {
-  backend: "api",
-  generate: async ({ schema }) => ({
-    value: schema.parse({ concepts: TEST_CONCEPTS }),
-    usage: { model: "test-model", inputTokens: 1, outputTokens: 1, cachedInputTokens: 0 },
-  }),
-};
+const modelA = testModelA(); // answers the mapper and the 8b level generators
 /** File text served for every contents read: 120 numbered lines, so each file gives 2+ chunks. */
 const fileText = (path: string) => Array.from({ length: 120 }, (_, i) => `${path} line ${i + 1}`).join("\n");
 
@@ -153,6 +146,7 @@ describe("Inngest step chunk-and-embed (AC 1, Success Criterion 1)", () => {
       "pick-core-files",
       "map-concepts",
       "chunk-and-embed",
+      ...["L0", "L1", "L2", "L3", "L4"].map((l) => `generate-level-${l}`),
     ]);
     const rows = await chunkRows();
     expect(result).toMatchObject({ status: "mapped", chunks: rows.length });

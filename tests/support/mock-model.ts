@@ -83,13 +83,41 @@ export const TEST_CONCEPTS = ["Concept one", "Concept two", "Concept three"].map
   basis: ["readme"],
 }));
 
-/** Model A dep for workflow tests that are not about the mapper: always answers TEST_CONCEPTS, no model call. */
+/** The JSON data line of a level generator prompt (T008), or undefined for another prompt. */
+export function promptData(prompt: string): { level: string; chunks: { id: number }[] } | undefined {
+  try {
+    const data = JSON.parse(prompt.split("\n")[1] ?? "");
+    return typeof data?.level === "string" ? data : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** A level answer with one card and one MCQ citing the first chunk the prompt gave (none when it gave none). */
+const testLevelAnswer = (prompt: string) => {
+  const id = promptData(prompt)?.chunks[0]?.id;
+  return {
+    goal: "Test goal",
+    passTest: { kind: "model-kind", description: "Test pass test" },
+    cards: id === undefined ? [] : [{ front: "Test front?", back: "Test back.", chunkId: id }],
+    mcqs:
+      id === undefined ? [] : [{ question: "Test question?", options: ["a", "b", "c", "d"], key: "a", chunkId: id }],
+  };
+};
+
+/**
+ * Model A dep for workflow tests that are not about the mapper: answers TEST_CONCEPTS to the mapper and a
+ * testLevelAnswer to a level generator, no model call.
+ */
 export function testModelA(): ModelADeps {
   return {
     backend: "api",
-    generate: async ({ schema }) => ({
-      value: schema.parse({ concepts: TEST_CONCEPTS }),
-      usage: { model: "test-model", inputTokens: 1, outputTokens: 1, cachedInputTokens: 0 },
-    }),
+    generate: async ({ schema, prompt }) => {
+      const concepts = schema.safeParse({ concepts: TEST_CONCEPTS });
+      return {
+        value: concepts.success ? concepts.data : schema.parse(testLevelAnswer(prompt)),
+        usage: { model: "test-model", inputTokens: 1, outputTokens: 1, cachedInputTokens: 0 },
+      };
+    },
   };
 }
