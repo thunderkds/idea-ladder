@@ -47,8 +47,8 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass / ☐ fail | [test file path(s) — required before Done] |
-| Verification command run | ☐ pass / ☐ fail | [paste actual output] |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | tests/blind-solver.test.ts (AC 1, 4, 7), tests/blind-solver-step.test.ts (AC 3, 4, SC 3-5), tests/config.test.ts `model B (T009)` (AC 2), tests/seed-schema.test.ts (AC 5), tests/blind-solver-metrics.test.ts (AC 5-7, SC 6). Full run: `bun test --timeout 60000` -> 524 pass, 0 fail; `cd eval && bun test` -> 77 pass, 0 fail; `bun run test:e2e -- start-flow` -> 6 passed |
+| Verification command run | ☑ pass (unit tests); live `eval:blind-solver` is the owner's | `bun test blind-solver seed-schema blind-solver-metrics save-ladder config` -> `81 pass |  0 fail |  825 expect() calls | Ran 81 tests across 7 files. [4.37s]`. `bun run typecheck` and `bun run lint` clean. `env -i PATH=/usr/bin:/bin bun run eval:blind-solver` (no `claude`) -> `eval:blind-solver cannot run; missing: the `claude` CLI is not installed or not on PATH (install Claude Code and sign in). No model call was made.` exit 1; with `MODEL_B_BACKEND=api` -> `missing: ANTHROPIC_API_KEY (MODEL_B_BACKEND=api); MODEL_B_ID (MODEL_B_BACKEND=api)`. No live model call was made. |
 | Negative cases hold | ☐ pass / ☐ fail | |
 | verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
 | Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
@@ -79,7 +79,20 @@ note: Tests need ".test", "_test_", ".spec" or "_spec_" in the filename (ex: "My
 no blind-solve step
 ```
 
-**AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
+**AFTER** (2026-11-19T11:07:31Z, same command, post-change):
+
+```
+$ date -u ...; bun test blind-solver seed-schema blind-solver-metrics ...; grep -n blind-solve src/server/ladder-generate.ts
+2026-11-19T11:07:31Z
+ 41 pass
+ 0 fail
+ 684 expect() calls
+Ran 41 tests across 4 files. [2.06s]
+1:// Background ladder generation (Inngest). Steps: fetch-repo (T005), pick-core-files (T006), map-concepts (T007), chunk, generate-level-L0..L4, check-and-dedupe, blind-solve (T009) and save-ladder (T008); later tasks append more.
+7:import { BLIND_SOLVE_STEP, blindSolveLevels } from "./blind-solver.ts";
+392:const LEVEL_STEP = /generate-level-L[0-4]|check-and-dedupe|blind-solve|save-ladder/;
+519:      console.warn(JSON.stringify({ event: "blind-solve-error", jobId, repo, sha, error: String(err) }));
+```
 
 **DELTA**: [one sentence — what a user can now do that they could not before]
 
