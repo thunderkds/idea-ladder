@@ -17,8 +17,9 @@ type Reply = {
 const [recordDir, ...argv] = process.argv.slice(2) as [string, ...string[]];
 const callsPath = join(recordDir, "calls.jsonl");
 const n = existsSync(callsPath) ? readFileSync(callsPath, "utf8").split("\n").filter(Boolean).length : 0;
-const mcpPath = argv[argv.indexOf("--mcp-config") + 1] as string;
-const mcp = JSON.parse(readFileSync(mcpPath, "utf8"));
+// No --mcp-config (model A's generate): record argv, cwd and env only.
+const mcpIdx = argv.indexOf("--mcp-config");
+const mcp = mcpIdx >= 0 ? JSON.parse(readFileSync(argv[mcpIdx + 1] as string, "utf8")) : undefined;
 appendFileSync(
   callsPath,
   `${JSON.stringify({
@@ -26,13 +27,14 @@ appendFileSync(
     cwd: process.cwd(),
     env: process.env,
     mcp,
-    context: JSON.parse(readFileSync(mcp.mcpServers.reader.env.READER_CONTEXT_FILE, "utf8")),
+    context: mcp ? JSON.parse(readFileSync(mcp.mcpServers.reader.env.READER_CONTEXT_FILE, "utf8")) : undefined,
   })}\n`,
 );
 const replies = JSON.parse(readFileSync(join(recordDir, "replies.json"), "utf8")) as Reply[];
 const reply = replies[Math.min(n, replies.length - 1)] as Reply;
-if (reply.toolCalls !== undefined) writeFileSync(mcp.mcpServers.reader.env.READER_CALLS_FILE, String(reply.toolCalls));
-if (reply.rateLimited)
+if (mcp && reply.toolCalls !== undefined)
+  writeFileSync(mcp.mcpServers.reader.env.READER_CALLS_FILE, String(reply.toolCalls));
+if (mcp && reply.rateLimited)
   appendFileSync(mcp.mcpServers.reader.env.READER_RATE_LIMITED_FILE, "1\n".repeat(reply.rateLimited));
 // holdPipes: ignore SIGTERM and leave a grandchild holding stdout/stderr (as a stuck MCP server child would).
 if (reply.holdPipes) {
