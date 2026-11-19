@@ -47,8 +47,8 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass / ☐ fail | [test file path(s) — required before Done] |
-| Verification command run | ☐ pass / ☐ fail | [paste actual output] |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | tests/migrate.test.ts (AC 1: up/down/up with a seeded chunk row), tests/chunk.test.ts (AC 2: step `chunk`, no OPENAI_API_KEY, re-run adds 0 rows), tests/dedupe.test.ts + tests/check-and-dedupe.test.ts (AC 3), tests/config.test.ts (DEDUPE_JACCARD, DEDUPE_COSINE refused), tests/save-ladder.test.ts + tests/level-generator-step.test.ts (SC 4: ladder saved unverified, job done, no embedder), tests/level-generators-subject.test.ts (AC 5), tests/repo-config.test.ts (.env.example). `bun test`: 444 pass, 0 fail. |
+| Verification command run | ☑ pass | 2026-11-19T10:26:50Z. `bun run typecheck`: no error. `bun run lint`: `Checked 118 files ... No fixes applied.` / `check-tokens: 0 color literals`. `bun test migrate chunk dedupe check-and-dedupe save-ladder level-generator config`: 109 pass, 0 fail. `bun test`: 444 pass, 0 fail, Ran 444 tests across 40 files. `cd eval && bun test`: 77 pass, 0 fail. `bun run test:e2e -- start-flow`: 6 passed. AC 4 grep (`openai|embedd?ing|embedder|cosine`): only the DEDUPE_COSINE refusal (config.ts + its test), the "no OPENAI_API_KEY" test, migrate/chunk tests that assert the columns are gone, and the concept name "Embeddings" in e2e/test data. `bun run db:migrate` was not run (no DATABASE_URL here); migrations are applied to a scratch DB by tests/migrate.test.ts. |
 | Negative cases hold | ☐ pass / ☐ fail | |
 | verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
 | Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
@@ -86,7 +86,15 @@ no 0010 migration
 Ran 13 tests across 2 files. [51.00ms]
 ```
 
-**AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
+**AFTER**:
+```
+2026-11-19T10:26:50Z
+(grep -rlniE "openai|embedder" src eval/src e2e package.json -> no file)
+0010_drop_chunk_embeddings.down.sql
+0010_drop_chunk_embeddings.up.sql
+bun test dedupe: 17 pass, 0 fail (word-overlap Jaccard tests)
+eval, no GITHUB_TOKEN: level-generators needs GITHUB_TOKEN; no model call was made
+```
 
 **DELTA**: [one sentence — what a user can now do that they could not before]
 
