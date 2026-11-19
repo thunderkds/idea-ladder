@@ -27,6 +27,7 @@ import {
   RepoNotFoundError,
 } from "./github-repo.ts";
 import { getLadderView, ladderExists, listLadders, noPasses, type PassedLevels } from "./ladder-view.ts";
+import { checkConceptsBody, getConcepts, putConcepts } from "./learner-concepts.ts";
 import { offlinePack, syncRatings } from "./offline.ts";
 import { exportProgress, importProgress, MAX_IMPORT_BYTES, parseProgressFile } from "./progress.ts";
 import { checkSubscribe, isEndpoint, pushStatus, subscribe, unsubscribe } from "./push.ts";
@@ -155,6 +156,22 @@ export function createApp(opts: {
     if (!user) return c.json({ error: "unauthorized" }, 401);
     const view = await getLadderView(sql, c.req.param("ladderId"), user.userId, passedLevels);
     return view ? c.json(view) : c.json({ error: "not-found" }, 404);
+  });
+
+  app.get("/api/ladders/:ladderId/concepts", async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const view = await getConcepts(sql, c.req.param("ladderId"), user.userId);
+    return typeof view === "string" ? c.json({ error: view }, 404) : c.json(view);
+  });
+
+  app.put("/api/ladders/:ladderId/concepts", async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const checked = await checkConceptsBody(await c.req.json().catch(() => undefined));
+    if ("field" in checked) return c.json(checked, 422);
+    const saved = await putConcepts(sql, c.req.param("ladderId"), user.userId, checked.names);
+    return saved === "ok" ? c.json({ ok: true }) : c.json({ error: saved }, 404);
   });
 
   // The client page; an unknown id still gets the client (it draws the 404 page) with status 404.
