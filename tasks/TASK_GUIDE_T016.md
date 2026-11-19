@@ -42,10 +42,10 @@ Source (`docs/REQUIREMENT_SOURCE.md`):
 
 ### Requirement Fidelity Gate (sign off BEFORE implementation)
 
-- [ ] Restated intent confirmed to match the user's request (by Supervisor / user — not the implementing agent)
-- [ ] Domain terms align with `PROJECT_SPEC.md` glossary (`grill-with-docs` run if terminology was fuzzy)
-- [ ] Every Acceptance Criterion below traces to a line in the Requirement
-- [ ] All Requirement Refs exist in `PRD.md` and are fully covered by the Acceptance Criteria above
+- [x] Restated intent confirmed to match the user's request (by Supervisor / user — not the implementing agent) — auto (Supervisor) 2026-11-19: matches US-008, FR-006 and the user's "complete all task [admin]"
+- [x] Domain terms align with `PROJECT_SPEC.md` glossary (`grill-with-docs` run if terminology was fuzzy)
+- [x] Every Acceptance Criterion below traces to a line in the Requirement
+- [x] All Requirement Refs exist in `PRD.md` and are fully covered by the Acceptance Criteria above
 
 > An agent must NOT start implementing until this gate is checked. If anything here is unclear,
 > STOP and ask the Supervisor (Karpathy: Think Before Coding).
@@ -56,6 +56,15 @@ Source (`docs/REQUIREMENT_SOURCE.md`):
 
 **Depends on**: T012 — the verified MCQ pool and the attempt rows a flag must not change; T011 (via T012) — the review card component where the button goes and the review queue the flag filters.
 **Entry point**: `This question seems wrong` (button label on the review card and the MCQ), handled by `flagQuestion`
+
+### Supervisor decisions after T012, T032 and T009 merged (2026-11-19, auto, Risk Low)
+
+1. A "question" is a review card (`review_cards`, T011/T032) or an MCQ (`mcqs`, T008/T012): two id spaces. The flag request names both: `POST /api/flags { kind: "card" | "mcq", id, reason? }`; the flag table key is `(learner_id, kind, question_id)`.
+2. `removed` status: migration `0013_question_flags` adds `status text NOT NULL DEFAULT 'active' CHECK (status IN ('active','removed'))` to both `review_cards` and `mcqs` (0012 is T032's). The review queue / offline pack (src/server/review.ts, src/server/offline.ts) and the MCQ draw (src/server/mcq-test.ts `startMcqAttempt` only) filter `removed` and the learner's own flags. Scoring (`submitMcqAttempt`) and src/server/evidence.ts are not touched (AC 4).
+3. "A ladder the learner has not started" = not in the learner's ladder list (the same rule `mayRate` uses for rating).
+4. Regenerate: on reaching `FLAG_REMOVE_MIN`, send Inngest event `ladder/question.regenerate` `{ kind, questionId, chunkId, ladderId }` exactly once (in the same transaction as the status change, guarded so a 4th flag sends nothing). A new Inngest function consumes MCQ events: it calls T008's exported `regenerateMcq` + `checkAnswerKey` + verbatim + dedupe and T009's `blindSolveMcq`, and inserts the replacement as a new `mcqs` row only if all pass (else the question stays removed — Edge Case row 4). Card events are consumed as a no-op with a logged reason (no card regenerator exists; cut list). Do not change T008/T009 module internals.
+5. UI now: the flag button and confirmation on the review card (/review). The MCQ attempt screen does not exist yet: T030 adds the same button there using the same API; the T016 Playwright and UI evidence cover the review card only.
+6. Build order: backend-developer first (migration, API, filters, event + consumer, tests SC 1–5), then frontend-developer (button, confirmation, Playwright SC 6, UI evidence rows).
 
 ---
 
