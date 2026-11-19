@@ -158,6 +158,33 @@ test("the server's 422 is shown next to the named field and the input is kept", 
   await expect(page.getByLabel("Concept 3")).toHaveValue("Server check");
 });
 
+test("focus: Add focuses the new input; Remove focuses the next row, else the previous row, else Add", async ({
+  page,
+}) => {
+  const { invalid } = await conceptSeeds(page);
+  await signIn(page);
+  await page.goto(`/ladders/${invalid}/concepts`);
+  await expect(inputs(page)).toHaveCount(4);
+
+  await page.getByRole("button", { name: "Add concept" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(inputs(page)).toHaveCount(5);
+  await expect(page.getByLabel("Concept 5")).toBeFocused();
+
+  await page.getByRole("button", { name: "Remove concept Embeddings" }).click();
+  await expect(page.getByLabel("Concept 2")).toHaveValue("CRDT");
+  await expect(page.getByLabel("Concept 2")).toBeFocused();
+
+  await page.locator(".concept-row").last().getByRole("button").click();
+  await expect(inputs(page)).toHaveCount(3);
+  await expect(page.getByLabel("Concept 3")).toHaveValue("Event emitter");
+  await expect(page.getByLabel("Concept 3")).toBeFocused();
+
+  for (let i = 0; i < 3; i++) await page.locator(".concept-row").first().getByRole("button").click();
+  await expect(inputs(page)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Add concept" })).toBeFocused();
+});
+
 test("unknown ladder or a ladder with no concepts -> not-found message, no form", async ({ page }) => {
   const plain = await plainId(page);
   await signIn(page);

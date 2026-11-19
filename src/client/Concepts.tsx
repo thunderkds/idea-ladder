@@ -11,6 +11,10 @@ type Loaded = { concepts: { name: string; reason?: string }[]; fallbackToConcept
 
 export function ConceptsPage({ ladderId }: { ladderId: string }) {
   const nextKey = useRef(0);
+  // Focus after Add or Remove: a row key, or "add" for the Add button. Applied once the new rows are in the DOM.
+  const inputRefs = useRef(new Map<number, HTMLInputElement>());
+  const addRef = useRef<HTMLButtonElement>(null);
+  const pendingFocus = useRef<number | "add" | null>(null);
   const [rows, setRows] = useState<Row[]>();
   const [fallback, setFallback] = useState(false);
   const [missing, setMissing] = useState(false);
@@ -40,6 +44,14 @@ export function ConceptsPage({ ladderId }: { ladderId: string }) {
       stopped = true;
     };
   }, [api]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs after every rows change; the refs are read inside
+  useEffect(() => {
+    const target = pendingFocus.current;
+    pendingFocus.current = null;
+    if (target === null) return;
+    (target === "add" ? addRef.current : inputRefs.current.get(target))?.focus();
+  }, [rows]);
 
   const edit = (next: Row[]) => {
     setRows(next);
@@ -107,6 +119,17 @@ export function ConceptsPage({ ladderId }: { ladderId: string }) {
     );
   }
 
+  const remove = (i: number) => {
+    const next = rows.filter((_, j) => j !== i);
+    pendingFocus.current = (next[i] ?? next[i - 1])?.key ?? "add";
+    edit(next);
+  };
+  const add = () => {
+    const row = { key: nextKey.current++, name: "" };
+    pendingFocus.current = row.key;
+    edit([...rows, row]);
+  };
+
   const fieldError = (field: string) => (problem?.field === field ? problem.message : undefined);
   const rowError = (i: number) => fieldError(`concepts[${i}].name`) ?? fieldError(`concepts[${i}].slug`);
   const listError = fieldError("concepts");
@@ -141,6 +164,10 @@ export function ConceptsPage({ ladderId }: { ladderId: string }) {
               <div className="concept-edit">
                 <input
                   id={`concept-${row.key}`}
+                  ref={(el) => {
+                    if (el) inputRefs.current.set(row.key, el);
+                    else inputRefs.current.delete(row.key);
+                  }}
                   className="text-input"
                   type="text"
                   value={row.name}
@@ -148,11 +175,7 @@ export function ConceptsPage({ ladderId }: { ladderId: string }) {
                   aria-describedby={error ? `concept-error-${row.key}` : undefined}
                   onChange={(e) => edit(rows.map((r) => (r.key === row.key ? { ...r, name: e.target.value } : r)))}
                 />
-                <button
-                  className="button button-quiet"
-                  type="button"
-                  onClick={() => edit(rows.filter((r) => r.key !== row.key))}
-                >
+                <button className="button button-quiet" type="button" onClick={() => remove(i)}>
                   Remove<span className="visually-hidden"> concept {row.name || i + 1}</span>
                 </button>
               </div>
@@ -169,11 +192,7 @@ export function ConceptsPage({ ladderId }: { ladderId: string }) {
           );
         })}
       </ul>
-      <button
-        className="button button-quiet"
-        type="button"
-        onClick={() => edit([...rows, { key: nextKey.current++, name: "" }])}
-      >
+      <button className="button button-quiet" type="button" ref={addRef} onClick={add}>
         Add concept
       </button>
       <div className="save-bar">
