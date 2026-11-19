@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { conceptSlug, MAX_CONCEPTS, MIN_CONCEPTS, nameLength, nameProblem } from "../shared/concepts.ts";
 import type { Confidence } from "./confidence.ts";
-import { type Generate, ModelAInvalidOutputError } from "./model-a.ts";
+import { type Generate, ModelAFailedError, ModelAInvalidOutputError } from "./model-a.ts";
 import type { CallUsage, CoreFile } from "./repo-reader.ts";
 
 export const MAP_CONCEPTS_STEP = "map-concepts";
@@ -110,6 +110,9 @@ export async function mapConcepts(input: MapConceptsInput) {
       if (concepts.length >= MIN_CONCEPTS) return { concepts, fallbackToConcepts: confidence.fallbackToConcepts };
       note = `only ${concepts.length} concepts had a valid name and a basis from the allowed values`;
     } catch (err) {
+      if (err instanceof ModelAInvalidOutputError || err instanceof ModelAFailedError) {
+        if (err.usage) input.onUsage?.(err.usage);
+      }
       if (!(err instanceof ModelAInvalidOutputError)) throw err;
       note = err.message;
     }

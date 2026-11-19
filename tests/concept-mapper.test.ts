@@ -104,10 +104,22 @@ for (const back of backends) {
 
     test("SC2: 2 valid concepts twice -> mapper-invalid-output after exactly 1 retry", async () => {
       const { modelA, calls } = await back.make([{ concepts: FOUR.slice(0, 2) }]);
-      await expect(mapConcepts({ snapshot, coreFiles, confidence, generate: modelA.generate })).rejects.toMatchObject({
-        code: "mapper-invalid-output",
-      });
+      const usage: CallUsage[] = [];
+      await expect(
+        mapConcepts({ snapshot, coreFiles, confidence, generate: modelA.generate, onUsage: (u) => usage.push(u) }),
+      ).rejects.toMatchObject({ code: "mapper-invalid-output" });
       expect(await calls()).toBe(2);
+      expect(usage).toHaveLength(2);
+    });
+
+    test("an answer that fails the schema still reports its usage (both calls are paid)", async () => {
+      const { modelA, calls } = await back.make([{ nope: true }]);
+      const usage: CallUsage[] = [];
+      await expect(
+        mapConcepts({ snapshot, coreFiles, confidence, generate: modelA.generate, onUsage: (u) => usage.push(u) }),
+      ).rejects.toMatchObject({ code: "mapper-invalid-output" });
+      expect(await calls()).toBe(2);
+      expect(usage).toHaveLength(2);
     });
 
     test("retry succeeds: first answer has too few grounded concepts, second is fine", async () => {
@@ -205,5 +217,24 @@ describe("claude-code generate (fake claude)", () => {
         generate: createModelA({ backend: "claude-code", claudeBin: join(rec, "none") }).generate,
       }),
     ).rejects.toBeInstanceOf(ModelANotInstalledError);
+  });
+});
+
+describe("claude-code is_error keeps its usage on the error", () => {
+  test("ModelAFailedError carries usage", async () => {
+    const out = {
+      is_error: true,
+      subtype: "error_max_turns",
+      result: "boom",
+      usage: { input_tokens: 9, output_tokens: 4 },
+    };
+    await writeFile(join(rec, "replies.json"), JSON.stringify([{ stdout: JSON.stringify(out) }]));
+    const modelA = createModelA({ backend: "claude-code", claudeBin: bin });
+    const usage: CallUsage[] = [];
+    await expect(
+      mapConcepts({ snapshot, coreFiles, confidence, generate: modelA.generate, onUsage: (u) => usage.push(u) }),
+    ).rejects.toBeInstanceOf(ModelAFailedError);
+    expect(usage).toHaveLength(1);
+    expect(usage[0]).toMatchObject({ inputTokens: 9, outputTokens: 4 });
   });
 });

@@ -28,18 +28,24 @@ export type ModelAConfig =
 /** The call ran but its answer is not JSON that fits the schema: the caller may retry once with a nudge. */
 export class ModelAInvalidOutputError extends Error {
   readonly code = "model-a-invalid-output";
-  constructor(detail: string) {
+  /** Usage of the paid call whose answer failed, when the call ran. */
+  readonly usage?: CallUsage;
+  constructor(detail: string, usage?: CallUsage) {
     super(`model-a-invalid-output: ${detail}`);
     this.name = "ModelAInvalidOutputError";
+    this.usage = usage;
   }
 }
 
 /** The `claude -p` run failed (timeout, non-zero exit, is_error): the Inngest step may retry. */
 export class ModelAFailedError extends Error {
   readonly code = "model-a-failed";
-  constructor(detail: string) {
+  /** Usage of the paid call whose answer failed, when the call ran. */
+  readonly usage?: CallUsage;
+  constructor(detail: string, usage?: CallUsage) {
     super(`model-a-failed: ${detail}`);
     this.name = "ModelAFailedError";
+    this.usage = usage;
   }
 }
 
@@ -64,18 +70,18 @@ const jsonSchemaOf = (schema: z.ZodType): Record<string, unknown> => {
 };
 
 /** Parses model text as JSON (a fence or surrounding prose is tolerated) and checks it against the schema. */
-function parseWith<T>(schema: z.ZodType<T>, text: string): T {
+function parseWith<T>(schema: z.ZodType<T>, text: string, usage: CallUsage): T {
   const first = text.indexOf("{");
   const last = text.lastIndexOf("}");
   let json: unknown;
   try {
     json = JSON.parse(first >= 0 && last > first ? text.slice(first, last + 1) : text);
   } catch {
-    throw new ModelAInvalidOutputError("the answer is not JSON");
+    throw new ModelAInvalidOutputError("the answer is not JSON", usage);
   }
   const r = schema.safeParse(json);
   if (!r.success)
-    throw new ModelAInvalidOutputError(r.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
+    throw new ModelAInvalidOutputError(r.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "), usage);
   return r.data;
 }
 
@@ -95,7 +101,7 @@ function apiGenerate(model: LanguageModel): Generate {
       outputTokens: r.usage.outputTokens ?? 0,
       cachedInputTokens: cached,
     };
-    return { value: parseWith(schema, r.text), usage };
+    return { value: parseWith(schema, r.text, usage), usage };
   };
 }
 
@@ -140,10 +146,10 @@ function claudeCodeGenerate(cfg: Extract<ModelAConfig, { backend: "claude-code" 
     };
     if (out.is_error) {
       const why = out.result?.replace(/\s*\n\s*/g, " ").slice(0, 200);
-      throw new ModelAFailedError(`claude reported an error (${out.subtype})${why ? `: ${why}` : ""}`);
+      throw new ModelAFailedError(`claude reported an error (${out.subtype})${why ? `: ${why}` : ""}`, usage);
     }
     const text = out.structured_output !== undefined ? JSON.stringify(out.structured_output) : (out.result ?? "");
-    return { value: parseWith(schema, text), usage };
+    return { value: parseWith(schema, text, usage), usage };
   };
 }
 
