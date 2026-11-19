@@ -1,13 +1,15 @@
-// Background ladder generation (Inngest). Steps: fetch-repo (T005), pick-core-files (T006), map-concepts (T007), chunk-and-embed, generate-level-L0..L4 and check-and-dedupe (T008); later tasks append more.
+// Background ladder generation (Inngest). Steps: fetch-repo (T005), pick-core-files (T006), map-concepts (T007), chunk-and-embed, generate-level-L0..L4, check-and-dedupe and save-ladder (T008); later tasks append more.
 import { APICallError, type LanguageModel } from "ai";
 import type { SQL } from "bun";
 import { Inngest, NonRetriableError } from "inngest";
+import type { Totals } from "../../eval/src/cost.ts";
 import { LEVEL_IDS, type LevelId } from "../shared/levels.ts";
 import { CHECK_AND_DEDUPE_STEP, checkAndDedupe, DEFAULT_DEDUPE_COSINE, type LadderLevel } from "./check-and-dedupe.ts";
 import { chunkFiles, type SourceFile } from "./chunker.ts";
 import { pickCoreFilesClaudeCode, ReaderNotInstalledError } from "./claude-code-reader.ts";
 import { MAP_CONCEPTS_STEP, MapperInvalidOutputError, mapConcepts } from "./concept-mapper.ts";
 import { type Confidence, confidenceScore } from "./confidence.ts";
+import { jobCostByStep } from "./cost-wiring.ts";
 import { EMBEDDING_DIMENSIONS, type Embedder, EmbedderNotConfiguredError, type EmbedResult } from "./embedder.ts";
 import { GitHubError, type GithubRepoClient, RateLimitError, RepoNotFoundError } from "./github-repo.ts";
 import { generateLevel, LEVEL_SOURCES, type LevelChunk, LevelGeneratorInvalidOutputError } from "./level-generator.ts";
@@ -23,6 +25,7 @@ import {
   type ReadFile,
   type TreeEntry,
 } from "./repo-reader.ts";
+import { SAVE_LADDER_STEP, saveLadder } from "./save-ladder.ts";
 
 export const LADDER_GENERATE_EVENT = "ladder/generate.requested";
 export type GenerateRequested = { repo: string; sha: string; jobId: string };
@@ -70,13 +73,14 @@ export type ReaderDeps = { limits: ReaderLimits; logCost: (entry: CostEntry) => 
       claudeBin?: string;
     }
 );
-/** `embedder` is absent only in the T005-T007 step tests that end at map-concepts; main.ts always sets it. */
 type Deps = {
   sql: SQL;
   github: GithubRepoClient;
   reader: ReaderDeps;
   modelA: ModelADeps;
-  embedder?: Embedder;
+  embedder: Embedder;
+  /** This job's cost per step for the generation report; default: the job's cost log (jobCostByStep). */
+  stepCosts?: (jobId: string) => Record<string, Totals> | null;
   /** DEDUPE_COSINE (config.dedupeCosine); DEFAULT_DEDUPE_COSINE when absent. */
   dedupeCosine?: number;
 };
@@ -309,10 +313,7 @@ const DOC_PATH = /^docs\/.+\.md$/i;
 const README_PATH = /^readme(\.[^/]*)?$/i;
 
 /** Chunks README, docs, dependency files and core files at the pinned SHA; stores them with embeddings once per repo + SHA. */
-async function chunkAndEmbedStep(
-  { sql, github, reader, embedder }: Deps & { embedder: Embedder },
-  { jobId }: GenerateRequested,
-) {
+async function chunkAndEmbedStep({ sql, github, reader, embedder }: Deps, { jobId }: GenerateRequested) {
   const [job] = await sql`SELECT repo_full_name, commit_sha, status FROM generation_jobs WHERE id = ${jobId}`;
   if (!job) throw new NonRetriableError(`unknown job ${jobId}`);
   const repo = job.repo_full_name as string;
@@ -422,7 +423,7 @@ const toLevelChunk = (r: ChunkRow): LevelChunk => ({
 /** Tree paths sent to the L2 generator at most. */
 const MAX_TREE_PATHS = 200;
 /** A step whose error message names it fails the job `<step>-failed` after the last retry (see onFailure). */
-const LEVEL_STEP = /generate-level-L[0-4]|check-and-dedupe/;
+const LEVEL_STEP = /generate-level-L[0-4]|check-and-dedupe|save-ladder/;
 
 /** One model A generator for one level, grounded in that level's chunks. Stores nothing: save-ladder (8d) writes. */
 async function generateLevelStep(
@@ -485,7 +486,7 @@ async function generateLevelStep(
 
 /** Key check -> regenerate (max 2) -> verbatim -> dedupe on the memoized level outputs. Stores nothing (8d writes). */
 async function checkAndDedupeStep(
-  { sql, reader, modelA, embedder, dedupeCosine }: Deps & { embedder: Embedder },
+  { sql, reader, modelA, embedder, dedupeCosine }: Deps,
   { jobId }: GenerateRequested,
   levels: LadderLevel[],
 ) {
@@ -536,6 +537,25 @@ async function checkAndDedupeStep(
   }
 }
 
+/** Writes the checked ladder (status unverified) and sets the job done, in one transaction; nothing before this writes. */
+async function saveLadderStep({ sql, stepCosts }: Deps, { jobId }: GenerateRequested, levels: LadderLevel[]) {
+  const [job] = await sql`SELECT repo_full_name, commit_sha, status FROM generation_jobs WHERE id = ${jobId}`;
+  if (!job) throw new NonRetriableError(`unknown job ${jobId}`);
+  if (job.status === "failed") return { status: "failed", reason: "job-failed" } as const;
+  try {
+    const { ladderId } = await saveLadder(sql, {
+      jobId,
+      repo: job.repo_full_name,
+      sha: job.commit_sha,
+      levels,
+      costByStep: (stepCosts ?? jobCostByStep)(jobId),
+    });
+    return { status: "done", ladderId } as const;
+  } catch (err) {
+    throw new Error(`${SAVE_LADDER_STEP}: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
+  }
+}
+
 export function ladderGenerateFunction(inngest: Inngest, deps: Deps) {
   return inngest.createFunction(
     {
@@ -572,9 +592,8 @@ export function ladderGenerateFunction(inngest: Inngest, deps: Deps) {
       const picked = await step.run(PICK_CORE_FILES_STEP, () => pickCoreFilesStep(deps, data));
       if (picked.status !== "picked") return picked;
       const mapped = await step.run(MAP_CONCEPTS_STEP, () => mapConceptsStep(deps, data));
-      const { embedder } = deps;
-      if (mapped.status !== "mapped" || !embedder) return mapped;
-      const chunked = await step.run(CHUNK_AND_EMBED_STEP, () => chunkAndEmbedStep({ ...deps, embedder }, data));
+      if (mapped.status !== "mapped") return mapped;
+      const chunked = await step.run(CHUNK_AND_EMBED_STEP, () => chunkAndEmbedStep(deps, data));
       if (chunked.status !== "chunked") return chunked;
       const concepts = mapped.concepts.map((c: { name: string; reason: string }) => ({
         name: c.name,
@@ -594,10 +613,19 @@ export function ladderGenerateFunction(inngest: Inngest, deps: Deps) {
         levels.find((l) => l.status === "failed");
       if (failed) return failed;
       const checked = await step.run(CHECK_AND_DEDUPE_STEP, () =>
-        checkAndDedupeStep({ ...deps, embedder }, data, levels as LadderLevel[]),
+        checkAndDedupeStep(deps, data, levels as LadderLevel[]),
       );
       if (checked.status !== "checked") return checked;
-      return { ...mapped, chunks: chunked.chunks, levels, checked: checked.levels };
+      const saved = await step.run(SAVE_LADDER_STEP, () => saveLadderStep(deps, data, checked.levels as LadderLevel[]));
+      if (saved.status !== "done") return saved;
+      return {
+        ...mapped,
+        status: "done",
+        ladderId: saved.ladderId,
+        chunks: chunked.chunks,
+        levels,
+        checked: checked.levels,
+      };
     },
   );
 }

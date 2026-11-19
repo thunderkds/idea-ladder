@@ -103,6 +103,7 @@ describe("Inngest steps generate-level-L0..L4 (AC 2, AC 3)", () => {
       "chunk-and-embed",
       ...LEVEL_STEPS,
       "check-and-dedupe",
+      "save-ladder",
     ]);
     const sources: Record<string, string[]> = {
       L0: ["readme", "dep"],
@@ -129,8 +130,9 @@ describe("Inngest steps generate-level-L0..L4 (AC 2, AC 3)", () => {
     expect([...new Set(levelCosts.map((c) => `${c.step} ${c.backend}`))].sort()).toEqual(
       LEVEL_STEPS.map((s) => `${s} api`),
     );
-    expect((await jobRow(jobId)).status).toBe("mapped"); // job done is save-ladder's (8d)
-    expect((await db.sql`SELECT count(*)::int AS n FROM ladders`)[0].n).toBe(0);
+    // Nothing is stored before save-ladder; it writes one ladder and sets the job done (tests/save-ladder.test.ts).
+    expect((await jobRow(jobId)).status).toBe("done");
+    expect((await db.sql`SELECT count(*)::int AS n FROM ladders`)[0].n).toBe(1);
   });
 
   test("Success Criterion 7: fallbackToConcepts -> only L0 is generated, L1-L4 concept-only-skipped", async () => {
@@ -267,7 +269,8 @@ describe("retry and failure (NFR-005, AC 8)", () => {
         model: "mock-embedding",
         outputTokens: 0,
       });
-    expect((await jobRow(jobId)).status).toBe("mapped"); // job done is save-ladder's (8d)
-    expect((await db.sql`SELECT count(*)::int AS n FROM ladders`)[0].n).toBe(0);
+    // Nothing is stored before save-ladder; it writes one ladder and sets the job done (tests/save-ladder.test.ts).
+    expect((await jobRow(jobId)).status).toBe("done");
+    expect((await db.sql`SELECT count(*)::int AS n FROM ladders`)[0].n).toBe(1);
   });
 });

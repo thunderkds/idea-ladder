@@ -14,6 +14,7 @@ import {
 import { migrateUp } from "../src/server/migrate.ts";
 import { createTestDatabase } from "./support/db.ts";
 import { type Fixture, fixtureFetch, loadFixture, V0_REPOS } from "./support/github-fixtures.ts";
+import { mockEmbedder } from "./support/mock-embedder.ts";
 import { answer, type Reply, scriptedModel, testModelA } from "./support/mock-model.ts";
 
 let db: Awaited<ReturnType<typeof createTestDatabase>>;
@@ -65,6 +66,7 @@ function engine(
   const costs: CostEntry[] = [];
   const statuses: string[] = [];
   const fn = ladderGenerateFunction(createInngest(), {
+    embedder: mockEmbedder(),
     sql: db.sql,
     github,
     modelA: testModelA(),
@@ -93,7 +95,7 @@ describe("Inngest step pick-core-files (AC 5, AC 6)", () => {
   test("runs after fetch-repo, stores ranked core files, job picking -> picked, one cost line per model call", async () => {
     const jobId = await newJob();
     const { t, gh, costs, statuses } = engine(jobId, happy);
-    const { result, ctx } = await t.execute();
+    const { result, ctx } = await t.executeStep("map-concepts");
     expect(ctx.step.run.mock.calls.map((c) => c[0])).toEqual(["fetch-repo", "pick-core-files", "map-concepts"]);
     expect(result).toMatchObject({ status: "mapped", coreFiles: PICKS });
     expect(await coreRows()).toEqual(PICKS.map((p, i) => ({ rank: i + 1, ...p })));
@@ -141,7 +143,9 @@ describe("Inngest step pick-core-files (AC 5, AC 6)", () => {
     // InngestTestEngine does not keep state between execute() calls, so the stored result is given here.
     const memoized = (first.ctx.step.run.mock.results[0] as { value?: unknown } | undefined)?.value;
     expect(await memoized).toMatchObject({ status: "fetched" });
-    const retry = await t.execute({ steps: [{ id: "fetch-repo", handler: async () => await memoized }] });
+    const retry = await t.executeStep("map-concepts", {
+      steps: [{ id: "fetch-repo", handler: async () => await memoized }],
+    });
     expect(retry.result).toMatchObject({ status: "mapped" });
     expect(gh.calls.filter((p) => !p.includes("/contents/")).length).toBe(fetchCalls); // fetch-repo not re-run
     expect(gh.calls.filter((p) => p.includes("/contents/")).length).toBe(1); // second read served from the cache
@@ -165,7 +169,7 @@ describe("Inngest step pick-core-files (AC 5, AC 6)", () => {
     await db.sql`UPDATE generation_jobs SET status = 'failed', reason = 'test' WHERE id = ${first}`;
     const second = await newJob();
     const { t, model } = engine(second, happy);
-    expect((await t.execute()).result).toMatchObject({ status: "mapped", coreFiles: PICKS });
+    expect((await t.executeStep("map-concepts")).result).toMatchObject({ status: "mapped", coreFiles: PICKS });
     expect(model.doGenerateCalls.length).toBe(0);
   });
 });
@@ -174,7 +178,7 @@ describe("pick-core-files failure paths (fix batch)", () => {
   test("a cache write that fails (text with a NUL) does not fail or re-run the paid loop", async () => {
     const jobId = await newJob();
     const { t, model } = engine(jobId, happy, (g) => ({ ...g, readFile: async () => "a\u0000b" }));
-    const { result } = await t.execute();
+    const { result } = await t.executeStep("map-concepts");
     expect(result).toMatchObject({ status: "mapped", coreFiles: PICKS });
     expect(model.doGenerateCalls.length).toBe(2);
     expect((await db.sql`SELECT count(*)::int AS n FROM repo_file_cache`)[0].n).toBe(0);
@@ -232,7 +236,7 @@ describe("pick-core-files failure paths (fix batch)", () => {
         return g.readFile(repo, sha, path);
       },
     }));
-    const { result } = await t.execute();
+    const { result } = await t.executeStep("map-concepts");
     expect(result).toMatchObject({ status: "mapped", coreFiles: other });
     expect(await coreRows()).toEqual(other.map((p, i) => ({ rank: i + 1, ...p })));
   });
@@ -243,6 +247,7 @@ describe("Inngest step pick-core-files on the claude-code back end (AC 9)", () =
     const jobId = await newJob();
     const gh = fixtureFetch(fixtures, () => undefined);
     const fn = ladderGenerateFunction(createInngest(), {
+      embedder: mockEmbedder(),
       sql: db.sql,
       github: githubRepoClient({ baseUrl: "https://api.github.com", token: "t", fetch: gh.impl }),
       modelA: testModelA(),
@@ -275,6 +280,7 @@ describe("Inngest step pick-core-files on the claude-code back end (AC 9)", () =
     const gh = fixtureFetch(fixtures, () => undefined);
     const costs: CostEntry[] = [];
     const fn = ladderGenerateFunction(createInngest(), {
+      embedder: mockEmbedder(),
       sql: db.sql,
       github: githubRepoClient({ baseUrl: "https://api.github.com", token: "t", fetch: gh.impl }),
       modelA: testModelA(),
@@ -290,7 +296,7 @@ describe("Inngest step pick-core-files on the claude-code back end (AC 9)", () =
       function: fn,
       events: [{ name: LADDER_GENERATE_EVENT, data: { ...DSET, jobId } }],
     });
-    const { result } = await t.execute();
+    const { result } = await t.executeStep("map-concepts");
     expect(result).toMatchObject({ status: "mapped", coreFiles: PICKS });
     expect(await coreRows()).toEqual(PICKS.map((p, i) => ({ rank: i + 1, ...p })));
     expect(costs.filter((c) => c.step === "pick-core-files")).toEqual([

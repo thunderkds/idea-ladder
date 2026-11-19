@@ -148,10 +148,11 @@ describe("Inngest step chunk-and-embed (AC 1, Success Criterion 1)", () => {
       "chunk-and-embed",
       ...["L0", "L1", "L2", "L3", "L4"].map((l) => `generate-level-${l}`),
       "check-and-dedupe",
+      "save-ladder",
     ]);
     const rows = await chunkRows();
-    expect(result).toMatchObject({ status: "mapped", chunks: rows.length });
-    expect((await jobRow(jobId)).status).toBe("mapped"); // the final status stays mapped until save-ladder (8d)
+    expect(result).toMatchObject({ status: "done", chunks: rows.length });
+    expect((await jobRow(jobId)).status).toBe("done");
     const sources = new Set(rows.map((r: { source: string }) => r.source));
     expect([...sources].sort()).toEqual(["core", "dep", "readme"]);
     const core = await db.sql`SELECT path FROM core_files WHERE repo_full_name = ${MITT.repo} ORDER BY rank`;
@@ -186,7 +187,7 @@ describe("Inngest step chunk-and-embed (AC 1, Success Criterion 1)", () => {
     ]);
 
     // Re-run for the same repo + SHA: no new row, no chunk embedding call (only check-and-dedupe embeds again).
-    await engine(jobId, embedder, costs).execute();
+    await engine(jobId, embedder, costs).executeStep("chunk-and-embed");
     expect((await chunkRows()).length).toBe(rows.length);
     expect(costs.filter((c) => c.step === "chunk-and-embed")).toHaveLength(1);
   });

@@ -16,6 +16,7 @@ import { migrateUp } from "../src/server/migrate.ts";
 import { createModelA, type ModelADeps, ModelAFailedError, ModelANotInstalledError } from "../src/server/model-a.ts";
 import { createTestDatabase } from "./support/db.ts";
 import { type Fixture, fixtureFetch, loadFixture, V0_REPOS } from "./support/github-fixtures.ts";
+import { mockEmbedder } from "./support/mock-embedder.ts";
 import { TEST_CONCEPTS, testReader } from "./support/mock-model.ts";
 
 let db: Awaited<ReturnType<typeof createTestDatabase>>;
@@ -49,6 +50,7 @@ const conceptRows = async () =>
 function engine(jobId: string, modelA: ModelADeps, costs: CostEntry[] = [], reader = testReader()) {
   const gh = fixtureFetch(fixtures, () => undefined);
   const fn = ladderGenerateFunction(createInngest(), {
+    embedder: mockEmbedder(),
     sql: db.sql,
     github: githubRepoClient({ baseUrl: "https://api.github.com", token: "t", fetch: gh.impl }),
     reader: { ...reader, logCost: (e) => costs.push(e) },
@@ -74,7 +76,7 @@ describe("Inngest step map-concepts (AC 3)", () => {
         };
       },
     };
-    const { result, ctx } = await engine(jobId, modelA, costs).execute();
+    const { result, ctx } = await engine(jobId, modelA, costs).executeStep("map-concepts");
     expect(ctx.step.run.mock.calls.map((c) => c[0])).toEqual(["fetch-repo", "pick-core-files", "map-concepts"]);
     expect(result).toMatchObject({ status: "mapped", fallbackToConcepts: false });
     expect(seenStatus).toEqual(["mapping"]);
@@ -149,7 +151,7 @@ describe("Inngest step map-concepts (AC 3)", () => {
     const results = first.ctx.step.run.mock.results;
     const fetched = await (results[0] as { value?: unknown }).value;
     const picked = await (results[1] as { value?: unknown }).value;
-    const retry = await t.execute({
+    const retry = await t.executeStep("map-concepts", {
       steps: [
         { id: "fetch-repo", handler: async () => fetched },
         { id: "pick-core-files", handler: async () => picked },
@@ -177,7 +179,7 @@ describe("Inngest step map-concepts (AC 3)", () => {
     await db.sql`UPDATE generation_jobs SET status = 'failed' WHERE id = ${first}`;
     const second = await newJob();
     const c2 = { n: 0 };
-    const { result } = await engine(second, modelA(c2)).execute();
+    const { result } = await engine(second, modelA(c2)).executeStep("map-concepts");
     expect(c1.n).toBe(1);
     expect(c2.n).toBe(0);
     expect(result).toMatchObject({ status: "mapped" });
@@ -201,7 +203,11 @@ describe("Inngest step map-concepts on the claude-code back end", () => {
       await writeFile(join(rec, "replies.json"), JSON.stringify([{ stdout: JSON.stringify(out) }]));
       const jobId = await newJob();
       const costs: CostEntry[] = [];
-      const { result } = await engine(jobId, createModelA({ backend: "claude-code", claudeBin: bin }), costs).execute();
+      const { result } = await engine(
+        jobId,
+        createModelA({ backend: "claude-code", claudeBin: bin }),
+        costs,
+      ).executeStep("map-concepts");
       expect(result).toMatchObject({ status: "mapped" });
       expect((await conceptRows()).length).toBe(3);
       expect(costs.filter((c) => c.step === "map-concepts")).toEqual([
