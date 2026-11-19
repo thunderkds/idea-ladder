@@ -8,6 +8,7 @@ import { readerCostLogger } from "./cost-wiring.ts";
 import { githubRepoClient } from "./github-repo.ts";
 import { createInngest, LADDER_GENERATE_EVENT, ladderGenerateFunction, type ReaderDeps } from "./ladder-generate.ts";
 import { noPasses } from "./ladder-view.ts";
+import { createModelA } from "./model-a.ts";
 import { reminderFunction, webPushSender } from "./reminders.ts";
 
 let config: ReturnType<typeof loadConfig>;
@@ -48,6 +49,17 @@ const reader: ReaderDeps =
         limits,
         logCost,
       };
+// Model A for the concept mapper (and later T008, T014): the same back end as the reader.
+const modelA = createModelA(
+  config.modelABackend === "claude-code"
+    ? { backend: "claude-code", modelId: config.modelAId }
+    : {
+        backend: "api",
+        model: createAnthropic({ apiKey: config.anthropicApiKey, baseURL: "https://api.anthropic.com/v1" })(
+          config.modelAId as string,
+        ),
+      },
+);
 const github = githubRepoClient({ baseUrl: config.githubApiBaseUrl, token: config.githubAppToken });
 const inngest = createInngest();
 // T015: reminders are off (the tick does nothing) unless all three VAPID variables are set.
@@ -69,7 +81,7 @@ const app = createApp({
   },
   inngestHandler: serve({
     client: inngest,
-    functions: [ladderGenerateFunction(inngest, { sql, github, reader }), reminders],
+    functions: [ladderGenerateFunction(inngest, { sql, github, reader, modelA }), reminders],
     // Never derive the callback origin from the request Host header (required in production by loadConfig).
     ...(config.inngestServeOrigin ? { serveOrigin: config.inngestServeOrigin } : {}),
   }),

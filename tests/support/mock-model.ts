@@ -2,6 +2,7 @@
 import type { LanguageModelV3CallOptions, LanguageModelV3GenerateResult } from "@ai-sdk/provider";
 import { MockLanguageModelV3 } from "ai/test";
 import type { ReaderDeps } from "../../src/server/ladder-generate.ts";
+import type { ModelADeps } from "../../src/server/model-a.ts";
 
 export type Reply = { tools: { name: string; input: unknown }[] } | { text: string } | { error: Error };
 
@@ -73,4 +74,22 @@ export function testReader(): Extract<ReaderDeps, { model: unknown }> {
     return { text: answer(files.slice(0, 3).map((path) => ({ path }))) };
   });
   return { model, limits: { maxSteps: 15, tokenBudget: 80_000 }, logCost: () => {} };
+}
+
+/** Concepts every `testModelA` answer holds; each rests on the snapshot's readme. */
+export const TEST_CONCEPTS = ["Concept one", "Concept two", "Concept three"].map((name) => ({
+  name,
+  reason: `why ${name}`,
+  basis: ["readme"],
+}));
+
+/** Model A dep for workflow tests that are not about the mapper: always answers TEST_CONCEPTS, no model call. */
+export function testModelA(): ModelADeps {
+  return {
+    backend: "api",
+    generate: async ({ schema }) => ({
+      value: schema.parse({ concepts: TEST_CONCEPTS }),
+      usage: { model: "test-model", inputTokens: 1, outputTokens: 1, cachedInputTokens: 0 },
+    }),
+  };
 }

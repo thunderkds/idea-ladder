@@ -14,7 +14,7 @@ import {
 import { migrateUp } from "../src/server/migrate.ts";
 import { createTestDatabase } from "./support/db.ts";
 import { type Fixture, fixtureFetch, loadFixture, V0_REPOS } from "./support/github-fixtures.ts";
-import { answer, type Reply, scriptedModel } from "./support/mock-model.ts";
+import { answer, type Reply, scriptedModel, testModelA } from "./support/mock-model.ts";
 
 let db: Awaited<ReturnType<typeof createTestDatabase>>;
 let fixtures: Fixture[];
@@ -67,6 +67,7 @@ function engine(
   const fn = ladderGenerateFunction(createInngest(), {
     sql: db.sql,
     github,
+    modelA: testModelA(),
     reader: {
       model,
       limits: { maxSteps: 15, tokenBudget: 80_000 },
@@ -93,14 +94,14 @@ describe("Inngest step pick-core-files (AC 5, AC 6)", () => {
     const jobId = await newJob();
     const { t, gh, costs, statuses } = engine(jobId, happy);
     const { result, ctx } = await t.execute();
-    expect(ctx.step.run.mock.calls.map((c) => c[0])).toEqual(["fetch-repo", "pick-core-files"]);
-    expect(result).toMatchObject({ status: "picked", coreFiles: PICKS });
+    expect(ctx.step.run.mock.calls.map((c) => c[0])).toEqual(["fetch-repo", "pick-core-files", "map-concepts"]);
+    expect(result).toMatchObject({ status: "mapped", coreFiles: PICKS });
     expect(await coreRows()).toEqual(PICKS.map((p, i) => ({ rank: i + 1, ...p })));
-    expect((await jobStatus(jobId)).status).toBe("picked");
+    expect((await jobStatus(jobId)).status).toBe("mapped");
     await Bun.sleep(20);
-    expect(statuses).toEqual(["picking", "picking"]);
+    expect(statuses).toEqual(["picking", "picking", "mapping"]); // the last entry is the map-concepts cost line
     // AC 6: every model call -> logCost with the step name, model id and the SDK's token usage
-    expect(costs).toEqual(
+    expect(costs.filter((c) => c.step === "pick-core-files")).toEqual(
       [0, 1].map(() => ({
         jobId,
         repo: DSET.repo,
@@ -141,11 +142,11 @@ describe("Inngest step pick-core-files (AC 5, AC 6)", () => {
     const memoized = (first.ctx.step.run.mock.results[0] as { value?: unknown } | undefined)?.value;
     expect(await memoized).toMatchObject({ status: "fetched" });
     const retry = await t.execute({ steps: [{ id: "fetch-repo", handler: async () => await memoized }] });
-    expect(retry.result).toMatchObject({ status: "picked" });
+    expect(retry.result).toMatchObject({ status: "mapped" });
     expect(gh.calls.filter((p) => !p.includes("/contents/")).length).toBe(fetchCalls); // fetch-repo not re-run
     expect(gh.calls.filter((p) => p.includes("/contents/")).length).toBe(1); // second read served from the cache
     expect((await coreRows()).map((r: { path: string }) => r.path)).toEqual(PICKS.map((p) => p.path));
-    expect((await jobStatus(jobId)).status).toBe("picked");
+    expect((await jobStatus(jobId)).status).toBe("mapped");
   });
 
   test("fewer than 3 valid paths after the repair -> job failed / reader-invalid-output, not retried, no rows", async () => {
@@ -164,7 +165,7 @@ describe("Inngest step pick-core-files (AC 5, AC 6)", () => {
     await db.sql`UPDATE generation_jobs SET status = 'failed', reason = 'test' WHERE id = ${first}`;
     const second = await newJob();
     const { t, model } = engine(second, happy);
-    expect((await t.execute()).result).toMatchObject({ status: "picked", coreFiles: PICKS });
+    expect((await t.execute()).result).toMatchObject({ status: "mapped", coreFiles: PICKS });
     expect(model.doGenerateCalls.length).toBe(0);
   });
 });
@@ -174,7 +175,7 @@ describe("pick-core-files failure paths (fix batch)", () => {
     const jobId = await newJob();
     const { t, model } = engine(jobId, happy, (g) => ({ ...g, readFile: async () => "a\u0000b" }));
     const { result } = await t.execute();
-    expect(result).toMatchObject({ status: "picked", coreFiles: PICKS });
+    expect(result).toMatchObject({ status: "mapped", coreFiles: PICKS });
     expect(model.doGenerateCalls.length).toBe(2);
     expect((await db.sql`SELECT count(*)::int AS n FROM repo_file_cache`)[0].n).toBe(0);
   });
@@ -232,7 +233,7 @@ describe("pick-core-files failure paths (fix batch)", () => {
       },
     }));
     const { result } = await t.execute();
-    expect(result).toMatchObject({ status: "picked", coreFiles: other });
+    expect(result).toMatchObject({ status: "mapped", coreFiles: other });
     expect(await coreRows()).toEqual(other.map((p, i) => ({ rank: i + 1, ...p })));
   });
 });
@@ -244,6 +245,7 @@ describe("Inngest step pick-core-files on the claude-code back end (AC 9)", () =
     const fn = ladderGenerateFunction(createInngest(), {
       sql: db.sql,
       github: githubRepoClient({ baseUrl: "https://api.github.com", token: "t", fetch: gh.impl }),
+      modelA: testModelA(),
       reader: {
         backend: "claude-code",
         claudeBin: join(tmpdir(), "il-no-such-dir", "claude"),
@@ -275,6 +277,7 @@ describe("Inngest step pick-core-files on the claude-code back end (AC 9)", () =
     const fn = ladderGenerateFunction(createInngest(), {
       sql: db.sql,
       github: githubRepoClient({ baseUrl: "https://api.github.com", token: "t", fetch: gh.impl }),
+      modelA: testModelA(),
       reader: {
         backend: "claude-code",
         githubToken: "app-token",
@@ -288,9 +291,9 @@ describe("Inngest step pick-core-files on the claude-code back end (AC 9)", () =
       events: [{ name: LADDER_GENERATE_EVENT, data: { ...DSET, jobId } }],
     });
     const { result } = await t.execute();
-    expect(result).toMatchObject({ status: "picked", coreFiles: PICKS });
+    expect(result).toMatchObject({ status: "mapped", coreFiles: PICKS });
     expect(await coreRows()).toEqual(PICKS.map((p, i) => ({ rank: i + 1, ...p })));
-    expect(costs).toEqual([
+    expect(costs.filter((c) => c.step === "pick-core-files")).toEqual([
       {
         jobId,
         repo: DSET.repo,
