@@ -52,10 +52,11 @@ describe("T013 migration 0014_artifacts", () => {
   });
 
   test("down drops both tables and nothing else; up again restores them", async () => {
+    expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0015_diff_questions");
     expect(await migrateDown(db.sql, undefined, ALLOW_DOWN)).toBe("0014_artifacts");
     const left = await db.sql`SELECT to_regclass('public.artifacts') AS a, to_regclass('public.run_feedback') AS r,
       to_regclass('public.evidence_records') AS e`;
     expect(left).toEqual([{ a: null, r: null, e: "evidence_records" }]);
-    expect(await migrateUp(db.sql)).toEqual(["0014_artifacts"]);
+    expect(await migrateUp(db.sql)).toEqual(["0014_artifacts", "0015_diff_questions"]);
   });
 });
