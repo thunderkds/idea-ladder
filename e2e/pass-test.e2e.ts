@@ -66,8 +66,9 @@ type Mocks = {
   ladder?: LadderView | (() => LadderView);
   start?: (route: Route) => Promise<void>;
   submit?: (route: Route) => Promise<void>;
+  artifact?: (route: Route) => Promise<void>;
 };
-type Calls = { starts: number; submits: unknown[] };
+type Calls = { starts: number; submits: unknown[]; artifacts: unknown[] };
 
 async function signIn(page: Page) {
   await page.goto("/");
@@ -79,7 +80,7 @@ const seededIds = async (page: Page) =>
 
 /** Signs in, mocks the handlers and opens the test screen of `level` on the seeded next.js ladder. */
 async function openTest(page: Page, level: string, mocks: Mocks = {}): Promise<{ calls: Calls; ladderId: string }> {
-  const calls: Calls = { starts: 0, submits: [] };
+  const calls: Calls = { starts: 0, submits: [], artifacts: [] };
   const { next } = await seededIds(page);
   await signIn(page);
   await page.route(`**/api/ladders/${next}`, (route) =>
@@ -94,6 +95,11 @@ async function openTest(page: Page, level: string, mocks: Mocks = {}): Promise<{
     calls.submits.push(route.request().postDataJSON());
     if (mocks.submit) return mocks.submit(route);
     return route.fulfill({ json: passResult });
+  });
+  await page.route("**/api/ladders/*/levels/*/artifact", async (route) => {
+    calls.artifacts.push(route.request().postDataJSON());
+    if (mocks.artifact) return mocks.artifact(route);
+    return route.fulfill({ status: 500, json: { error: "unmocked" } });
   });
   await page.goto(`/ladders/${next}?test=${level}`);
   return { calls, ladderId: next };
@@ -241,4 +247,218 @@ test("T030 SC 7: a locked level has no `Take the test`; its direct URL shows `Pa
   await expect(takeTest(page)).toHaveCount(0);
   expect(calls.starts).toBe(0);
   await expectNoSeriousAxeViolations(page, "locked");
+});
+
+const L1_OPEN = ladderView(["passed", "open", "locked", "locked", "locked"]);
+const L2_OPEN = ladderView(["passed", "passed", "open", "locked", "locked"]);
+const L4_OPEN = ladderView(["passed", "passed", "passed", "passed", "open"]);
+const problem = (status: number, json: Record<string, unknown>) => (route: Route) => route.fulfill({ status, json });
+const urlField = (page: Page) => page.locator("#artifact-url");
+
+test("T030 SC 4: L2 `author-mismatch` shows the plain-words reason next to the field; the form keeps the URL", async ({
+  page,
+}) => {
+  const branch = "https://github.com/octo/next.js/tree/feature/retry";
+  const { calls } = await openTest(page, "L2", {
+    ladder: L2_OPEN,
+    artifact: problem(422, { error: "artifact-rejected", reason: "author-mismatch" }),
+  });
+  await expect(page.getByLabel("Branch link")).toBeVisible();
+  await expect(page.locator("fieldset.question")).toHaveCount(0);
+  await urlField(page).fill(`  ${branch}  `);
+  await page.getByRole("button", { name: "Check my branch" }).click();
+  const error = page.locator("#artifact-error");
+  await expect(error).toHaveText("These commits are not by your GitHub account");
+  await expect(urlField(page)).toHaveValue(branch); // trimmed for display, kept
+  await expect(urlField(page)).toHaveAttribute("aria-invalid", "true");
+  await expect(urlField(page)).toHaveAccessibleDescription(/These commits are not by your GitHub account/);
+  expect(calls.artifacts).toEqual([{ url: branch }]);
+  await expectNoSeriousAxeViolations(page, "artifact-L2-error");
+});
+
+test("T030 AC 3: every T013 reason code and an invalid URL are shown in plain words, never as the raw code", async ({
+  page,
+}) => {
+  let reply: { status: number; json: Record<string, unknown> } = { status: 400, json: { error: "invalid-url" } };
+  await openTest(page, "L4", { ladder: L4_OPEN, artifact: (route) => route.fulfill(reply) });
+  await expect(page.getByLabel("Repo link or PR link")).toBeVisible();
+  await urlField(page).fill("https://github.com.evil.io/x/y");
+  const check = page.getByRole("button", { name: "Check my link" });
+  await check.click();
+  await expect(page.locator("#artifact-error")).toContainText("This is not a link of the right kind");
+  const cases: [string, string][] = [
+    ["pr-not-merged", "This PR is not merged yet"],
+    ["not-found", "GitHub has no public repo, branch or PR at this link"],
+    ["no-new-commits", "no new commits of yours"],
+    ["not-from-scratch", "fork of the ladder's repo"],
+    ["range-too-large", "more than 250 new commits"],
+    ["author-mismatch", "These commits are not by your GitHub account"],
+  ];
+  for (const [reason, text] of cases) {
+    reply = { status: 422, json: { error: "artifact-rejected", reason } };
+    await check.click();
+    await expect(page.locator("#artifact-error")).toContainText(text);
+    await expect(page.locator("#artifact-error")).not.toContainText(reason);
+  }
+});
+
+test("T030 AC 3: an L4 merged PR passes: `Level passed` and the ladder is complete", async ({ page }) => {
+  let passed = false;
+  await openTest(page, "L4", {
+    ladder: () => (passed ? ladderView(["passed", "passed", "passed", "passed", "passed"]) : L4_OPEN),
+    artifact: async (route) => {
+      passed = true;
+      await route.fulfill({ json: { artifact: { id: "7", level: "L4" }, evidence: { level: "L4" } } });
+    },
+  });
+  await urlField(page).fill("https://github.com/vercel/next.js/pull/12");
+  await page.getByRole("button", { name: "Check my link" }).click();
+  const result = page.locator("[aria-live=polite]");
+  await expect(result).toContainText("Level passed");
+  await expect(result).toContainText("your ladder is complete");
+  await expectNoSeriousAxeViolations(page, "result-l4");
+});
+
+test("T030 AC 3: L1 uses the MCQ screen (run-mcq); the run log and explanation are optional feedback only", async ({
+  page,
+}) => {
+  const feedback: unknown[] = [];
+  const { calls } = await openTest(page, "L1", { ladder: L1_OPEN });
+  await page.route("**/api/ladders/*/levels/L1/run-feedback", (route) => {
+    feedback.push(route.request().postDataJSON());
+    return feedback.length === 1
+      ? route.fulfill({ status: 422, json: { error: "explanation-not-3-sentences" } })
+      : route.fulfill({ json: { ok: true } });
+  });
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("L1 Run it");
+  await expect(urlField(page)).toHaveCount(0);
+  await expect(page.getByText("Feedback only. It is never scored")).toBeVisible();
+  await page.getByLabel("Run log, or a link to it").fill("listening on :3000");
+  await page.getByLabel("What it does, in 3 sentences").fill("It starts a server.");
+  await page.getByRole("button", { name: "Save feedback" }).click();
+  await expect(page.locator("#feedback-status")).toHaveText("Write exactly 3 sentences, each ending with . ! or ?");
+  await page
+    .getByLabel("What it does, in 3 sentences")
+    .fill("It starts a server. It reads a config. It logs requests.");
+  await page.getByRole("button", { name: "Save feedback" }).click();
+  await expect(page.locator("#feedback-status")).toContainText("Saved. It is feedback only");
+  expect(feedback[1]).toEqual({
+    runLog: "listening on :3000",
+    explanation: "It starts a server. It reads a config. It logs requests.",
+  });
+  expect(calls.starts).toBe(0); // feedback never starts or scores a test
+  await takeTest(page).click();
+  await expect(page.locator("fieldset.question")).toHaveCount(10);
+  await expectNoSeriousAxeViolations(page, "mcq-L1");
+});
+
+test.describe("T030 rate limit in local time (UTC+14)", () => {
+  test.use({ timezoneId: "Pacific/Kiritimati" });
+  test("T030 SC 6: a 429 shows `Next attempt at` in local time and no start button until `retryAt`", async ({
+    page,
+  }) => {
+    const now = Date.parse("2026-11-24T08:00:00.000Z");
+    await page.clock.install({ time: now });
+    const retryAt = new Date(now + 3 * 3_600_000).toISOString();
+    const { calls } = await openTest(page, "L3", {
+      start: problem(429, { error: "too-many-attempts", retryAt }),
+    });
+    await takeTest(page).click();
+    const alert = page.getByRole("alert");
+    await expect(alert).toContainText("Next attempt at");
+    const local = await page.evaluate((iso) => new Date(iso).toLocaleString(), retryAt);
+    expect(local).toContain("2026"); // the browser's own local rendering, in UTC+14
+    await expect(alert.locator("time")).toHaveText(local);
+    await expect(alert.locator("time")).toHaveAttribute("datetime", retryAt);
+    await expect(page.getByRole("button")).toHaveCount(0);
+    await expectNoSeriousAxeViolations(page, "rate-limited");
+    await page.clock.fastForward(3 * 3_600_000 - 60_000);
+    await expect(takeTest(page)).toHaveCount(0);
+    await page.clock.fastForward(61_000);
+    await expect(takeTest(page)).toBeVisible();
+    expect(calls.starts).toBe(1);
+  });
+});
+
+test("T030 AC 5: `pool-too-small` shows `This level's test is not ready yet`", async ({ page }) => {
+  await openTest(page, "L3", { start: problem(422, { error: "pool-too-small" }) });
+  await takeTest(page).click();
+  await expect(page.getByRole("alert")).toContainText("This level's test is not ready yet");
+  await expect(takeTest(page)).toHaveCount(0);
+});
+
+test("T030 AC 5: at 30:00 the attempt expires: `This attempt expired` and `Start a new attempt`", async ({ page }) => {
+  await page.clock.install({ time: Date.parse("2026-11-24T08:00:00.000Z") });
+  const { calls } = await openTest(page, "L3");
+  await takeTest(page).click();
+  await answer(page, 3);
+  await expect(page.getByRole("timer")).toHaveText("30:00");
+  await page.clock.fastForward(29 * 60_000 + 58_000);
+  await expect(page.getByRole("timer")).toHaveText("0:02");
+  await expect(page.getByText("This attempt expired")).toHaveCount(0);
+  await page.clock.fastForward(3_000);
+  await expect(page.getByRole("alert")).toContainText("This attempt expired");
+  await expect(submit(page)).toHaveCount(0);
+  await page.getByRole("button", { name: "Start a new attempt" }).click();
+  await expect(page.locator("fieldset.question")).toHaveCount(10);
+  await expect(page.getByText("0 of 10 answered")).toBeVisible();
+  expect(calls.starts).toBe(2);
+  expect(calls.submits).toEqual([]);
+});
+
+test("T030 AC 5: a server `attempt-expired` on submit also shows `This attempt expired`", async ({ page }) => {
+  await openTest(page, "L3", { submit: problem(409, { error: "attempt-expired" }) });
+  await takeTest(page).click();
+  await answer(page, 10);
+  await submit(page).click();
+  await expect(page.getByRole("alert")).toContainText("This attempt expired");
+  await expect(page.getByRole("button", { name: "Start a new attempt" })).toBeVisible();
+  await expect(page.getByText("Level passed")).toHaveCount(0);
+});
+
+test("T030 AC 5: offline shows T015's `You are offline — this needs a connection` and sends nothing", async ({
+  page,
+  context,
+}) => {
+  const { calls } = await openTest(page, "L3");
+  await expect(takeTest(page)).toBeVisible();
+  await context.setOffline(true);
+  await expect(page.getByText("You are offline — this needs a connection")).toBeVisible();
+  await expect(takeTest(page)).toHaveCount(0);
+  await context.setOffline(false);
+  await takeTest(page).click();
+  await answer(page, 10);
+  await context.setOffline(true);
+  await expect(submit(page)).toHaveCount(0);
+  await expect(page.getByText("You are offline — this needs a connection")).toBeVisible();
+  await context.setOffline(false);
+  await expect(submit(page)).toBeEnabled();
+  expect(calls.submits).toEqual([]);
+});
+
+test("T030 edge: a network drop on submit shows `Not sent — try again`; the retry sends the same answers", async ({
+  page,
+}) => {
+  let n = 0;
+  const { calls } = await openTest(page, "L3", {
+    submit: (route) => (n++ === 0 ? route.abort("internetdisconnected") : route.fulfill({ json: failResult })),
+  });
+  await takeTest(page).click();
+  await answer(page, 10, 1);
+  await submit(page).click();
+  await expect(page.getByRole("alert")).toContainText("Not sent — try again");
+  await expect(page.getByText("7 of 10")).toHaveCount(0); // never a result the server did not send
+  await submit(page).click();
+  await expect(page.locator("[aria-live=polite]")).toContainText("7 of 10 correct");
+  expect(calls.submits).toHaveLength(2);
+  expect(calls.submits[1]).toEqual(calls.submits[0]);
+});
+
+test("T030 edge: a second submit of the same attempt (other tab) shows `Already submitted`", async ({ page }) => {
+  await openTest(page, "L3", { submit: problem(409, { error: "already-submitted" }) });
+  await takeTest(page).click();
+  await answer(page, 10);
+  await submit(page).click();
+  await expect(page.getByRole("alert")).toContainText("Already submitted");
+  await expect(page.getByText("Level passed")).toHaveCount(0);
 });
