@@ -462,3 +462,42 @@ test("T030 edge: a second submit of the same attempt (other tab) shows `Already 
   await expect(page.getByRole("alert")).toContainText("Already submitted");
   await expect(page.getByText("Level passed")).toHaveCount(0);
 });
+
+test.describe("T030 real server (no mocks)", () => {
+  test("T030 SC 9: an L0 attempt against the real T012 handlers passes and the ladder view shows L1 unlocked", async ({
+    page,
+  }) => {
+    const seeds = (await (await page.request.get(`${CONTROL}/pass-seeds`)).json()) as {
+      learner: { githubId: number; login: string };
+      ladderId: string;
+    };
+    await page.request.get(`${CONTROL}/set-user?id=${seeds.learner.githubId}&login=${seeds.learner.login}`);
+    try {
+      await signIn(page);
+      await page.goto(`/ladders/${seeds.ladderId}`);
+      await expect(page.locator("#level-L0")).toHaveClass(/level-open/);
+      await expect(page.locator("#level-L1")).toHaveClass(/level-locked/);
+      await page.locator("#level-L0").getByRole("link", { name: "Take the test" }).click();
+      await expect(page).toHaveURL(new RegExp(`/ladders/${seeds.ladderId}\\?test=L0$`));
+      const started = page.waitForResponse((r) => r.url().endsWith("/levels/L0/mcq-attempts"));
+      await takeTest(page).click();
+      const body = await (await started).text();
+      expect(body).not.toContain('"key"'); // the real response carries no key field at any depth
+      const groups = page.locator("fieldset.question");
+      await expect(groups).toHaveCount(10);
+      // The seeded key option is `key-<n>`; the test knows it, the client does not.
+      for (let i = 0; i < 10; i++) await groups.nth(i).getByRole("radio", { name: /^key-/ }).check();
+      await submit(page).click();
+      const result = page.locator("[aria-live=polite]");
+      await expect(result).toContainText("Level passed");
+      await expect(result).toContainText("10 of 10 correct");
+      await page.getByRole("link", { name: "Go to L1 Run it" }).click();
+      await expect(page.locator("#level-L0")).toHaveClass(/level-passed/);
+      await expect(page.locator("#level-L1")).toHaveClass(/level-open/);
+      await expect(page.locator("#level-L1").getByRole("link", { name: "Take the test" })).toBeVisible();
+      await expect(page.locator("#level-L0").getByRole("link", { name: "Take the test" })).toHaveCount(0);
+    } finally {
+      await page.request.get(`${CONTROL}/set-user?id=42&login=octo`);
+    }
+  });
+});

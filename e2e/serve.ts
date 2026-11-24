@@ -7,6 +7,7 @@ import { SQL } from "bun";
 import webpush from "web-push";
 import { createApp } from "../src/server/app.ts";
 import { loadConfig } from "../src/server/config.ts";
+import { evidencePassedLevels } from "../src/server/evidence.ts";
 import { type GithubRepoClient, githubRepoClient } from "../src/server/github-repo.ts";
 import { createInngest, LADDER_GENERATE_EVENT, ladderGenerateFunction } from "../src/server/ladder-generate.ts";
 import type { PassedLevels } from "../src/server/ladder-view.ts";
@@ -15,6 +16,7 @@ import { type PushTarget, reminderTick } from "../src/server/reminders.ts";
 import { adminUrl } from "../tests/support/db.ts";
 import { fixtureFetch, loadFixture, rateLimited, V0_REPOS, type V0Repo } from "../tests/support/github-fixtures.ts";
 import { startGithubStub } from "../tests/support/github-stub.ts";
+import { seedPool } from "../tests/support/mcq-seed.ts";
 import { testModelA, testModelB, testReader } from "../tests/support/mock-model.ts";
 
 export const APP_PORT = 54401;
@@ -144,6 +146,19 @@ const syncSeeds = {
   ratedCard: await seedCard(syncLadder, "L0", "When is color turned off?", "When the output is not a TTY."),
   lockedCard: await seedCard(syncLadder, "L1", "Locked sync card", "Hidden until L0 is passed."),
 };
+// T030 seeds (e2e/pass-test.e2e.ts, Success Criterion 9): `passer` has its own ladder with a 10-question L0 pool
+// (T012 seed helper: the key option is `key-<n>`), so the real T012 handlers score the attempt and the real evidence
+// record opens L1.
+const [passer] = await sql`INSERT INTO users (github_id, github_login) VALUES (47, 'passer') RETURNING id::text AS id`;
+const PASS_REPO = "sindresorhus/slugify";
+const PASS_SHA = "a".repeat(40);
+const passLadder = await seedLadder(PASS_REPO, PASS_SHA, true, passer.id);
+await sql`INSERT INTO repo_snapshots (repo_full_name, commit_sha, default_branch, archived, readme, topics, languages, dep_files,
+    open_issues, good_first_issues, tree, tree_truncated)
+  VALUES (${PASS_REPO}, ${PASS_SHA}, 'main', false, 'r', '[]'::jsonb, '{}'::jsonb, '[]'::jsonb, 0, 0, '[]'::jsonb, false)`;
+await seedPool(sql, { ladderId: passLadder, repo: PASS_REPO, sha: PASS_SHA }, "L0", 10);
+const passSeeds = { learner: { githubId: 47, login: "passer" }, ladderId: passLadder };
+
 const DAY_MS = 86_400_000;
 // T015: the fake push sender records every call and always succeeds (no push service is ever contacted).
 type PushCall = { endpoint: string; payload: unknown };
@@ -242,7 +257,11 @@ const fn = ladderGenerateFunction(createInngest(), {
   modelB: testModelB(),
 });
 
-const passedLevels: PassedLevels = async (ladderId) => (ladderId === seeded.klona ? ["L0", "L1"] : []);
+// klona's passes are injected (T010 seeds); every other ladder uses the real evidence records (T012), so T030's
+// integration test sees its pass. No other seeded ladder has an evidence record, so their levels are unchanged.
+const realPassed = evidencePassedLevels(sql);
+const passedLevels: PassedLevels = async (ladderId, userId) =>
+  ladderId === seeded.klona ? ["L0", "L1"] : realPassed(ladderId, userId);
 const app = createApp({
   config,
   passedLevels,
@@ -282,6 +301,7 @@ Bun.serve({
     if (url.pathname === "/concept-seeds") return Response.json(conceptSeeds);
     if (url.pathname === "/review-seeds") return Response.json(reviewSeeds);
     if (url.pathname === "/sync-seeds") return Response.json(syncSeeds);
+    if (url.pathname === "/pass-seeds") return Response.json(passSeeds);
     if (url.pathname === "/push-sent") return Response.json(pushSent);
     if (url.pathname === "/reminder-tick") {
       const now = new Date(url.searchParams.get("now") ?? "");
