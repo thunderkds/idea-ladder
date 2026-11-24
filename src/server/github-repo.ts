@@ -216,6 +216,30 @@ export function githubRepoClient(opts: { baseUrl: string; token: string; fetch?:
       return { totalCommits, files, authorIds, tooLarge: false };
     },
 
+    /**
+     * T014: the changed files of `base...head` (both 40-hex SHAs) with their patches (none for a binary file). GitHub
+     * lists the files on the first page only, so one commit per page is asked. Null when GitHub answers 404 (a SHA it
+     * no longer has, e.g. after a force-push).
+     */
+    async compareFiles(
+      fullName: string,
+      base: string,
+      head: string,
+    ): Promise<{ filename: string; status: string; patch?: string }[] | null> {
+      if (!SHA.test(base) || !SHA.test(head)) throw new Error("expected 40-hex SHAs");
+      const path = `${repoPath(fullName)}/compare/${base}...${head}?per_page=1&page=1`;
+      const c = (await getJsonOrNull(path)) as { files?: unknown } | null;
+      if (!c) return null;
+      if (!Array.isArray(c.files)) return malformed(path);
+      return (c.files as Record<string, unknown>[]).map((f) => {
+        if (typeof f.filename !== "string") return malformed(path);
+        const status = typeof f.status === "string" ? f.status : "";
+        return typeof f.patch === "string"
+          ? { filename: f.filename, status, patch: f.patch }
+          : { filename: f.filename, status };
+      });
+    },
+
     /** T013: pull request facts, or null when not found. */
     async getPull(fullName: string, number: number): Promise<PullFacts | null> {
       const path = `${repoPath(fullName)}/pulls/${number}`;
