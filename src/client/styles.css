@@ -559,6 +559,9 @@ a.button {
 .test-timer {
   margin: 0 0 var(--space-4);
 }
+.test-intro {
+  margin-bottom: var(--space-6);
+}
 .test-progress {
   margin: 0 0 var(--space-4);
   color: var(--color-text-muted);

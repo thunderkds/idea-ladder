@@ -501,3 +501,177 @@ test.describe("T030 real server (no mocks)", () => {
     }
   });
 });
+
+/** Asserts each element's computed style equals the value a tokens.css custom property resolves to. */
+async function expectTokens(page: Page, checks: [selector: string, property: string, token: string][]) {
+  const results = await page.evaluate((list) => {
+    return list.map(([selector, property, token]) => {
+      const el = document.querySelector(selector);
+      const probe = document.createElement("div");
+      document.body.appendChild(probe);
+      probe.style.setProperty(property, `var(${token})`);
+      const want = getComputedStyle(probe).getPropertyValue(property);
+      probe.remove();
+      const got = el ? getComputedStyle(el).getPropertyValue(property) : "missing element";
+      return { selector, property, token, want, got };
+    });
+  }, checks);
+  for (const r of results) expect(r.got, `${r.selector} ${r.property} = ${r.token}`).toBe(r.want);
+}
+
+/** At 360 / 768 / 1280: screenshot, no horizontal scroll, one centred column, tap targets and option spacing, axe. */
+async function designCheck(page: Page, label: string) {
+  for (const vp of VIEWPORTS) {
+    await page.setViewportSize(vp);
+    const m = await page.evaluate(() => {
+      const rect = (e: Element) => e.getBoundingClientRect();
+      const main = document.querySelector("main") as HTMLElement;
+      const targets = [...document.querySelectorAll("main .button, main .option, main .back-link")]
+        .filter((e) => (e as HTMLElement).offsetParent !== null)
+        .map((e) => ({ text: (e.textContent ?? "").slice(0, 30), w: rect(e).width, h: rect(e).height }));
+      const gaps = [...document.querySelectorAll(".options")].flatMap((list) => {
+        const rows = [...list.children].map(rect);
+        return rows.slice(1).map((r, i) => r.top - (rows[i] as DOMRect).bottom);
+      });
+      const fieldset = document.querySelector("fieldset.question");
+      const option = document.querySelector(".option");
+      return {
+        scrollWidth: document.documentElement.scrollWidth,
+        bodyFont: Number.parseFloat(getComputedStyle(document.body).fontSize),
+        mainLeft: rect(main).left,
+        mainRight: document.documentElement.clientWidth - rect(main).right,
+        targets,
+        minGap: gaps.length ? Math.min(...gaps) : null,
+        optionFill: fieldset && option ? rect(option).width / (rect(fieldset).width - 2 * 16 - 2) : null,
+      };
+    });
+    console.log(`T030 metrics ${label} ${vp.width}px ${JSON.stringify({ ...m, targets: m.targets.length })}`);
+    expect(m.targets.length, `${label} ${vp.width}px has tap targets to check`).toBeGreaterThan(0);
+    expect(m.scrollWidth, `${label} ${vp.width}px no horizontal scroll`).toBeLessThanOrEqual(vp.width);
+    expect(m.bodyFont).toBeGreaterThanOrEqual(16);
+    expect(Math.abs(m.mainLeft - m.mainRight), `${label} ${vp.width}px centred`).toBeLessThanOrEqual(1);
+    for (const t of m.targets) {
+      expect(t.h, `${label} ${vp.width}px "${t.text}" height`).toBeGreaterThanOrEqual(44);
+      expect(t.w, `${label} ${vp.width}px "${t.text}" width`).toBeGreaterThanOrEqual(44);
+    }
+    if (m.minGap !== null) expect(m.minGap, `${label} gap between options`).toBeGreaterThanOrEqual(8);
+    if (m.optionFill !== null) expect(m.optionFill, `${label} options full width`).toBeGreaterThan(0.98);
+    await page.screenshot({ path: `${SHOTS}/${label}-${vp.width}.png`, fullPage: true });
+  }
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await expectNoSeriousAxeViolations(page, label);
+}
+
+test.describe("T030 design checks (tokens, tap targets, 360 / 768 / 1280 px, axe)", () => {
+  test("T030 design: MCQ attempt screen (10 questions, progress, submit at the end)", async ({ page }) => {
+    await openTest(page, "L3");
+    await expect(takeTest(page)).toBeVisible();
+    await designCheck(page, "mcq-intro");
+    await takeTest(page).click();
+    await answer(page, 4);
+    await expectTokens(page, [
+      ["body", "font-family", "--font-family"],
+      ["body", "font-size", "--font-size-body"],
+      [".test-submit", "background-color", "--color-accent"],
+      [".test-submit", "color", "--color-accent-text"],
+      [".question", "background-color", "--color-surface"],
+      [".question", "border-top-color", "--color-border"],
+      [".options", "row-gap", "--space-2"],
+      [".option", "border-top-color", "--color-accent"], // the checked option of question 1
+      ["main", "max-width", "--content-max"],
+    ]);
+    await designCheck(page, "mcq-attempt");
+  });
+
+  test("T030 design: artifact screens L2 and L4 with the error next to the field; L1 feedback form", async ({
+    page,
+  }) => {
+    let ladder = L2_OPEN;
+    await openTest(page, "L2", {
+      ladder: () => ladder,
+      artifact: (route) =>
+        route.fulfill({
+          status: 422,
+          json: {
+            error: "artifact-rejected",
+            reason: route.request().url().includes("/L2/") ? "author-mismatch" : "pr-not-merged",
+          },
+        }),
+    });
+    await urlField(page).fill(`https://github.com/octo/next.js/tree/${"very-long-branch-name-".repeat(8)}end`);
+    await page.getByRole("button", { name: "Check my branch" }).click();
+    await expect(page.locator("#artifact-error")).toBeVisible();
+    await expectTokens(page, [
+      ["#artifact-error", "color", "--color-error"],
+      ["#artifact-url", "border-top-color", "--color-error"],
+      [".artifact-form .button", "background-color", "--color-accent"],
+    ]);
+    await designCheck(page, "artifact-L2-error");
+    ladder = L4_OPEN;
+    await page.goto(page.url().replace("test=L2", "test=L4"));
+    await urlField(page).fill("https://github.com/vercel/next.js/pull/12");
+    await page.getByRole("button", { name: "Check my link" }).click();
+    await expect(page.locator("#artifact-error")).toHaveText("This PR is not merged yet");
+    await designCheck(page, "artifact-L4-error");
+    ladder = L1_OPEN;
+    await page.goto(page.url().replace("test=L4", "test=L1"));
+    await expect(page.getByText("Feedback only. It is never scored")).toBeVisible();
+    const gap = await page.evaluate(
+      () =>
+        (document.querySelector(".feedback-section") as Element).getBoundingClientRect().top -
+        (document.querySelector(".test-intro .button") as Element).getBoundingClientRect().bottom,
+    );
+    expect(gap, "Take the test does not touch the feedback form").toBeGreaterThanOrEqual(16);
+    await designCheck(page, "mcq-L1-feedback");
+  });
+
+  test("T030 design: result view pass and fail (text + icon, not color alone; not an error page)", async ({ page }) => {
+    let reply = passResult;
+    await openTest(page, "L3", { submit: (route) => route.fulfill({ json: reply }) });
+    await takeTest(page).click();
+    await answer(page, 10);
+    await submit(page).click();
+    await expect(page.locator(".result-pass")).toBeVisible();
+    await expect(page.locator(".result-pass .result-title svg")).toHaveCount(1);
+    await expect(page.locator(".result-pass [role=alert]")).toHaveCount(0);
+    await expectTokens(page, [
+      [".result-pass", "border-top-color", "--color-accent"],
+      [".result-pass", "background-color", "--color-surface"],
+      [".result-pass .result-title", "color", "--color-accent"],
+      [".result .button", "background-color", "--color-accent"],
+    ]);
+    await designCheck(page, "result-pass");
+    reply = failResult;
+    await page.reload();
+    await takeTest(page).click();
+    await answer(page, 10);
+    await submit(page).click();
+    await expect(page.locator(".result-fail")).toBeVisible();
+    await expect(page.locator(".result-fail .result-title svg")).toHaveCount(1);
+    await expectTokens(page, [
+      [".result-fail", "border-top-color", "--color-border"],
+      [".result-fail", "background-color", "--color-surface"],
+      [".result-fail .result-title", "color", "--color-text"],
+    ]);
+    await designCheck(page, "result-fail");
+  });
+
+  test("T030 design: keyboard only completes an attempt at 1280 px", async ({ page }) => {
+    const { calls } = await openTest(page, "L3");
+    await takeTest(page).focus();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("fieldset.question")).toHaveCount(10);
+    // Tab into each radio group; Space picks its first option, then Tab moves to the next group.
+    await page.locator("fieldset.question").nth(0).getByRole("radio").nth(0).focus();
+    for (let i = 0; i < 10; i++) {
+      await page.keyboard.press("Space");
+      if (i < 9) await page.keyboard.press("Tab");
+    }
+    await expect(page.getByText("10 of 10 answered")).toBeVisible();
+    await page.keyboard.press("Tab");
+    await expect(submit(page)).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("[aria-live=polite]")).toContainText("Level passed");
+    expect(calls.submits).toHaveLength(1);
+  });
+});
