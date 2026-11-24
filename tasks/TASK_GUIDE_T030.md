@@ -49,7 +49,7 @@ Source (`docs/REQUIREMENT_SOURCE.md`):
 
 ### Requirement Fidelity Gate (sign off BEFORE implementation)
 
-- [ ] Restated intent confirmed to match the user's request (by Supervisor / user — not the implementing agent)
+- [x] Restated intent confirmed to match the user's request (by Supervisor / user — not the implementing agent) — Supervisor 2026-11-24: user said "start T030"; AC 3 rewritten for T013 option B; scope "build now, diff screen last" chosen by the user
 - [ ] Domain terms align with `PROJECT_SPEC.md` glossary (`grill-with-docs` run if terminology was fuzzy)
 - [ ] Every Acceptance Criterion below traces to a line in the Requirement
 - [ ] All Requirement Refs exist in `PRD.md` and are fully covered by the Acceptance Criteria above
@@ -65,7 +65,7 @@ Source (`docs/REQUIREMENT_SOURCE.md`):
 > time by `pre_agent_validate_guide.py`. `Entry point` is verified (non-blocking finding) at Stage 4
 > `code-review` time.
 
-**Depends on**: T012 — `startMcqAttempt` / `submitMcqAttempt`, error codes (`pool-too-small`, 429 `retryAt`), review card ids on fail; T013 — `verifyL1RunLog`, `verifyL2Branch`, `verifyL4Artifact` and their reason codes, plus the L1 nonce (option A); T014 — diff-question status values and `submitDiffAnswers`. The MCQ screen may be built against T012 first; the artifact and diff screens wait for T013 / T014.
+**Depends on**: T012 — `startMcqAttempt` / `submitMcqAttempt`, error codes (`pool-too-small`, 429 `retryAt`), review card ids on fail; T013 — `verifyL1RunLog`, `verifyL2Branch`, `verifyL4Artifact` and their reason codes, (no L1 nonce: option B); T014 — diff-question status values and `submitDiffAnswers`. T012 and T013 are merged. T014 is not built: build the diff-question screen last against the T014 guide contract with mocks; its real-handler test waits for T014, and T030 stays open until then (user decision 2026-11-24).
 **Entry point**: `Take the test` (button label on an unlocked, not-yet-passed level in the ladder view)
 
 ---
@@ -76,7 +76,7 @@ Source (`docs/REQUIREMENT_SOURCE.md`):
 |---|----------------------|-----------------------|
 | 1 | MCQ attempt screen: `Take the test` on an MCQ level calls `startMcqAttempt` and shows the 10 questions with options in the order the server sent. `Submit answers` stays disabled until every question has an answer, then calls `submitMcqAttempt` once (double click → one request). The page source and client state never hold an answer key (the server sends none; the test asserts no `key` field reaches the client). | "Verified MCQs"; FR-016; NFR-002 |
 | 2 | Result view: a pass shows "Level passed" and the name of the next level, now unlocked, with a link to it. A fail shows the score (e.g. "7 of 10") and the linked review cards with `Review these cards`, which opens the T011 review screen filtered to them. The view shows only what the server returned; no client-side scoring. | "L3 unlocked (fail: back to review cards)"; "loops back to study and review" |
-| 3 | Artifact submit screen per level: L1 shows the nonce and fields for the run-log link and the 3-sentence explanation (option A of T013; a different user choice changes this row before spawn); L2 asks for a branch link; L4 asks for a repo link or a PR link. The server's reason code is shown in plain words (`author-mismatch` → "These commits are not by your GitHub account", `pr-not-merged` → "This PR is not merged yet", `not-found`, `no-new-commits`, `not-from-scratch`, invalid URL). | L1/L2/L4 pass tests; "artifacts must match the signed-in GitHub account" |
+| 3 | Artifact submit screen per level (T013 option B, Debate 2026-11-19): L1 has no artifact screen; it uses the MCQ attempt screen of AC 1 (kind `run-mcq`), with optional fields for a run-log link and a 3-sentence explanation shown as feedback only (never scored, never in the evidence). L2 asks for a branch link; L4 asks for a repo link or a PR link. The server's reason code is shown in plain words (`author-mismatch` → "These commits are not by your GitHub account", `pr-not-merged` → "This PR is not merged yet", `not-found`, `no-new-commits`, `not-from-scratch`, `range-too-large`, invalid URL). | L1/L2/L4 pass tests; "artifacts must match the signed-in GitHub account" |
 | 4 | Diff-question screen: after an L2 branch is verified, the screen shows "Making 5 questions on your code" and polls the T014 status at most every 5 s. `ready` → 5 questions, submit via `submitDiffAnswers`, then the result view of AC 2 (pass = 4 of 5 by the server). `diff-questions-unavailable` / `diff-not-testable` → the reason and `Submit another branch`. | "push: 5 questions on your code"; "pass 4 of 5" |
 | 5 | Boundary and negative: a 429 shows "Next attempt at" with the server's `retryAt` in the learner's local time and no retry button before then; `pool-too-small` shows "This level's test is not ready yet"; an attempt older than 30 min shows "This attempt expired" and `Start a new attempt`; offline shows T015's "You are offline — this needs a connection". | FR-016 "retakes are rate-limited"; T012 limits |
 | 6 | A locked level shows no `Take the test` button; a direct URL to its test screen shows "Pass the previous level first". | "unlock each level only by passing its test" |
