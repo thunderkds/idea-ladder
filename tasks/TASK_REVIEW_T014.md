@@ -67,8 +67,33 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 > **before any implementation commit exists**; if it does not (docs, templates, skill-instruction
 > text), BEFORE is the **verbatim prior content** of what changed — a quoted excerpt, not a command.
 
-**BEFORE**: [pasted timestamped command output showing the thing absent/failing, captured before the
-first implementation commit] OR [verbatim excerpt of the prior content, for non-executable changes]
+**BEFORE**: captured by backend-developer at 2026-11-24T04:25:12Z on `3b34b16` (no T014 code yet), the guide's
+verification command plus two absence checks:
+
+```
+$ date -u; git rev-parse --short HEAD
+2026-11-24T04:25:12Z
+3b34b16
+$ bun install --frozen-lockfile && bun run typecheck && bun run lint && bun test -t "T014"
+290 packages installed [270.00ms]
+$ tsc --noEmit
+$ biome check . && bun scripts/check-tokens.ts
+Checked 152 files in 255ms. No fixes applied.
+check-tokens: 0 color literals outside src/client/tokens.css
+bun test v1.4.4 (38afee6c8)
+
+error: regex "T014" matched 0 tests. Searched 61 files (skipping 608 tests) [232.00ms]
+$ ls migrations | tail -2
+0014_artifacts.down.sql
+0014_artifacts.up.sql
+$ grep -rn "diff-questions\|diff-question-sets" src/
+src/shared/levels.ts:22:    passTest: { kind: "diff-questions", description: "Branch or diff link + questions generated from your diff" },
+src/server/level-generator.ts:14:  L2: "branch-diff-and-diff-questions",
+```
+
+No T014 test, no diff-question migration, no `/api/artifacts/:artifactId/diff-questions` or
+`/api/diff-question-sets/:setId/submit` route: a verified L2 branch (T013) sends `ladder/l2-artifact.verified`
+and nothing consumes it, so L2 can never pass and L3 never unlocks.
 
 **AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
 
