@@ -1,4 +1,4 @@
-# TASK_REVIEW — T[NNN]: [Short Title]
+# TASK_REVIEW — T030: Pass-test screens — MCQ attempt, artifact submit (L1/L2/L4), diff-question attempt, result view
 
 > Sibling of `tasks/TASK_GUIDE_T[NNN].md`. Everything here is **filled by the reviewer at Stage
 > 4/5** — it is deliberately NOT in the guide, because the implementing agent re-reads the guide on
@@ -67,8 +67,33 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 > **before any implementation commit exists**; if it does not (docs, templates, skill-instruction
 > text), BEFORE is the **verbatim prior content** of what changed — a quoted excerpt, not a command.
 
-**BEFORE**: [pasted timestamped command output showing the thing absent/failing, captured before the
-first implementation commit] OR [verbatim excerpt of the prior content, for non-executable changes]
+**BEFORE**: captured by frontend-developer at HEAD `da0bcb4` (no T030 implementation commit yet), with the
+guide's exact Verification Command, wrapped in UTC timestamps:
+
+```
+$ date -u; git rev-parse --short HEAD; bun install --frozen-lockfile && bun run typecheck && bun run lint && bun test -t "T030"; echo "bun test exit: $?"; bunx playwright test --grep T030; echo "playwright exit: $?"; date -u
+2026-11-24T04:00:11Z
+da0bcb4
+bun install v1.4.4 (38afee6c8)
+
+Checked 388 installs across 345 packages (no changes) [1055.00ms]
+$ tsc --noEmit
+$ biome check . && bun scripts/check-tokens.ts
+Checked 152 files in 211ms. No fixes applied.
+check-tokens: 0 color literals outside src/client/tokens.css
+bun test v1.4.4 (38afee6c8)
+
+error: regex "T030" matched 0 tests. Searched 61 files (skipping 608 tests) [2.43s]
+bun test exit: 1
+[WebServer] $ vite build
+Error: No tests found
+
+playwright exit: 1
+2026-11-24T04:00:22Z
+```
+
+No pass-test screen exists: `src/client/LadderView.tsx` renders no `Take the test` control, and `src/client/App.tsx`
+routes no test screen, so a learner cannot take any pass test from the UI.
 
 **AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
 
