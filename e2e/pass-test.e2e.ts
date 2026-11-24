@@ -675,3 +675,125 @@ test.describe("T030 design checks (tokens, tap targets, 360 / 768 / 1280 px, axe
     expect(calls.submits).toHaveLength(1);
   });
 });
+
+// AC 4: T014 is not built. Its routes are the client's assumption (src/client/pass-test.ts `diffStatusPath`,
+// `diffSubmitPath`) on the T014 guide's status values; these tests use mocks only. The real-handler run waits for T014.
+const diffQuestions = Array.from({ length: 5 }, (_, i) => ({
+  id: String(700 + i),
+  question: `In your diff, what does change ${i + 1} do?`,
+  options: [`Effect ${i + 1}a`, `Effect ${i + 1}b`, `Effect ${i + 1}c`, `Effect ${i + 1}d`],
+}));
+type DiffStatus = { status: string; reason?: string; setId?: string; questions?: typeof diffQuestions };
+
+/** Opens L2, mocks a verified branch (artifact 77) and the T014 status / submit routes; submits the branch. */
+async function openDiff(
+  page: Page,
+  statuses: (n: number) => DiffStatus,
+  submitJson: McqResult = { ...passResult, asked: 5, correct: 4, unlockedLevel: "L3" },
+) {
+  const polls: number[] = [];
+  const submits: unknown[] = [];
+  await page.route("**/api/artifacts/77/diff-questions", (route) => {
+    polls.push(Date.now());
+    return route.fulfill({ json: statuses(polls.length) });
+  });
+  await page.route("**/api/diff-question-sets/*/submit", (route) => {
+    submits.push(route.request().postDataJSON());
+    return route.fulfill({ json: submitJson });
+  });
+  const { calls } = await openTest(page, "L2", {
+    ladder: L2_OPEN,
+    artifact: (route) => route.fulfill({ json: { artifact: { id: "77", level: "L2", kind: "branch" } } }),
+  });
+  await urlField(page).fill("https://github.com/octo/next.js/tree/feature/retry");
+  await page.getByRole("button", { name: "Check my branch" }).click();
+  return { polls, submits, calls };
+}
+
+test("T030 SC 5: `Making 5 questions on your code`, polled at most every 5 s, then 5 questions; 4 of 5 passes", async ({
+  page,
+}) => {
+  await page.clock.install({ time: Date.parse("2026-11-24T08:00:00.000Z") });
+  const { polls, submits } = await openDiff(page, (n) =>
+    n < 3 ? { status: "generating" } : { status: "ready", setId: "55", questions: diffQuestions },
+  );
+  await expect(page.getByText("Making 5 questions on your code")).toBeVisible();
+  await expect.poll(() => polls.length).toBe(1);
+  await page.clock.fastForward(4_900);
+  expect(polls.length).toBe(1);
+  await page.clock.fastForward(200);
+  await expect.poll(() => polls.length).toBe(2);
+  await page.clock.fastForward(5_000);
+  await expect.poll(() => polls.length).toBe(3);
+  const groups = page.locator("fieldset.question");
+  await expect(groups).toHaveCount(5);
+  await page.clock.fastForward(30_000);
+  expect(polls.length, "a final status stops polling").toBe(3);
+  await answer(page, 5);
+  await submit(page).click();
+  const result = page.locator("[aria-live=polite]");
+  await expect(result).toContainText("Level passed");
+  await expect(result).toContainText("4 of 5 correct");
+  await expect(page.getByRole("link", { name: "Go to L3 Understand" })).toBeVisible();
+  expect(submits).toEqual([{ answers: Object.fromEntries(diffQuestions.map((q) => [q.id, 0])) }]);
+});
+
+test("T030 AC 4: `diff-questions-unavailable` / `diff-not-testable` show the reason and `Submit another branch`", async ({
+  page,
+}) => {
+  let status = "diff-questions-unavailable";
+  await openDiff(page, () => ({ status, reason: "too-few-verified" }));
+  await expect(page.getByRole("alert")).toContainText("We could not make 5 checked questions from this branch");
+  await expect(page.getByRole("alert")).not.toContainText("too-few-verified");
+  await expectNoSeriousAxeViolations(page, "diff-unavailable");
+  await page.getByRole("button", { name: "Submit another branch" }).click();
+  await expect(urlField(page)).toBeVisible();
+  status = "diff-not-testable";
+  await page.getByRole("button", { name: "Check my branch" }).click();
+  await expect(page.getByRole("alert")).toContainText("This branch has no code change we can ask about");
+  await expect(page.getByRole("button", { name: "Submit another branch" })).toBeVisible();
+});
+
+test("T030 edge: polling pauses while the page is hidden; after 10 min `Taking longer than usual` and `Check again`", async ({
+  page,
+}) => {
+  await page.clock.install({ time: Date.parse("2026-11-24T08:00:00.000Z") });
+  const { polls } = await openDiff(page, () => ({ status: "generating" }));
+  await expect.poll(() => polls.length).toBe(1);
+  const setHidden = (hidden: boolean) =>
+    page.evaluate((h) => {
+      Object.defineProperty(document, "visibilityState", { value: h ? "hidden" : "visible", configurable: true });
+      document.dispatchEvent(new Event("visibilitychange"));
+    }, hidden);
+  await setHidden(true);
+  await page.clock.fastForward(60_000);
+  expect(polls.length, "no poll while hidden").toBeLessThanOrEqual(2);
+  const paused = polls.length;
+  await page.clock.fastForward(60_000);
+  expect(polls.length).toBe(paused);
+  await setHidden(false);
+  await expect.poll(() => polls.length).toBe(paused + 1);
+  await page.clock.fastForward(10 * 60_000);
+  await expect(page.getByText("Taking longer than usual")).toBeVisible();
+  const stopped = polls.length;
+  await page.clock.fastForward(60_000);
+  expect(polls.length, "polling stops after 10 min").toBe(stopped);
+  await expectNoSeriousAxeViolations(page, "diff-slow");
+  await page.getByRole("button", { name: "Check again" }).click();
+  await expect.poll(() => polls.length).toBe(stopped + 1);
+  await expect(page.getByText("Making 5 questions on your code")).toBeVisible();
+});
+
+test("T030 design: diff-question waiting state and 5-question screen", async ({ page }) => {
+  await page.clock.install({ time: Date.parse("2026-11-24T08:00:00.000Z") });
+  let ready = false;
+  await openDiff(page, () =>
+    ready ? { status: "ready", setId: "55", questions: diffQuestions } : { status: "generating" },
+  );
+  await expect(page.getByText("Making 5 questions on your code")).toBeVisible();
+  await designCheck(page, "diff-waiting");
+  ready = true;
+  await page.clock.fastForward(5_000);
+  await expect(page.locator("fieldset.question")).toHaveCount(5);
+  await designCheck(page, "diff-questions");
+});

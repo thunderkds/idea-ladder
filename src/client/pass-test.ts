@@ -82,6 +82,14 @@ export const DIFF_STATUS_TEXT: Record<string, string> = {
   "diff-not-testable": "This branch has no code change we can ask about",
 };
 
+/**
+ * T014 routes, ASSUMED: the T014 guide names the status values and `submitDiffAnswers` but no paths. T014 is not
+ * built (user 2026-11-24: build this screen against the guide with mocks); align these two paths when it lands.
+ * GET status -> { status, reason?, setId?, questions? }; POST submit { answers } -> T012's result shape.
+ */
+export const diffStatusPath = (artifactId: string) => `/api/artifacts/${encodeURIComponent(artifactId)}/diff-questions`;
+export const diffSubmitPath = (setId: string) => `/api/diff-question-sets/${encodeURIComponent(setId)}/submit`;
+
 export const REVIEW_CARDS_PARAM = "cards";
 const CARD_ID = /^[1-9][0-9]{0,17}$/;
 

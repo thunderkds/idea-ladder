@@ -9,6 +9,11 @@ import { OfflineNotice, useOnline } from "./offline.tsx";
 import { expireSession } from "./offline-store.ts";
 import {
   artifactProblemText,
+  DIFF_POLL_MS,
+  DIFF_STATUS_TEXT,
+  diffPollStep,
+  diffStatusPath,
+  diffSubmitPath,
   localTime,
   mcqProblemText,
   reviewCardsHref,
@@ -398,13 +403,17 @@ function RunFeedback({ ladderId }: { ladderId: string }) {
 function ArtifactTest({
   ladderId,
   level,
+  initialUrl = "",
   onResult,
+  onBranchVerified,
 }: {
   ladderId: string;
   level: "L2" | "L4";
+  initialUrl?: string;
   onResult: (r: TestResult) => void;
+  onBranchVerified: (artifactId: string, url: string) => void;
 }) {
-  const [url, setUrl] = useState("");
+  const [url, setUrl] = useState(initialUrl);
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
   const sending = useRef(false);
@@ -422,6 +431,7 @@ function ArtifactTest({
       if (!res.ok) return setError(artifactProblemText(json as Problem, level, ""));
       // L4: the artifact is the pass (the evidence record is written). L2: the diff questions follow (T014).
       if (level === "L4") onResult({ pass: true, unlockedLevel: null, reviewCardIds: [] });
+      else onBranchVerified(String((json.artifact as { id: unknown }).id), value);
     } catch {
       setError(NOT_SENT);
     } finally {
@@ -475,6 +485,129 @@ function ArtifactTest({
   );
 }
 
+type DiffState = { status: string; reason?: string; setId?: string; questions?: Question[] };
+
+/**
+ * T014 (mocked until it lands): after the L2 branch is verified, polls the question status every 5 s, pauses while
+ * the page is hidden, and stops on a final status or after 10 min. `ready` shows the 5 questions; the server scores.
+ */
+function DiffTest({
+  artifactId,
+  onResult,
+  onAnother,
+}: {
+  artifactId: string;
+  onResult: (r: TestResult) => void;
+  onAnother: () => void;
+}) {
+  const [state, setState] = useState<DiffState>({ status: "generating" });
+  const [slow, setSlow] = useState(false);
+  const [round, setRound] = useState(0); // `Check again` starts a new 10-minute round
+
+  useEffect(() => {
+    void round;
+    const startedAt = Date.now();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let stopped = false;
+    let paused = false;
+    let status = "generating";
+    const poll = async () => {
+      timer = undefined;
+      try {
+        const res = await fetch(diffStatusPath(artifactId));
+        if (res.status === 401) return void expireSession();
+        if (res.ok) {
+          const body = (await res.json()) as DiffState;
+          if (stopped) return;
+          status = body.status;
+          setState({ ...body, questions: body.questions ? keepShown(body.questions) : undefined });
+        }
+      } catch {
+        // network blip: try again on the next tick
+      }
+      if (stopped) return;
+      next();
+    };
+    const next = () => {
+      const step = diffPollStep({
+        status,
+        elapsedMs: Date.now() - startedAt,
+        hidden: document.visibilityState === "hidden",
+      });
+      paused = step === "pause";
+      if (step === "poll") timer = setTimeout(poll, DIFF_POLL_MS);
+      if (step === "slow") setSlow(true);
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "hidden" && timer) {
+        clearTimeout(timer);
+        timer = undefined;
+        paused = true;
+      } else if (document.visibilityState === "visible" && paused) {
+        paused = false;
+        void poll();
+      }
+    };
+    setSlow(false);
+    document.addEventListener("visibilitychange", onVisible);
+    void poll();
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [artifactId, round]);
+
+  const send = async (answers: Record<string, number>) => {
+    if (!state.setId) return undefined;
+    try {
+      const { res, json } = await postJson(diffSubmitPath(state.setId), { answers });
+      if (res.status === 401) return void expireSession();
+      if (!res.ok) return void setState({ status: "problem", reason: String(json.error ?? "") });
+      onResult(fromMcqResult(json as unknown as McqResult));
+      return undefined;
+    } catch {
+      return "not-sent" as const;
+    }
+  };
+
+  if (state.status === "ready" && state.questions) {
+    return (
+      <>
+        <h2>5 questions on your code</h2>
+        <AnswerForm questions={state.questions} disabled={false} send={send} />
+      </>
+    );
+  }
+  if (state.status === "generating") {
+    return (
+      <section className="test-intro" aria-label="Your questions" aria-busy={slow ? undefined : "true"}>
+        <p className="test-problem-title" role="status">
+          {slow ? "Taking longer than usual" : DIFF_STATUS_TEXT.generating}
+        </p>
+        <p className="status-detail">
+          {slow
+            ? "Your questions are still not ready. Check again in a few minutes."
+            : "Your branch is checked. This page updates by itself."}
+        </p>
+        {slow ? (
+          <button className="button" type="button" onClick={() => setRound((r) => r + 1)}>
+            Check again
+          </button>
+        ) : null}
+      </section>
+    );
+  }
+  return (
+    <ProblemBox title={DIFF_STATUS_TEXT[state.status] ?? mcqProblemText(state.reason ?? "")}>
+      <p className="status-detail">Change something else on a branch, then send it.</p>
+      <button className="button" type="button" onClick={onAnother}>
+        Submit another branch
+      </button>
+    </ProblemBox>
+  );
+}
+
 /** One result view for every test type: pass shows the newly open level; fail the score and the linked cards. */
 function ResultView({ ladderId, ladder, result }: { ladderId: string; ladder: LadderView; result: TestResult }) {
   const next = ladder.levels.find((l) => l.id === result.unlockedLevel);
@@ -525,6 +658,8 @@ export function PassTestPage({ ladderId, level }: { ladderId: string; level: Lev
   const [ladder, setLadder] = useState<LadderView>();
   const [loadError, setLoadError] = useState<"missing" | "failed">();
   const [result, setResult] = useState<TestResult>();
+  /** L2: the verified branch whose diff questions are shown (T014), and its URL for `Submit another branch`. */
+  const [branch, setBranch] = useState<{ artifactId?: string; url: string }>({ url: "" });
 
   const load = useCallback(async () => {
     try {
@@ -611,8 +746,16 @@ export function PassTestPage({ ladderId, level }: { ladderId: string; level: Lev
           <McqTest ladderId={ladderId} level={level} onResult={onResult} />
           {level === "L1" ? <RunFeedback ladderId={ladderId} /> : null}
         </>
+      ) : branch.artifactId ? (
+        <DiffTest artifactId={branch.artifactId} onResult={onResult} onAnother={() => setBranch({ url: branch.url })} />
       ) : (
-        <ArtifactTest ladderId={ladderId} level={kind === "branch" ? "L2" : "L4"} onResult={onResult} />
+        <ArtifactTest
+          ladderId={ladderId}
+          level={kind === "branch" ? "L2" : "L4"}
+          initialUrl={branch.url}
+          onResult={onResult}
+          onBranchVerified={(artifactId, url) => setBranch({ artifactId, url })}
+        />
       )}
     </main>
   );
