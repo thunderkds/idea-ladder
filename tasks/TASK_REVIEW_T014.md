@@ -47,16 +47,16 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass / ☐ fail | [test file path(s) — required before Done] |
-| Verification command run | ☐ pass / ☐ fail | [paste actual output] |
-| Negative cases hold | ☐ pass / ☐ fail | |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | Written in this task: `tests/diff-questions.test.ts` (16 tests: SC 1-6, AC 1-7, edge cases sha-gone / rate limit / substring key / duplicate options / >500 chars / duplicate event, retake + rate limit, routes, migration 0015 up/down/up), `tests/diff-hunks.test.ts` (4 unit tests: splitter ids, lockfile/binary/dist-build-vendor filter, deleted-only diff, DIFF_TOKEN_BUDGET cap), fixtures + mocks `tests/support/t014-diff.ts`. Updated for 0015: `tests/migrate.test.ts`, `tests/artifacts-migration.test.ts`. Output: see next row (`20 pass, 0 fail`). |
+| Verification command run | ☑ pass | backend-developer, 2026-11-24T05:18:43Z on `444c808`: `bun install --frozen-lockfile && bun run typecheck && bun run lint && bun test -t "T014"` → `Checked 388 installs across 345 packages (no changes)` / `$ tsc --noEmit` (no errors) / `Checked 158 files in 92ms. No fixes applied.` / `check-tokens: 0 color literals outside src/client/tokens.css` / `20 pass  608 filtered out  0 fail  172 expect() calls  Ran 20 tests across 63 files. [4.43s]`. The two `Inngest step error` blocks in the log are the intended failures of SC 4 (blind-solve throws once) and the rate-limit edge case (`RetryAfterError: github rate limit`, `retryAfter: "2026-11-24T09:10:00.000Z"`). |
+| Negative cases hold | ☑ pass | In the run above: hunk id not in the diff, B disagreement, B disagrees in all 3 rounds (`diff-questions-unavailable`/`too-few-verified`, 0 served), lockfile-only diff (`diff-not-testable`, model mocks called 0 times), SHA gone (`sha-gone`), GitHub rate limit (RetryAfterError, set stays `generating`, no partial set), substring key / duplicate options / >500 chars rejected, invalid model A output spends one round, duplicate L2 event (1 set, 0 LLM calls), another learner's set 404, unknown question id 422, bad body 400, second submit 409 (nothing stored on any of them), retake on a non-failed set 409, 4th attempt in 24 h 429 + retryAt, new branch over the limit `too-many-attempts` with 0 LLM calls, scoring module imports no model module and no `ai`/`@ai-sdk` package, `fetch` spied to throw during scoring and never called. |
 | verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
 | Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
-| Full smoke suite still green (no regression) | ☐ pass / ☐ fail | |
+| Full smoke suite still green (no regression) | ☑ pass | backend-developer, 2026-11-24T05:17:13Z on `444c808`: `bun test` → `628 pass  0 fail  Ran 628 tests across 63 files. [82.21s]`. One earlier full run showed `T015 offline pack (AC 2) > at most 200 cards` timing out at 5 s (410 sequential inserts) plus an `Unhandled error between tests` from the background level-generator runs; re-run 2 of 2 green on this branch with the same 4 files, and green alone: a load-timing flake, not caused by this change (the test touches no T014 table). |
 | **Companion score (easy-verifier)** | ☐ pass / ☐ fail / ☐ N/A | [`overall` and `change_risk` as the tool returned them, the scope, the ref, and the absolute path of the verifier report after a literal `report:` label — e.g. "overall 86 (>= 80), change_risk pass, scope changes, ref `main...HEAD`, report: `/home/me/.easy-verifier-reports/kit/score_changes_20261028T0530Z.html`". The gate reads the path that follows `report:` and nothing else, so with no label, or a path that is absent, the row is unscored — write ☑ N/A instead. ☑ N/A with a reason when neither companion tool was run: the merge gate blocks on ☑ fail only, never on an absent or N/A row] |
-| **UI: Visual regression (diff or verdict pasted)** | ☐ pass / ☐ fail / ☐ N/A | [screenshot path or LLM verdict — required for UI tasks, Hard-Stop Gate 6] |
-| **UI: Design-system compliance (tokens/colors/typography verified)** | ☐ pass / ☐ fail / ☐ N/A | [method used + output] |
-| **UI: Responsiveness at target viewports** | ☐ pass / ☐ fail / ☐ N/A | [viewports tested, any overflow findings] |
+| **UI: Visual regression (diff or verdict pasted)** | ☑ N/A | Backend only: the answer screen is T030 (guide § Out of scope "Answer screen UI (server handlers only)"). |
+| **UI: Design-system compliance (tokens/colors/typography verified)** | ☑ N/A | Backend only (no client file changed). |
+| **UI: Responsiveness at target viewports** | ☑ N/A | Backend only (no client file changed). |
 
 ---
 
@@ -95,9 +95,27 @@ No T014 test, no diff-question migration, no `/api/artifacts/:artifactId/diff-qu
 `/api/diff-question-sets/:setId/submit` route: a verified L2 branch (T013) sends `ladder/l2-artifact.verified`
 and nothing consumes it, so L2 can never pass and L3 never unlocks.
 
-**AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
+**AFTER**: same command, 2026-11-24T05:18:43Z on `444c808`:
 
-**DELTA**: [one sentence — what a user can now do that they could not before]
+```
+$ bun install --frozen-lockfile && bun run typecheck && bun run lint && bun test -t "T014"
+Checked 388 installs across 345 packages (no changes) [6.00ms]
+$ tsc --noEmit
+$ biome check . && bun scripts/check-tokens.ts
+Checked 158 files in 92ms. No fixes applied.
+check-tokens: 0 color literals outside src/client/tokens.css
+bun test v1.4.4 (38afee6c8)
+ 20 pass
+ 608 filtered out
+ 0 fail
+ 172 expect() calls
+Ran 20 tests across 63 files. [4.43s]
+$ ls migrations | tail -2
+0015_diff_questions.down.sql
+0015_diff_questions.up.sql
+```
+
+**DELTA**: after T013 verifies an L2 branch, the learner now gets 5 checked questions on their own diff, and 4 of 5 correct (scored in code) writes the L2 evidence record and unlocks L3; before, nothing consumed the L2 event and L2 could never pass.
 
 **WITNESS**: [who ran it and when — derived from `memory/event-trace/T014.jsonl`, never the
 implementing agent alone]
