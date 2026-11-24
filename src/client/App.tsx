@@ -3,6 +3,8 @@ import { ConceptsPage } from "./Concepts.tsx";
 import { LadderPage } from "./LadderView.tsx";
 import { OfflineNotice, requireOnline } from "./offline.tsx";
 import { expireSession, signOut } from "./offline-store.ts";
+import { PassTestPage } from "./PassTest.tsx";
+import { testLevelFromSearch } from "./pass-test.ts";
 import { ReviewPage } from "./Review.tsx";
 import { SettingsPage } from "./Settings.tsx";
 
@@ -229,7 +231,11 @@ export function App() {
   if (path === "/settings") return <SettingsPage />;
   const concepts = /^\/ladders\/([^/]+)\/concepts$/.exec(path);
   if (concepts?.[1]) return <ConceptsPage ladderId={decodeURIComponent(concepts[1])} />;
-  if (path.startsWith("/ladders/")) return <LadderPage ladderId={path.slice("/ladders/".length)} />;
+  if (path.startsWith("/ladders/")) {
+    const ladderId = path.slice("/ladders/".length);
+    const testLevel = testLevelFromSearch(window.location.search);
+    return testLevel ? <PassTestPage ladderId={ladderId} level={testLevel} /> : <LadderPage ladderId={ladderId} />;
+  }
   if (path.startsWith("/jobs/")) return <JobStatus jobId={path.slice("/jobs/".length)} />;
   const root = document.getElementById("root");
   if (path === "/start" && root?.dataset.error) {
