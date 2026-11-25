@@ -70,6 +70,61 @@ const sessionOf = (res: Response) =>
 const users = () => db.sql`SELECT github_id::text AS github_id, github_login FROM users`;
 const sessionCount = async () => Number((await db.sql`SELECT count(*)::int AS n FROM sessions`)[0].n);
 
+describe("T034 dev login: Host check and cross-site refusal (Stage 4 P1, P2a)", () => {
+  const get = (path: string, headers: Record<string, string> = {}) => app.request(`${BASE}${path}`, { headers });
+
+  test("a Host other than localhost or 127.0.0.1 gets 403 on every route; no cookie, no user, no lookup", async () => {
+    for (const host of [
+      "attacker.example:3000",
+      "attacker.example",
+      "localhost.attacker.example",
+      "127.0.0.1.nip.io",
+    ]) {
+      for (const path of ["/auth/github", "/api/me", "/", "/auth/github/callback?code=a&state=b"]) {
+        const res = await get(path, { host });
+        expect(`${host} ${path}: ${res.status}`).toBe(`${host} ${path}: 403`);
+        expect(res.headers.getSetCookie()).toEqual([]);
+      }
+    }
+    expect(await users()).toEqual([]);
+    expect(stub.requests).toEqual([]);
+  });
+
+  test("Host localhost:3000 and 127.0.0.1:3000 sign in", async () => {
+    for (const host of ["localhost:3000", "127.0.0.1:3000", "localhost", "LOCALHOST:3000"]) {
+      const res = await get("/auth/github", { host });
+      expect(`${host}: ${res.status}`).toBe(`${host}: 302`);
+      expect(sessionOf(res)).toBeDefined();
+    }
+  });
+
+  test("Sec-Fetch-Site cross-site: 400 failure page, no lookup, no cookie, no session", async () => {
+    const res = await get("/auth/github", { "sec-fetch-site": "cross-site" });
+    expect(res.status).toBe(400);
+    expect(await res.text()).toContain("Sign-in failed");
+    expect(sessionOf(res)).toBeUndefined();
+    expect(await users()).toEqual([]);
+    expect(await sessionCount()).toBe(0);
+    expect(stub.requests).toEqual([]);
+  });
+
+  test("Sec-Fetch-Site same-origin, none, same-site or missing: signs in", async () => {
+    for (const site of ["same-origin", "none", "same-site", undefined]) {
+      const res = await get("/auth/github", site ? { "sec-fetch-site": site } : {});
+      expect(`${site}: ${res.status} ${Boolean(sessionOf(res))}`).toBe(`${site}: 302 true`);
+    }
+  });
+
+  test("a valid session of that user: redirect to next with no lookup and no new session", async () => {
+    const cookie = sessionOf(await get("/auth/github")) ?? "";
+    stub.requests.length = 0;
+    const res = await get("/auth/github?next=/review", { cookie });
+    expect([res.status, res.headers.get("location")]).toEqual([302, "/review"]);
+    expect(stub.requests).toEqual([]);
+    expect(await sessionCount()).toBe(1);
+  });
+});
+
 describe("T034 dev sign-in (AC 4, AC 7)", () => {
   test("GET /auth/github?next=/ladders/1: no GitHub redirect, a session for the looked-up account, back to next", async () => {
     const res = await app.request(`${BASE}/auth/github?next=/ladders/1`);

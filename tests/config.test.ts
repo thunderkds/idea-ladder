@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
 import { networkInterfaces, tmpdir } from "node:os";
 import webpush from "web-push";
 import { ConfigError, listenHostname, loadConfig, modelBWarning } from "../src/server/config.ts";
@@ -274,39 +274,53 @@ describe("T034 dev login config (DEV_LOGIN_GITHUB_LOGIN)", () => {
     expect(listenHostname(loadConfig({ ...valid, NODE_ENV: "development" }))).toBeUndefined();
   });
 
-  test("main.ts in dev login mode answers on 127.0.0.1 and not on a non-loopback address", async () => {
-    const proc = Bun.spawn([process.execPath, `${import.meta.dir}/../src/server/main.ts`], {
-      cwd: tmpdir(), // no project .env is loaded
-      env: { PATH: process.env.PATH, ...dev, DATABASE_URL: "postgres://u:p@127.0.0.1:1/none", PORT: "0" },
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    try {
+  describe("main.ts loopback bind in dev login mode", () => {
+    // A machine with no LAN IPv4 address shows the LAN test as skipped, never as a silent pass.
+    const lan = Object.values(networkInterfaces())
+      .flat()
+      .find((a) => a && a.family === "IPv4" && !a.internal)?.address;
+    let proc: ReturnType<typeof Bun.spawn> | undefined;
+    let port: string | undefined;
+    beforeAll(async () => {
+      mock.restore();
+      proc = Bun.spawn([process.execPath, `${import.meta.dir}/../src/server/main.ts`], {
+        cwd: tmpdir(), // no project .env is loaded
+        env: { PATH: process.env.PATH, ...dev, DATABASE_URL: "postgres://u:p@127.0.0.1:1/none", PORT: "0" },
+        stdout: "pipe",
+        stderr: "pipe",
+      });
       let out = "";
-      const reader = proc.stdout.getReader();
+      const reader = (proc.stdout as ReadableStream<Uint8Array>).getReader();
       const deadline = Date.now() + 15_000;
       while (!/listening on http:\/\/localhost:\d+/.test(out) && Date.now() < deadline) {
         const { value, done } = await reader.read();
         if (done) break;
         out += new TextDecoder().decode(value);
       }
-      const port = out.match(/listening on http:\/\/localhost:(\d+)/)?.[1];
+      port = out.match(/listening on http:\/\/localhost:(\d+)/)?.[1];
+    }, 20_000);
+    afterAll(async () => {
+      proc?.kill();
+      await proc?.exited;
+    });
+
+    test("answers on 127.0.0.1", async () => {
       expect(port).toBeDefined();
       expect((await fetch(`http://127.0.0.1:${port}/api/me`)).status).toBe(401);
-      const lan = Object.values(networkInterfaces())
-        .flat()
-        .find((a) => a && a.family === "IPv4" && !a.internal)?.address;
-      if (lan) {
+    }, 20_000);
+
+    test.skipIf(!lan)(
+      `does not answer on the LAN address (${lan ?? "none: skipped"})`,
+      async () => {
+        expect(port).toBeDefined();
         const reached = await fetch(`http://${lan}:${port}/api/me`, { signal: AbortSignal.timeout(2_000) }).then(
           () => true,
           () => false,
         );
         expect(`${lan}: ${reached}`).toBe(`${lan}: false`);
-      }
-    } finally {
-      proc.kill();
-      await proc.exited;
-    }
+      },
+      20_000,
+    );
   });
 
   test("main.ts start-up exits 1 before it listens when dev login is set outside development", () => {
@@ -326,7 +340,7 @@ describe("T034 dev login config (DEV_LOGIN_GITHUB_LOGIN)", () => {
     expect(res.exitCode).toBe(1);
     expect(res.stderr.toString()).toMatch(/DEV_LOGIN_GITHUB_LOGIN is allowed only with NODE_ENV=development/);
     expect(res.stdout.toString()).not.toMatch(/listening/);
-  });
+  }, 20_000);
 });
 
 describe("model B (T009)", () => {
