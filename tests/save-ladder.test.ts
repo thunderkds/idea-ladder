@@ -59,7 +59,8 @@ function failingModelA(fail?: (level: string) => Error | undefined): ModelADeps 
     levels,
     generate: async (input) => {
       const data = promptData(input.prompt);
-      if (data?.level) {
+      // A T033 top-up call has the same data line; only the generate-level-* calls are recorded here.
+      if (data?.level && !input.system?.startsWith("You write more multiple-choice questions")) {
         levels.push(data.level);
         const err = fail?.(data.level);
         if (err) throw err;
@@ -296,11 +297,9 @@ describe("step save-ladder in ladder-generate (AC 7, AC 8, SC 6, SC 7)", () => {
     const jobId = await newJob(user.id);
     await db.sql`INSERT INTO generation_job_waiters (job_id, user_id) VALUES (${jobId}, ${user.id})`;
     const { result, ctx } = await engine(jobId, failingModelA()).t.execute();
-    expect(ctx.step.run.mock.calls.map((c) => c[0]).slice(-3)).toEqual([
-      "check-and-dedupe",
-      "blind-solve",
-      "save-ladder",
-    ]);
+    // T033 top-up steps (thin test pools) run between blind-solve and save-ladder.
+    const ran = ctx.step.run.mock.calls.map((c) => String(c[0])).filter((id) => !id.startsWith("top-up-"));
+    expect(ran.slice(-3)).toEqual(["check-and-dedupe", "blind-solve", "save-ladder"]);
     const [ladder] = await db.sql`SELECT id::text AS id, status FROM ladders`;
     expect(ladder.status).toBe("unverified");
     expect(result).toMatchObject({ status: "done", ladderId: ladder.id });

@@ -126,6 +126,8 @@ describe("Inngest step chunk (T031 AC 2, Success Criterion 2)", () => {
       ...["L0", "L1", "L2", "L3", "L4"].map((l) => `generate-level-${l}`),
       "check-and-dedupe",
       "blind-solve",
+      // T033: testModelA keeps 1 MCQ per pool level, so L0, L1 and L3 each get both top-up rounds.
+      ...[1, 2].flatMap((r) => ["L0", "L1", "L3"].map((l) => `top-up-${l}-${r}`)),
       "save-ladder",
     ]);
     const rows = await chunkRows();

@@ -1,10 +1,10 @@
-// Background ladder generation (Inngest). Steps: fetch-repo (T005), pick-core-files (T006), map-concepts (T007), chunk, generate-level-L0..L4, check-and-dedupe, blind-solve (T009) and save-ladder (T008); later tasks append more.
+// Background ladder generation (Inngest). Steps: fetch-repo (T005), pick-core-files (T006), map-concepts (T007), chunk, generate-level-L0..L4, check-and-dedupe, blind-solve (T009), top-up-<level>-<round> (T033) and save-ladder (T008); later tasks append more.
 import { APICallError, type LanguageModel } from "ai";
 import type { SQL } from "bun";
 import { Inngest, NonRetriableError } from "inngest";
 import type { Totals } from "../../eval/src/cost.ts";
 import { LEVEL_IDS, type LevelId } from "../shared/levels.ts";
-import { BLIND_SOLVE_STEP, blindSolveLevels } from "./blind-solver.ts";
+import { BLIND_SOLVE_STEP, blindSolveLevels, isModelFailure } from "./blind-solver.ts";
 import { CHECK_AND_DEDUPE_STEP, checkAndDedupe, DEFAULT_DEDUPE_JACCARD, type LadderLevel } from "./check-and-dedupe.ts";
 import { chunkFiles, type SourceFile } from "./chunker.ts";
 import { pickCoreFilesClaudeCode, ReaderNotInstalledError } from "./claude-code-reader.ts";
@@ -12,7 +12,15 @@ import { MAP_CONCEPTS_STEP, MapperInvalidOutputError, mapConcepts } from "./conc
 import { type Confidence, confidenceScore } from "./confidence.ts";
 import { jobCostByStep } from "./cost-wiring.ts";
 import { GitHubError, type GithubRepoClient, RateLimitError, RepoNotFoundError } from "./github-repo.ts";
-import { generateLevel, LEVEL_SOURCES, type LevelChunk, LevelGeneratorInvalidOutputError } from "./level-generator.ts";
+import {
+  generateLevel,
+  generateTopUpMcqs,
+  LEVEL_SOURCES,
+  type LevelChunk,
+  LevelGeneratorInvalidOutputError,
+  type Mcq,
+} from "./level-generator.ts";
+import { checkTopUp, solveTopUp, type TopUpRound, topUpMcqPools, topUpStepId } from "./mcq-top-up.ts";
 import { type ModelADeps, ModelANotInstalledError } from "./model-a.ts";
 import {
   type CallUsage,
@@ -25,7 +33,7 @@ import {
   type ReadFile,
   type TreeEntry,
 } from "./repo-reader.ts";
-import { SAVE_LADDER_STEP, saveLadder } from "./save-ladder.ts";
+import { SAVE_LADDER_STEP, type SaveLadderInput, saveLadder } from "./save-ladder.ts";
 
 export const LADDER_GENERATE_EVENT = "ladder/generate.requested";
 export type GenerateRequested = { repo: string; sha: string; jobId: string };
@@ -389,7 +397,7 @@ const toLevelChunk = (r: ChunkRow): LevelChunk => ({
 /** Tree paths sent to the L2 generator at most. */
 const MAX_TREE_PATHS = 200;
 /** A step whose error message names it fails the job `<step>-failed` after the last retry (see onFailure). */
-const LEVEL_STEP = /generate-level-L[0-4]|check-and-dedupe|blind-solve|save-ladder/;
+const LEVEL_STEP = /generate-level-L[0-4]|check-and-dedupe|blind-solve|top-up|save-ladder/;
 
 /** One model A generator for one level, grounded in that level's chunks. Stores nothing: save-ladder (8d) writes. */
 async function generateLevelStep(
@@ -524,8 +532,99 @@ async function blindSolveStep(
   }
 }
 
+/** The job's repo + SHA and every chunk of it, in id order (the top-up steps). */
+async function jobChunks(sql: SQL, jobId: string) {
+  const [job] = await sql`SELECT repo_full_name, commit_sha FROM generation_jobs WHERE id = ${jobId}`;
+  if (!job) throw new NonRetriableError(`unknown job ${jobId}`);
+  const repo = job.repo_full_name as string;
+  const sha = job.commit_sha as string;
+  const rows = await sql`
+    SELECT id::text AS id, source, path, start_line, end_line, text FROM chunks
+    WHERE repo_full_name = ${repo} AND commit_sha = ${sha} ORDER BY chunks.id`;
+  return { repo, sha, chunks: (rows as ChunkRow[]).map(toLevelChunk) };
+}
+
+/** T033 step top-up-<level>-<round>: model A writes more MCQs, then the answer-key and duplicate checks. */
+async function topUpCheckStep(
+  { sql, reader, modelA, dedupeJaccard }: Deps,
+  { jobId }: GenerateRequested,
+  level: LevelId,
+  round: number,
+  levels: LadderLevel[],
+): Promise<TopUpRound> {
+  const step = topUpStepId(level, round);
+  const { repo, sha, chunks } = await jobChunks(sql, jobId);
+  const onUsage = (u: CallUsage) => reader.logCost({ ...u, jobId, repo, sha, step, backend: modelA.backend });
+  const current = levels.find((l) => l.level === level);
+  let generated: TopUpRound;
+  try {
+    generated = await generateTopUpMcqs({
+      level,
+      chunks: chunks.filter((c) => LEVEL_SOURCES[level].includes(c.source)),
+      avoid: current?.status === "generated" ? current.mcqs.map((m) => m.question) : [],
+      generate: modelA.generate,
+      onUsage,
+    });
+  } catch (err) {
+    // Not a model failure (a cost-log fault, a bug): rethrown, so Inngest retries this step.
+    if (!isModelFailure(err))
+      throw new Error(`${step}: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
+    // A model failure: the top-up is best effort; the round counts as run with 0 added, the level is saved thin.
+    console.warn(
+      JSON.stringify({ event: "top-up-generator-error", jobId, repo, sha, level, round, error: String(err) }),
+    );
+    return { mcqs: [], dropped: [] };
+  }
+  try {
+    return await checkTopUp({
+      level,
+      generated,
+      levels,
+      chunks,
+      generate: modelA.generate,
+      dedupeJaccard: dedupeJaccard ?? DEFAULT_DEDUPE_JACCARD,
+      onUsage,
+    });
+  } catch (err) {
+    throw new Error(`${step}: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
+  }
+}
+
+/** T033 step top-up-<level>-<round>-blind-solve: model B answers the round's checked MCQs blind (T009 rules). */
+async function topUpSolveStep(
+  { sql, reader, modelA, modelB, dedupeJaccard }: Deps,
+  { jobId }: GenerateRequested,
+  level: LevelId,
+  round: number,
+  levels: LadderLevel[],
+  candidates: Mcq[],
+): Promise<TopUpRound> {
+  const step = topUpStepId(level, round); // one cost-log step per round (AC 5)
+  const { repo, sha, chunks } = await jobChunks(sql, jobId);
+  try {
+    return await solveTopUp({
+      level,
+      candidates,
+      levels,
+      chunks,
+      generateA: modelA.generate,
+      generateB: modelB.generate,
+      dedupeJaccard: dedupeJaccard ?? DEFAULT_DEDUPE_JACCARD,
+      onUsageA: (u) => reader.logCost({ ...u, jobId, repo, sha, step, backend: modelA.backend }),
+      onUsageB: (u) => reader.logCost({ ...u, jobId, repo, sha, step, backend: modelB.backend }),
+    });
+  } catch (err) {
+    throw new Error(`${step}-blind-solve: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
+  }
+}
+
 /** Writes the checked ladder (status unverified) and sets the job done, in one transaction; nothing before this writes. */
-async function saveLadderStep({ sql, stepCosts }: Deps, { jobId }: GenerateRequested, levels: LadderLevel[]) {
+async function saveLadderStep(
+  { sql, stepCosts }: Deps,
+  { jobId }: GenerateRequested,
+  levels: LadderLevel[],
+  topUps: SaveLadderInput["topUps"],
+) {
   const [job] = await sql`SELECT repo_full_name, commit_sha, status FROM generation_jobs WHERE id = ${jobId}`;
   if (!job) throw new NonRetriableError(`unknown job ${jobId}`);
   if (job.status === "failed") return { status: "failed", reason: "job-failed" } as const;
@@ -536,6 +635,7 @@ async function saveLadderStep({ sql, stepCosts }: Deps, { jobId }: GenerateReque
       sha: job.commit_sha,
       levels,
       costByStep: (stepCosts ?? jobCostByStep)(jobId),
+      topUps,
     });
     return { status: "done", ladderId } as const;
   } catch (err) {
@@ -607,7 +707,19 @@ export function ladderGenerateFunction(inngest: Inngest, deps: Deps) {
         blindSolveStep(deps, data, checked.levels as LadderLevel[]),
       );
       if (solved.status !== "solved") return solved;
-      const saved = await step.run(SAVE_LADDER_STEP, () => saveLadderStep(deps, data, solved.levels as LadderLevel[]));
+      // T033: a pool level still below MIN_MCQ_POOL gets up to MCQ_TOP_UP_ROUNDS extra rounds, each step memoized.
+      const topped = await topUpMcqPools({
+        levels: solved.levels as LadderLevel[],
+        check: async (level, round, current) =>
+          (await step.run(topUpStepId(level, round), () =>
+            topUpCheckStep(deps, data, level, round, current),
+          )) as TopUpRound,
+        solve: async (level, round, current, candidates) =>
+          (await step.run(`${topUpStepId(level, round)}-blind-solve`, () =>
+            topUpSolveStep(deps, data, level, round, current, candidates),
+          )) as TopUpRound,
+      });
+      const saved = await step.run(SAVE_LADDER_STEP, () => saveLadderStep(deps, data, topped.levels, topped.topUps));
       if (saved.status !== "done") return saved;
       return {
         ...mapped,

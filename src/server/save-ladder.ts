@@ -3,7 +3,7 @@
 // a retried step (or a ladder that already exists) writes nothing new.
 import type { SQL } from "bun";
 import type { Totals } from "../../eval/src/cost.ts";
-import { FIXED_LEVELS } from "../shared/levels.ts";
+import { FIXED_LEVELS, type LevelId } from "../shared/levels.ts";
 import type { LadderLevel } from "./check-and-dedupe.ts";
 
 export const SAVE_LADDER_STEP = "save-ladder";
@@ -11,6 +11,10 @@ export const SAVE_LADDER_STEP = "save-ladder";
 export const MIN_MCQ_POOL = 8;
 export const MIN_CARDS = 5;
 export const POOL_LEVELS: ReadonlySet<string> = new Set(["L0", "L1", "L3"]);
+/** T033: extra rounds a pool level below MIN_MCQ_POOL gets before it is saved (mcq-top-up.ts). */
+export const MCQ_TOP_UP_ROUNDS = 2;
+/** T033: per pool level, the top-up rounds run, MCQs they added and their drops per reason (all checks). */
+export type TopUpReport = { rounds: number; added: number; dropped: Record<string, number> };
 
 export type LevelFlag = "insufficient-pool" | "insufficient-cards";
 export type LevelReport = {
@@ -20,6 +24,8 @@ export type LevelReport = {
   kept: { cards: number; mcqs: number };
   dropped: Record<string, number>;
   flags: LevelFlag[];
+  /** T033: present for a generated pool level. */
+  topUp?: TopUpReport;
 };
 /** costByStep: this job's cost entries per step (usd null on the claude-code back end); null if not reachable. */
 export type GenerationReport = { levels: LevelReport[]; costByStep: Record<string, Totals> | null };
@@ -53,8 +59,19 @@ function levelReport(l: LadderLevel): LevelReport {
   };
 }
 
-export function buildReport(levels: LadderLevel[], costByStep: Record<string, Totals> | null): GenerationReport {
-  return { levels: levels.map(levelReport), costByStep };
+export function buildReport(
+  levels: LadderLevel[],
+  costByStep: Record<string, Totals> | null,
+  topUps: Partial<Record<LevelId, TopUpReport>> = {},
+): GenerationReport {
+  return {
+    levels: levels.map((l) => {
+      const r = levelReport(l);
+      const topUp = topUps[l.level];
+      return topUp ? { ...r, topUp } : r;
+    }),
+    costByStep,
+  };
 }
 
 export type SaveLadderInput = {
@@ -64,11 +81,13 @@ export type SaveLadderInput = {
   /** The check-and-dedupe output, L0 to L4. */
   levels: LadderLevel[];
   costByStep: Record<string, Totals> | null;
+  /** T033: the top-up of each pool level (topUpMcqPools). */
+  topUps?: Partial<Record<LevelId, TopUpReport>>;
 };
 
 export async function saveLadder(sql: SQL, input: SaveLadderInput): Promise<{ ladderId: string }> {
   const { jobId, repo, sha, levels } = input;
-  const report = buildReport(levels, input.costByStep);
+  const report = buildReport(levels, input.costByStep, input.topUps);
   return await sql.begin(async (tx) => {
     const [created] = await tx`
       INSERT INTO ladders (repo_full_name, commit_sha, status) VALUES (${repo}, ${sha}, 'unverified')
