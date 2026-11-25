@@ -60,7 +60,7 @@ Supervisor recommendation: A, with the cap value the user names after reading th
 
 ### Requirement Fidelity Gate (sign off BEFORE implementation)
 
-- [ ] Restated intent confirmed to match the user's request (by Supervisor / user — not the implementing agent)
+- [x] Restated intent confirmed to match the user's request (by Supervisor / user — not the implementing agent) — Supervisor 2026-11-25: user said "start all the tasks in the v1" and chose "build the tooling, stop before the paid run"
 - [ ] Domain terms align with `PROJECT_SPEC.md` glossary (`grill-with-docs` run if terminology was fuzzy)
 - [ ] Every Acceptance Criterion below traces to a line in the Requirement
 - [ ] All Requirement Refs exist in `PRD.md` and are fully covered by the Acceptance Criteria above

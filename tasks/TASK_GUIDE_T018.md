@@ -58,6 +58,8 @@ Source:
 | B — One container host + managed Postgres | App as one container on a platform such as Fly.io, Railway or Render; managed Postgres with pgvector; Inngest Cloud. | One app runtime, no function time limits; small monthly cost; still a managed DB vendor. |
 | C — One VPS, all self-hosted | One VPS with Docker Compose: app, Postgres + pgvector, self-hosted Inngest server, Caddy for HTTPS. | Lowest vendor count and full control; the owner runs backups, upgrades and TLS. |
 
+**Answered 2026-11-25 by the user: option B (one container host + managed Postgres).** Still open before any deploy: the exact host (Fly.io, Railway or Render), the monthly spend limit, and the owner's account and deploy access. The agent does no deploy until all three are given and every task in `Depends on` is Done (T017, T030 and T033 are not).
+
 Supervisor recommendation: B (one container host), because the server runs on Bun and Inngest steps then have no function time limit; A only if the host supports Bun natively and T003's Bun smoke check passed on it. **The agent stops with `Status: blocked` + `Question:` until the user answers.** The user also confirms the monthly spend limit for the chosen host before the first deploy.
 
 ### Requirement Fidelity Gate (sign off BEFORE implementation)
