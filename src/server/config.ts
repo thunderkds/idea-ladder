@@ -173,3 +173,8 @@ export function modelBWarning(config: Pick<Config, "modelAId" | "modelBId">): st
   const same = (config.modelAId ?? "default") === (config.modelBId ?? "default");
   return same ? "model B uses the same model as model A: blind spots are shared" : undefined;
 }
+
+/** T034: in dev login mode the server listens on loopback only; otherwise Bun's default (undefined). */
+export function listenHostname(config: Pick<Config, "devLoginGithubLogin">): "127.0.0.1" | undefined {
+  return config.devLoginGithubLogin ? "127.0.0.1" : undefined;
+}

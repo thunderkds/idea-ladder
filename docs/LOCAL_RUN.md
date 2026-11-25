@@ -47,7 +47,7 @@ For local use, four variables are required: `DATABASE_URL`, `GITHUB_APP_TOKEN`, 
 Do not set `NODE_ENV=production` locally. `bun run dev` sets `NODE_ENV=development`, so cookies work over plain `http`.
 
 The dev login works only with `NODE_ENV=development`. With any other `NODE_ENV` (production, test or unset), the server refuses to start while `DEV_LOGIN_GITHUB_LOGIN` is set.
-While it is set, any browser that can reach the port is signed in as you. Do not open the port to other machines.
+While it is set, any browser that can reach the port is signed in as you. So in dev login mode the server listens on `127.0.0.1` (localhost) only. Other machines cannot reach it.
 
 ## 4. Start the app
 
