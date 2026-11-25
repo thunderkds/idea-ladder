@@ -18,6 +18,7 @@ import {
   signInUser,
 } from "./auth.ts";
 import type { Config } from "./config.ts";
+import { devLoginUser } from "./dev-login.ts";
 import { diffQuestionStatus, type EmitDiffRetake, retakeDiffQuestions, submitDiffAnswers } from "./diff-answers.ts";
 import { evidencePassedLevels } from "./evidence.ts";
 import { checkFlagRequest, type EnqueueRegenerate, flagQuestion } from "./flags.ts";
@@ -323,7 +324,19 @@ export function createApp(opts: {
     return user ? c.json({ login: user.githubLogin }) : c.json({ error: "unauthorized" }, 401);
   });
 
-  app.get("/auth/github", (c) => {
+  app.get("/auth/github", async (c) => {
+    // T034: dev login (development only, loadConfig guard) signs in as the configured account; no OAuth redirect.
+    if (config.devLoginGithubLogin) {
+      let token: string;
+      try {
+        token = await signInUser(sql, secret, await devLoginUser(config));
+      } catch (err) {
+        console.warn("dev sign-in failed:", err instanceof Error ? err.message : err);
+        return c.html(FAILED_PAGE, 400);
+      }
+      setCookie(c, SESSION_COOKIE, token, { ...cookieBase, maxAge: SESSION_MAX_AGE_S });
+      return c.redirect(returnPath(c.req.query("next")) ?? "/ladders", 302);
+    }
     const { state, cookie } = newState(secret, now());
     setCookie(c, STATE_COOKIE, cookie, { ...cookieBase, maxAge: STATE_MAX_AGE_S });
     const next = returnPath(c.req.query("next"));
@@ -337,6 +350,7 @@ export function createApp(opts: {
     const returnTo = returnPath(getCookie(c, RETURN_COOKIE));
     deleteCookie(c, RETURN_COOKIE, cookieBase);
     const fail = () => c.html(FAILED_PAGE, 400);
+    if (config.devLoginGithubLogin) return fail(); // T034: no OAuth app in dev login mode (empty client id/secret)
     const code = c.req.query("code");
     if (c.req.query("error") || !code) return fail();
     if (!checkState(secret, stateCookie, c.req.query("state"), now())) return fail();
