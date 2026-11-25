@@ -1,6 +1,7 @@
-import { describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
+import { networkInterfaces, tmpdir } from "node:os";
 import webpush from "web-push";
-import { ConfigError, loadConfig, modelBWarning } from "../src/server/config.ts";
+import { ConfigError, listenHostname, loadConfig, modelBWarning } from "../src/server/config.ts";
 
 const valid = {
   DATABASE_URL: "postgres://u:p@localhost:5432/db",
@@ -201,6 +202,145 @@ describe("loadConfig dedupe cutoff (T031)", () => {
       /DEDUPE_COSINE was removed \(T031\): use DEDUPE_JACCARD/,
     );
   });
+});
+
+describe("T034 dev login config (DEV_LOGIN_GITHUB_LOGIN)", () => {
+  // Under `bun test -t "T034"` the spawn spies of tests/mcq-no-llm.test.ts are made but its afterAll never runs.
+  beforeAll(() => mock.restore());
+  const { GITHUB_CLIENT_ID: _i, GITHUB_CLIENT_SECRET: _s, ...noOauth } = valid;
+  const dev = { ...noOauth, NODE_ENV: "development", DEV_LOGIN_GITHUB_LOGIN: "octocat" };
+  const messageOf = (env: Record<string, string | undefined>) => {
+    try {
+      loadConfig(env);
+    } catch (err) {
+      expect(err).toBeInstanceOf(ConfigError);
+      return (err as Error).message;
+    }
+    throw new Error("loadConfig did not throw");
+  };
+
+  test("development + dev login: loads with no OAuth variables; client id and secret are empty strings", () => {
+    const c = loadConfig(dev);
+    expect(c.devLoginGithubLogin).toBe("octocat");
+    expect([c.githubClientId, c.githubClientSecret]).toEqual(["", ""]);
+    expect(c.secureCookies).toBe(false);
+  });
+
+  test("production guard: any NODE_ENV other than development is a ConfigError naming the variable", () => {
+    for (const nodeEnv of ["production", "test", undefined, "", "Development", "dev", "staging"]) {
+      const message = messageOf({ ...valid, ...dev, ...prod, NODE_ENV: nodeEnv });
+      expect(`${nodeEnv}: ${message}`).toMatch(/DEV_LOGIN_GITHUB_LOGIN is allowed only with NODE_ENV=development/);
+    }
+  });
+
+  test("a bad login is a ConfigError that names the variable and never prints the value", () => {
+    for (const bad of ["-octo", "octo-", "oc--to", "a".repeat(40), "octo cat", "octo_cat", "../admin", "oc/to", "é"]) {
+      const message = messageOf({ ...dev, DEV_LOGIN_GITHUB_LOGIN: bad });
+      expect(message).toMatch(/DEV_LOGIN_GITHUB_LOGIN must be a GitHub login/);
+      expect(message).not.toContain(bad);
+    }
+    for (const good of ["a", "a".repeat(39), "octo-cat", "Octo1", "1-2-3"]) {
+      expect(loadConfig({ ...dev, DEV_LOGIN_GITHUB_LOGIN: good }).devLoginGithubLogin).toBe(good);
+    }
+  });
+
+  test("empty value counts as unset: OAuth variables are required again, no guard error", () => {
+    const message = messageOf({ ...dev, DEV_LOGIN_GITHUB_LOGIN: "" });
+    expect(message).toMatch(/GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET/);
+    expect(message).not.toMatch(/DEV_LOGIN_GITHUB_LOGIN/);
+    expect(loadConfig({ ...prod, DEV_LOGIN_GITHUB_LOGIN: "" }).devLoginGithubLogin).toBeUndefined();
+  });
+
+  test("dev login set with the OAuth variables too: dev login wins, the OAuth values are ignored", () => {
+    const c = loadConfig({ ...valid, ...dev });
+    expect(c.devLoginGithubLogin).toBe("octocat");
+    expect([c.githubClientId, c.githubClientSecret]).toEqual(["", ""]);
+  });
+
+  test("GITHUB_APP_TOKEN and SESSION_SECRET stay required in dev login mode", () => {
+    const { GITHUB_APP_TOKEN: _t, SESSION_SECRET: _x, ...partial } = dev;
+    expect(messageOf(partial)).toMatch(/missing required environment variable\(s\): GITHUB_APP_TOKEN, SESSION_SECRET/);
+    expect(messageOf({ ...dev, SESSION_SECRET: "short" })).toMatch(/SESSION_SECRET must be at least 32/);
+  });
+
+  test("no dev login: a missing GITHUB_CLIENT_ID is named as before", () => {
+    expect(messageOf({ ...valid, GITHUB_CLIENT_ID: undefined })).toMatch(/GITHUB_CLIENT_ID/);
+    expect(loadConfig(valid).devLoginGithubLogin).toBeUndefined();
+  });
+
+  test("listenHostname: loopback only (127.0.0.1) in dev login mode, else unchanged (undefined)", () => {
+    expect(listenHostname(loadConfig(dev))).toBe("127.0.0.1");
+    expect(listenHostname(loadConfig(valid))).toBeUndefined();
+    expect(listenHostname(loadConfig({ ...valid, NODE_ENV: "development" }))).toBeUndefined();
+  });
+
+  describe("main.ts loopback bind in dev login mode", () => {
+    // A machine with no LAN IPv4 address shows the LAN test as skipped, never as a silent pass.
+    const lan = Object.values(networkInterfaces())
+      .flat()
+      .find((a) => a && a.family === "IPv4" && !a.internal)?.address;
+    let proc: ReturnType<typeof Bun.spawn> | undefined;
+    let port: string | undefined;
+    beforeAll(async () => {
+      mock.restore();
+      proc = Bun.spawn([process.execPath, `${import.meta.dir}/../src/server/main.ts`], {
+        cwd: tmpdir(), // no project .env is loaded
+        env: { PATH: process.env.PATH, ...dev, DATABASE_URL: "postgres://u:p@127.0.0.1:1/none", PORT: "0" },
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      let out = "";
+      const reader = (proc.stdout as ReadableStream<Uint8Array>).getReader();
+      const deadline = Date.now() + 15_000;
+      while (!/listening on http:\/\/localhost:\d+/.test(out) && Date.now() < deadline) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        out += new TextDecoder().decode(value);
+      }
+      port = out.match(/listening on http:\/\/localhost:(\d+)/)?.[1];
+    }, 20_000);
+    afterAll(async () => {
+      proc?.kill();
+      await proc?.exited;
+    });
+
+    test("answers on 127.0.0.1", async () => {
+      expect(port).toBeDefined();
+      expect((await fetch(`http://127.0.0.1:${port}/api/me`)).status).toBe(401);
+    }, 20_000);
+
+    test.skipIf(!lan)(
+      `does not answer on the LAN address (${lan ?? "none: skipped"})`,
+      async () => {
+        expect(port).toBeDefined();
+        const reached = await fetch(`http://${lan}:${port}/api/me`, { signal: AbortSignal.timeout(2_000) }).then(
+          () => true,
+          () => false,
+        );
+        expect(`${lan}: ${reached}`).toBe(`${lan}: false`);
+      },
+      20_000,
+    );
+  });
+
+  test("main.ts start-up exits 1 before it listens when dev login is set outside development", () => {
+    const run = (nodeEnv: string) =>
+      Bun.spawnSync([process.execPath, `${import.meta.dir}/../src/server/main.ts`], {
+        cwd: tmpdir(), // no project .env is loaded
+        env: {
+          PATH: process.env.PATH,
+          ...dev,
+          DATABASE_URL: "postgres://u:p@127.0.0.1:1/none",
+          NODE_ENV: nodeEnv,
+          PORT: "0",
+        },
+        timeout: 20_000,
+      });
+    const res = run("production");
+    expect(res.exitCode).toBe(1);
+    expect(res.stderr.toString()).toMatch(/DEV_LOGIN_GITHUB_LOGIN is allowed only with NODE_ENV=development/);
+    expect(res.stdout.toString()).not.toMatch(/listening/);
+  }, 20_000);
 });
 
 describe("model B (T009)", () => {

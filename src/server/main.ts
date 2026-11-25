@@ -3,7 +3,7 @@ import { SQL } from "bun";
 import { serve } from "inngest/hono";
 import { loadPrices } from "../../eval/src/cost.ts";
 import { createApp } from "./app.ts";
-import { ConfigError, loadConfig, modelBWarning } from "./config.ts";
+import { ConfigError, listenHostname, loadConfig, modelBWarning } from "./config.ts";
 import { readerCostLogger } from "./cost-wiring.ts";
 import { generateDiffQuestions } from "./diff-questions.ts";
 import { evidencePassedLevels } from "./evidence.ts";
@@ -125,5 +125,5 @@ const app = createApp({
     ...(config.inngestServeOrigin ? { serveOrigin: config.inngestServeOrigin } : {}),
   }),
 });
-const server = Bun.serve({ port: config.port, fetch: app.fetch });
+const server = Bun.serve({ port: config.port, hostname: listenHostname(config), fetch: app.fetch });
 console.log(`Idea Ladder listening on http://localhost:${server.port}`);

@@ -129,6 +129,8 @@ Keep the change small: one new file `src/server/dev-login.ts` (lookup function a
 | `src/server/dev-login.ts` (new) | `devLoginUser(config)`: account lookup, checks, returns `GithubUser` |
 | `src/server/config.ts` | `devLoginGithubLogin`, production guard, OAuth variables conditional |
 | `src/server/app.ts` | dev branch in `GET /auth/github`; callback refuses in dev mode |
+| `src/server/main.ts` | bind to `127.0.0.1` in dev login mode (`listenHostname` in `config.ts`; Supervisor decision 2026-11-25 after the Stage 4 review) |
+| `src/server/app.ts` (Stage 4 addition) | in dev login mode: Host-name check on all routes (DNS rebinding) and `Sec-Fetch-Site: cross-site` refusal on `/auth/github` |
 | `tests/` (describe blocks start with "T034") | AC 1–7 |
 | `docs/LOCAL_RUN.md` | AC 8 |
 | `.env.example` | only if readable |

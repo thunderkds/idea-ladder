@@ -45,7 +45,7 @@ describe("CI workflow (.github/workflows/ci.yml, AC 7)", async () => {
 });
 
 describe("env files and secrets (AC 8)", () => {
-  test(".env.example lists exactly the variable names (T003's four, T005's five, T006's five, T015's three VAPID, T031's dedupe cutoff, T009's model B pair), all empty", async () => {
+  test(".env.example lists exactly the variable names (T003's four, T005's five, T006's five, T015's three VAPID, T031's dedupe cutoff, T009's model B pair, T034's dev login), all empty", async () => {
     const assignments = (await Bun.file(`${root}/.env.example`).text())
       .split("\n")
       .map((line) => line.trim())
@@ -54,6 +54,7 @@ describe("env files and secrets (AC 8)", () => {
       "DATABASE_URL=",
       "GITHUB_CLIENT_ID=",
       "GITHUB_CLIENT_SECRET=",
+      "DEV_LOGIN_GITHUB_LOGIN=",
       "GITHUB_APP_TOKEN=",
       "INNGEST_EVENT_KEY=",
       "INNGEST_SIGNING_KEY=",

@@ -18,6 +18,7 @@ import {
   signInUser,
 } from "./auth.ts";
 import type { Config } from "./config.ts";
+import { devLoginUser } from "./dev-login.ts";
 import { diffQuestionStatus, type EmitDiffRetake, retakeDiffQuestions, submitDiffAnswers } from "./diff-answers.ts";
 import { evidencePassedLevels } from "./evidence.ts";
 import { checkFlagRequest, type EnqueueRegenerate, flagQuestion } from "./flags.ts";
@@ -145,6 +146,14 @@ export function createApp(opts: {
 
   const app = new Hono();
   app.use(secureHeaders());
+  // T034: dev login answers only to Host localhost or 127.0.0.1 (port ignored), so DNS rebinding cannot reach it.
+  if (config.devLoginGithubLogin) {
+    app.use(async (c, next) => {
+      const host = (c.req.header("host") ?? new URL(c.req.url).host).toLowerCase().replace(/:\d+$/, "");
+      if (host !== "localhost" && host !== "127.0.0.1") return c.text("Forbidden", 403);
+      await next();
+    });
+  }
   // Per-user and auth responses must never be stored by browsers or shared caches.
   for (const path of [
     "/ladders",
@@ -323,7 +332,24 @@ export function createApp(opts: {
     return user ? c.json({ login: user.githubLogin }) : c.json({ error: "unauthorized" }, 401);
   });
 
-  app.get("/auth/github", (c) => {
+  app.get("/auth/github", async (c) => {
+    // T034: dev login (development only, loadConfig guard) signs in as the configured account; no OAuth redirect.
+    const devLogin = config.devLoginGithubLogin;
+    if (devLogin) {
+      // A cross-site request never signs anyone in; a session of this user already signed in skips the lookup.
+      if (c.req.header("sec-fetch-site") === "cross-site") return c.html(FAILED_PAGE, 400);
+      const next = returnPath(c.req.query("next")) ?? "/ladders";
+      if ((await currentUser(c))?.githubLogin.toLowerCase() === devLogin.toLowerCase()) return c.redirect(next, 302);
+      let token: string;
+      try {
+        token = await signInUser(sql, secret, await devLoginUser(config));
+      } catch (err) {
+        console.warn("dev sign-in failed:", err instanceof Error ? err.message : err);
+        return c.html(FAILED_PAGE, 400);
+      }
+      setCookie(c, SESSION_COOKIE, token, { ...cookieBase, maxAge: SESSION_MAX_AGE_S });
+      return c.redirect(next, 302);
+    }
     const { state, cookie } = newState(secret, now());
     setCookie(c, STATE_COOKIE, cookie, { ...cookieBase, maxAge: STATE_MAX_AGE_S });
     const next = returnPath(c.req.query("next"));
@@ -337,6 +363,7 @@ export function createApp(opts: {
     const returnTo = returnPath(getCookie(c, RETURN_COOKIE));
     deleteCookie(c, RETURN_COOKIE, cookieBase);
     const fail = () => c.html(FAILED_PAGE, 400);
+    if (config.devLoginGithubLogin) return fail(); // T034: no OAuth app in dev login mode (empty client id/secret)
     const code = c.req.query("code");
     if (c.req.query("error") || !code) return fail();
     if (!checkState(secret, stateCookie, c.req.query("state"), now())) return fail();

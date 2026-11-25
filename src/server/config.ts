@@ -1,7 +1,10 @@
 export type Config = {
   databaseUrl: string;
+  /** Empty strings in dev login mode: the OAuth routes never run then. */
   githubClientId: string;
   githubClientSecret: string;
+  /** T034: local dev sign-in as this GitHub login, no OAuth app. Allowed only with NODE_ENV=development. */
+  devLoginGithubLogin?: string;
   /** Fine-grained token, public read only: the app's own GitHub API calls (repo reads). Never logged. */
   githubAppToken: string;
   sessionSecret: string;
@@ -54,9 +57,18 @@ const REQUIRED = [
   "SESSION_SECRET",
 ] as const;
 
+/** A GitHub login: 1-39 letters, digits or single hyphens, no hyphen at the start or the end. */
+const GITHUB_LOGIN = /^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$/;
+
 /** Validates the environment once at start, so a bad setup fails with variable names, not deep in OAuth code. */
 export function loadConfig(env: Record<string, string | undefined>): Config {
   const problems: string[] = [];
+  // T034: an empty value counts as unset. The bypass exists only in development; the value is never printed.
+  const devLogin = env.DEV_LOGIN_GITHUB_LOGIN || undefined;
+  if (devLogin && env.NODE_ENV !== "development")
+    problems.push("DEV_LOGIN_GITHUB_LOGIN is allowed only with NODE_ENV=development");
+  if (devLogin && !GITHUB_LOGIN.test(devLogin))
+    problems.push("DEV_LOGIN_GITHUB_LOGIN must be a GitHub login (1-39 letters, digits or single hyphens)");
   const modelABackend = (env.MODEL_A_BACKEND || "claude-code") as ModelABackend;
   if (modelABackend !== "claude-code" && modelABackend !== "api")
     problems.push("MODEL_A_BACKEND must be claude-code or api");
@@ -64,7 +76,8 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
   if (modelBBackend !== "claude-code" && modelBBackend !== "api")
     problems.push("MODEL_B_BACKEND must be claude-code or api");
   const missing = [
-    ...REQUIRED,
+    // GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET (the OAuth app) are not needed with a dev login.
+    ...REQUIRED.filter((name) => !devLogin || !name.startsWith("GITHUB_CLIENT_")),
     ...(modelABackend === "api" || modelBBackend === "api" ? (["ANTHROPIC_API_KEY"] as const) : []),
     ...(modelABackend === "api" ? (["MODEL_A_ID"] as const) : []),
     ...(modelBBackend === "api" ? (["MODEL_B_ID"] as const) : []),
@@ -132,8 +145,9 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
   if (problems.length) throw new ConfigError(`Invalid configuration: ${problems.join("; ")}`);
   return {
     databaseUrl: env.DATABASE_URL as string,
-    githubClientId: env.GITHUB_CLIENT_ID as string,
-    githubClientSecret: env.GITHUB_CLIENT_SECRET as string,
+    githubClientId: devLogin ? "" : (env.GITHUB_CLIENT_ID as string),
+    githubClientSecret: devLogin ? "" : (env.GITHUB_CLIENT_SECRET as string),
+    ...(devLogin ? { devLoginGithubLogin: devLogin } : {}),
     githubAppToken: env.GITHUB_APP_TOKEN as string,
     sessionSecret: env.SESSION_SECRET as string,
     githubOauthBaseUrl,
@@ -158,4 +172,9 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
 export function modelBWarning(config: Pick<Config, "modelAId" | "modelBId">): string | undefined {
   const same = (config.modelAId ?? "default") === (config.modelBId ?? "default");
   return same ? "model B uses the same model as model A: blind spots are shared" : undefined;
+}
+
+/** T034: in dev login mode the server listens on loopback only; otherwise Bun's default (undefined). */
+export function listenHostname(config: Pick<Config, "devLoginGithubLogin">): "127.0.0.1" | undefined {
+  return config.devLoginGithubLogin ? "127.0.0.1" : undefined;
 }
