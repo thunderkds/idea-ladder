@@ -67,8 +67,24 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 > **before any implementation commit exists**; if it does not (docs, templates, skill-instruction
 > text), BEFORE is the **verbatim prior content** of what changed — a quoted excerpt, not a command.
 
-**BEFORE**: [pasted timestamped command output showing the thing absent/failing, captured before the
-first implementation commit] OR [verbatim excerpt of the prior content, for non-executable changes]
+**BEFORE**: captured 2026-11-25T04:47:15Z in `wt-t033` at commit 013b100 (before any implementation commit),
+command `bun install --frozen-lockfile && bun run typecheck && bun run lint && bun test -t "T033"`:
+
+```
+2026-11-25T04:47:15Z
+290 packages installed [141.00ms]
+$ tsc --noEmit
+$ biome check . && bun scripts/check-tokens.ts
+Checked 158 files in 113ms. No fixes applied.
+check-tokens: 0 color literals outside src/client/tokens.css
+bun test v1.4.4 (38afee6c8)
+
+error: regex "T033" matched 0 tests. Searched 63 files (skipping 635 tests) [203.00ms]
+```
+
+`grep -rn "top-up\|MCQ_TOP_UP" src/server` printed nothing: no top-up exists; a level in `POOL_LEVELS` that
+keeps fewer than 8 MCQs after check-and-dedupe and blind-solve goes straight to `save-ladder` as
+`insufficient-pool`.
 
 **AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
 
