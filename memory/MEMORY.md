@@ -54,4 +54,5 @@
 - [T016 merged](decisions.md#2026-11-19--t016-merged-this-question-seems-wrong-flag) — POST /api/flags (card|mcq); 0013 question_flags + status; 3 flaggers → removed + regenerate event; button on review card
 - [T013 merged](decisions.md#2026-11-19--t013-merged-github-artifact-verifiers-l1-passes-by-mcq-option-b) — L1 = MCQ on setup (Debate, option B); L2/L4 artifact routes by numeric GitHub id; 0014; event ladder/l2-artifact.verified; T033 thin pools
 - [T014 merged](decisions.md#2026-11-25--t014-merged-diff-questions-after-l2-model-a-writes-model-b-blind-solves-code-scores-4-of-5) — diff questions: workflow + submit (code-only pass 4 of 5), 0015, retake after system failures; T030 screen uses its routes
+- [T033 + T030 merged](decisions.md#2026-11-25--t033-and-t030-merged-top-up-of-thin-mcq-pools-pass-test-screens) — MCQ top-up rounds (2 steps per round, no bypass); pass-test screens on the real T012-T014 routes; red full suite is a known follow-up
 - [Usage limit, verify retry, Advocate attribution](learnings.md#gotchas) — retry verify on a new commit; set task state before Advocates; show full merge output
