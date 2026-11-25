@@ -18,6 +18,7 @@ import {
   signInUser,
 } from "./auth.ts";
 import type { Config } from "./config.ts";
+import { diffQuestionStatus, type EmitDiffRetake, retakeDiffQuestions, submitDiffAnswers } from "./diff-answers.ts";
 import { evidencePassedLevels } from "./evidence.ts";
 import { checkFlagRequest, type EnqueueRegenerate, flagQuestion } from "./flags.ts";
 import { authorizeUrl, fetchGithubUser } from "./github.ts";
@@ -108,6 +109,8 @@ export function createApp(opts: {
   passedLevels?: PassedLevels;
   /** T013: sends ladder/l2-artifact.verified. Default: none configured, so a verified L2 answers queue-unavailable. */
   emitArtifact?: EmitArtifact;
+  /** T014: sends ladder/diff-questions.retake. Default: none configured, so a retake answers queue-unavailable. */
+  emitDiffRetake?: EmitDiffRetake;
   /** Inngest serve handler, mounted at /api/inngest. */
   inngestHandler?: (c: Context) => Promise<Response>;
 }) {
@@ -126,6 +129,11 @@ export function createApp(opts: {
   const passedLevels = opts.passedLevels ?? evidencePassedLevels(sql);
   const emitArtifact: EmitArtifact =
     opts.emitArtifact ??
+    (async () => {
+      throw new Error("no Inngest client configured");
+    });
+  const emitDiffRetake: EmitDiffRetake =
+    opts.emitDiffRetake ??
     (async () => {
       throw new Error("no Inngest client configured");
     });
@@ -154,6 +162,8 @@ export function createApp(opts: {
     "/api/push/*",
     "/api/progress/*",
     "/api/mcq-attempts/*",
+    "/api/artifacts/*",
+    "/api/diff-question-sets/*",
     "/api/flags",
     SETTINGS_PATH,
   ]) {
@@ -250,6 +260,35 @@ export function createApp(opts: {
     const deps = { sql, github, passedLevels, emit: emitArtifact, now: () => new Date(now()) };
     const verify = level === "L2" ? verifyL2Branch : verifyL4Artifact;
     const result = await verify(deps, user.userId, c.req.param("ladderId"), body?.url);
+    if (!("status" in result)) return c.json(result);
+    const { status, ...problem } = result;
+    return c.json(problem, status);
+  });
+
+  // T014: the diff questions on a verified L2 branch. Keys never leave the server; only code scores (no LLM).
+  app.get("/api/artifacts/:artifactId/diff-questions", async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const view = await diffQuestionStatus(sql, user.userId, c.req.param("artifactId"));
+    return view ? c.json(view) : c.json({ error: "not-found" }, 404);
+  });
+
+  app.post("/api/artifacts/:artifactId/diff-questions", async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const at = new Date(now());
+    const result = await retakeDiffQuestions(sql, user.userId, c.req.param("artifactId"), at, emitDiffRetake);
+    if (result.status === "generating") return c.json(result, 202);
+    const { status, ...problem } = result;
+    return c.json(problem, status);
+  });
+
+  app.post("/api/diff-question-sets/:setId/submit", async (c) => {
+    const user = await currentUser(c);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const body = (await c.req.json().catch(() => undefined)) as { answers?: unknown } | undefined;
+    if (!body || typeof body !== "object") return c.json({ error: "invalid-request" }, 400);
+    const result = await submitDiffAnswers(sql, user.userId, c.req.param("setId"), body.answers, new Date(now()));
     if (!("status" in result)) return c.json(result);
     const { status, ...problem } = result;
     return c.json(problem, status);

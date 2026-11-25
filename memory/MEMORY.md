@@ -53,4 +53,5 @@
 - [Board rows, step limit, cross-task contracts](learnings.md#gotchas) — hook adds the guide's board row; step limit counts all task calls; test write+read paths together
 - [T016 merged](decisions.md#2026-11-19--t016-merged-this-question-seems-wrong-flag) — POST /api/flags (card|mcq); 0013 question_flags + status; 3 flaggers → removed + regenerate event; button on review card
 - [T013 merged](decisions.md#2026-11-19--t013-merged-github-artifact-verifiers-l1-passes-by-mcq-option-b) — L1 = MCQ on setup (Debate, option B); L2/L4 artifact routes by numeric GitHub id; 0014; event ladder/l2-artifact.verified; T033 thin pools
+- [T014 merged](decisions.md#2026-11-25--t014-merged-diff-questions-after-l2-model-a-writes-model-b-blind-solves-code-scores-4-of-5) — diff questions: workflow + submit (code-only pass 4 of 5), 0015, retake after system failures; T030 screen uses its routes
 - [Usage limit, verify retry, Advocate attribution](learnings.md#gotchas) — retry verify on a new commit; set task state before Advocates; show full merge output

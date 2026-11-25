@@ -51,7 +51,7 @@ Source (`docs/REQUIREMENT_SOURCE.md`):
 
 ### Requirement Fidelity Gate (sign off BEFORE implementation)
 
-- [ ] Restated intent confirmed to match the user's request (by Supervisor / user — not the implementing agent)
+- [x] Restated intent confirmed to match the user's request (by Supervisor / user — not the implementing agent) — Supervisor 2026-11-24: user said "spawn another tasks if possible"; T014 is next unblocked v1 task; screen routes fixed to match T030
 - [ ] Domain terms align with `PROJECT_SPEC.md` glossary (`grill-with-docs` run if terminology was fuzzy)
 - [ ] Every Acceptance Criterion below traces to a line in the Requirement
 - [ ] All Requirement Refs exist in `PRD.md` and are fully covered by the Acceptance Criteria above

@@ -1,5 +1,5 @@
 # PROJECT_KANBAN.md
-**Last updated**: 2026-11-19
+**Last updated**: 2026-11-25
 
 > Idea Ladder board (board mode `local`). Full context lives in `PROJECT_SPEC.md`.
 > The previous file was another project's Linear cache; it is archived at `docs/archive/easy-personal-board/`.
@@ -12,8 +12,6 @@
 
 ### Todo
 - [ ] **T033** — Thin MCQ pools: when a level in POOL_LEVELS (L0, L1, L3) saves fewer than MIN_MCQ_POOL questions, top it up or fall back to a concept-only ladder, so no ladder dead-ends at `pool-too-small` | backend-developer | C2 | Risk: Medium | P1 | Phase: v1 | Found 2026-11-19 in T013 Stage 4 (Debate); guide to write at Stage 2
-- [ ] **T014** — Diff questions after L2 — generated from the learner's diff (model A), blind-solved (model B), pass 4 of 5 | backend-developer | C2 | Risk: High | P1 | Phase: v1 (after Gate 1)
-- [ ] **T030** — Pass-test screens — MCQ attempt, artifact submit (L1/L2/L4), diff-question attempt, result view | frontend-developer | C2 | Risk: Medium | P0 | Phase: v1 (after Gate 1)
 - [ ] **T017** — Measure real cost per ladder on the golden set; set and enforce a cap with the user; provider prompt caching | backend-developer | C1 | Risk: Medium | P1 | Phase: v1 (after Gate 1) | HITL
 - [ ] **T018** — Deploy v1 + Gate 2 metrics ("others finish L1 without help") | common-infrastructure | C2 | Risk: Medium | P1 | Phase: v1 (after Gate 1) | HITL
 - [ ] **T019** — Signed credential (plain signed JSON, Ed25519) on ladder completion + revocation status list | backend-developer | C2 | Risk: High | P0 | Phase: v2 (after Gate 2)
@@ -31,10 +29,12 @@
 ### In Progress
 
 ### Ready for Review
+- [ ] **T030** — Pass-test screens — MCQ attempt, artifact submit (L1/L2/L4), diff-question attempt, result view | frontend-developer | C2 | Risk: Medium | P0 | Phase: v1 (after Gate 1) | Started 2026-11-24: branch `T030-pass-test-screens`, worktree `../wt-t030` ([admin]); user scope: diff screen last, against T014's contract with mocks · Ready for Review 2026-11-25: 7 commits on `T030-pass-test-screens`; bun test -t T030 8 pass / 0 fail; Playwright T030 26 passed; code-review 0 P0/P1, 2 P2 open (diff submit error drops the questions; review-cards link filters on the client); security-review no findings; no migration; AC 4 and the L2 flow checked against mocks only until T014 lands (user decision 2026-11-25: verify now); 9 failures in other suites (2 Playwright T015 PWA, 7 bun timeouts) also fail on the base commit per the agent; auto verify started
 
 ### Blocked
 
 ### Done
+- [x] **T014** — Diff questions after L2 — generated from the learner's diff (model A), blind-solved (model B), pass 4 of 5 | backend-developer | C2 | Risk: High | P1 | Phase: v1 (after Gate 1) | Started 2026-11-24: branch `T014-diff-questions`, worktree `../wt-t014` ([admin]) · Ready for Review 2026-11-25: 7 commits on `T014-diff-questions`; bun test -t T014 27 pass / 0 fail; full bun test 634 pass / 2 fail (T015 offline-pack timeout, T008 step-test timeout; same 2 fail on the base commit); code-review 0 P0, P1 (no retake after a system failure) + 2 P2 (hunk caps) fixed (6f1c460, 18359e0), security-review no findings; migration-safety GO (0015); Common-Infrastructure applies 0015 at merge; auto verify started | Done 2026-11-25: auto verify pass (session 3c43c682-7a70-411f-99bb-6e6647cdfbc4, commit 399626ed41d74692cbfa31b447d59b405fa32a32) | merged 051c27c 2026-11-25 ([admin], after the auto verify pass); push is the owner's
 - [x] **T013** — GitHub artifact verifiers — L2 branch, L4 repo or merged PR, L1 verifier design | backend-developer | C2 | Risk: High | P0 | Phase: v1 (after Gate 1) | HITL | L1 rule decided 2026-11-19 by Debate (option B: MCQ on setup, flagged for the user) | Started 2026-11-19: branch `T013-artifact-verifiers`, worktree `../wt-t013` ([admin], auto) · Ready for Review 2026-11-19: 11 commits on `T013-artifact-verifiers`; bun test 593 pass / 0 fail; code-review 0 P0, P1 resolved as specified (Debate; follow-up T033), seed fixed (7052dae); security-review no findings; migration-safety GO (0014); live GitHub check is the owner's; auto verify started | Done 2026-11-19: auto verify pass (session b66050ea-6479-4a62-9646-e5d38b2144ee, commit c47074d7a560309f9733f932e4d14fbccb2ed3ed)
 - [x] **T016** — "This question seems wrong" flag; frequently flagged cards regenerated or removed | backend-developer | C1 | Risk: Low | P2 | Phase: v1 (after Gate 1) | Started 2026-11-19: branch `T016-question-flag`, worktree `../wt-t016` ([admin], auto) · Ready for Review 2026-11-19: 9 commits on `T016-question-flag`; bun test 546 pass / 0 fail; e2e T016 5 passed; code-review 0 P0, 1 P1 fixed (0d4e855), 2 P3 cut; migration-safety GO (0013); UI evidence filled; auto verify started | Done 2026-11-19: auto verify pass (session 32f21116-11d3-43fa-8220-9ae3bfa6da03, commit cdfb7782b58bdebda2926eb0199a711dc241e502)
 - [x] **T009** — Blind solver (separate blind Claude call), regenerate max 2; re-measure catch / false-reject on an independent seed set | backend-developer | C2 | Risk: Medium | P0 | Phase: v1 (after Gate 1) | Started 2026-11-19: branch `T009-blind-solver`, worktree `../wt-t009` ([admin], auto) · Ready for Review 2026-11-19: 12 commits on `T009-blind-solver`; bun test 528 pass / 0 fail; code-review 0 P0/P1, 2 P2 fixed (2d69600), 3 P3 cut; security-review no findings; live 3-policy measurement (SC 7, twice) paused for the owner (Claude subscription); auto verify started | Done 2026-11-19: auto verify pass (session acbdce97-0d87-4f02-aaff-6f2cafa864e0, commit cb98e8897d7965985e3c60f303862eed6abac022)
