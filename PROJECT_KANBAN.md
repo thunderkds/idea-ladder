@@ -11,8 +11,7 @@
 > Task line format: **Txxx** — [title] | [agent] | C[0–3] | Risk: Low/Med/High | P[0–2]
 
 ### Todo
-- [ ] **T017** — Measure real cost per ladder on the golden set; set and enforce a cap with the user; provider prompt caching | backend-developer | C1 | Risk: Medium | P1 | Phase: v1 (after Gate 1) | HITL
-- [ ] **T018** — Deploy v1 + Gate 2 metrics ("others finish L1 without help") | common-infrastructure | C2 | Risk: Medium | P1 | Phase: v1 (after Gate 1) | HITL
+- [ ] **T018** — Deploy v1 + Gate 2 metrics ("others finish L1 without help") | common-infrastructure | C2 | Risk: Medium | P1 | Phase: v1 (after Gate 1) | HITL | Hosting: option B chosen by the user 2026-11-25; waits for T017, T030, T033 Done + host, spend limit, account access
 - [ ] **T019** — Signed credential (plain signed JSON, Ed25519) on ladder completion + revocation status list | backend-developer | C2 | Risk: High | P0 | Phase: v2 (after Gate 2)
 - [ ] **T020** — Public verify page: checks signature, re-checks GitHub evidence live | frontend-developer | C2 | Risk: High | P0 | Phase: v2 (after Gate 2)
 - [ ] **T021** — Shareable proof profile page | frontend-developer | C1 | Risk: Low | P1 | Phase: v2 (after Gate 2)
@@ -26,6 +25,7 @@
 - [ ] **T029** — "Learn what's trending" weekly pick | backend-developer | C1 | Risk: Low | P2 | Phase: v3 (after Gate 3)
 
 ### In Progress
+- [ ] **T017** — Measure real cost per ladder on the golden set; set and enforce a cap with the user; provider prompt caching | backend-developer | C1 | Risk: Medium | P1 | Phase: v1 (after Gate 1) | HITL | Started 2026-11-25: branch `T017-cost-cap`, worktree `../wt-t017` ([admin]); user: build the tooling, stop before the paid run
 - [ ] **T033** — Thin MCQ pools: when a level in POOL_LEVELS (L0, L1, L3) saves fewer than MIN_MCQ_POOL questions, top it up or fall back to a concept-only ladder, so no ladder dead-ends at `pool-too-small` | backend-developer | C2 | Risk: Medium | P1 | Phase: v1 | Found 2026-11-19 in T013 Stage 4 (Debate); guide written 2026-11-25 | Started 2026-11-25: branch `T033-mcq-top-up`, worktree `../wt-t033` ([admin])
 
 ### Ready for Review
