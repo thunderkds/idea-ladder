@@ -151,3 +151,9 @@
 **Decision**: The repo arrived with another project's Linear config (team HUN, project "") and board cache. Moved `.claude/board.json` → `.claude/board.linear.json.bak` and the cache + 149 HUN guides → `docs/archive/easy-personal-board/` (git-ignored). New local `PROJECT_KANBAN.md` with T-IDs. No Linear writes.
 **Why**: Hard-Stop Gate 4 (one project per KANBAN); online pull would erase local rows. 2-Advocate Debate. Undo: restore the .bak, then `python3 scripts/board_sync.py pull`.
 **Files**: .claude/board.linear.json.bak, PROJECT_KANBAN.md, docs/archive/easy-personal-board/, .gitignore
+
+### 2026-11-25 — T017 and T018 deferred: local-first on the Claude subscription (user)
+**Decision**: The user runs Idea Ladder locally on the Claude subscription only, so the paid `cost:measure` run, the dollar cap (T017) and the deploy (T018) wait. The user will measure cost in a later session, after v2 or v3. Branch `T017-cost-cap` (worktree `../wt-t017`) stays unmerged. Nothing else changes for v1.
+**Why**: PRD decision 2026-11-19 (subscription only, no second provider). I had built `cost:measure` API-only (needs `ANTHROPIC_API_KEY`); the `claude-code` back end logs `usd: null`, so a dollar cap cannot stop a subscription ladder.
+**How to apply**: When T017 restarts, first add a subscription mode to `cost:measure` (count calls and tokens, no dollars) and make the cap a calls or tokens cap, or wait for the API switch. T018 also needs `claude` logged in on any host.
+**Files**: PROJECT_KANBAN.md, scripts/cost-measure.ts (branch T017-cost-cap)
