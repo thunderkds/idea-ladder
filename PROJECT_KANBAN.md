@@ -25,6 +25,7 @@
 - [ ] **T029** — "Learn what's trending" weekly pick | backend-developer | C1 | Risk: Low | P2 | Phase: v3 (after Gate 3)
 
 ### In Progress
+- [ ] **T034** — Local dev sign-in — run the app on one machine without a GitHub OAuth app | backend-developer | C2 | Risk: Medium | P1 | Phase: v1 (local use) | Started 2026-11-25: branch `T034-dev-login`, worktree `../wt-t034`; user: keep GITHUB_APP_TOKEN + SESSION_SECRET, drop GITHUB_CLIENT_ID/SECRET for local use
 
 ### Ready for Review
 
