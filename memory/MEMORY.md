@@ -57,3 +57,4 @@
 - [T033 + T030 merged](decisions.md#2026-11-25--t033-and-t030-merged-top-up-of-thin-mcq-pools-pass-test-screens) — MCQ top-up rounds (2 steps per round, no bypass); pass-test screens on the real T012-T014 routes; red full suite is a known follow-up
 - [Usage limit, verify retry, Advocate attribution](learnings.md#gotchas) — retry verify on a new commit; set task state before Advocates; show full merge output
 - [T017/T018 deferred](decisions.md#2026-11-25--t017-and-t018-deferred-local-first-on-the-claude-subscription-user) — local-first on the subscription; cost measure and deploy wait until after v2 or v3
+- [T034 merged](decisions.md#2026-11-25--t034-merged-local-dev-sign-in-without-a-github-oauth-app-user) — dev sign-in by `DEV_LOGIN_GITHUB_LOGIN`; dev-only guard, localhost bind, Host check; OAuth path unchanged
