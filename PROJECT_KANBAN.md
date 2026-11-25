@@ -1,5 +1,5 @@
 # PROJECT_KANBAN.md
-**Last updated**: 2026-11-24
+**Last updated**: 2026-11-25
 
 > Idea Ladder board (board mode `local`). Full context lives in `PROJECT_SPEC.md`.
 > The previous file was another project's Linear cache; it is archived at `docs/archive/easy-personal-board/`.
@@ -28,9 +28,9 @@
 
 ### In Progress
 - [ ] **T014** — Diff questions after L2 — generated from the learner's diff (model A), blind-solved (model B), pass 4 of 5 | backend-developer | C2 | Risk: High | P1 | Phase: v1 (after Gate 1) | Started 2026-11-24: branch `T014-diff-questions`, worktree `../wt-t014` ([admin])
-- [ ] **T030** — Pass-test screens — MCQ attempt, artifact submit (L1/L2/L4), diff-question attempt, result view | frontend-developer | C2 | Risk: Medium | P0 | Phase: v1 (after Gate 1) | Started 2026-11-24: branch `T030-pass-test-screens`, worktree `../wt-t030` ([admin]); user scope: diff screen last, against T014's contract with mocks
 
 ### Ready for Review
+- [ ] **T030** — Pass-test screens — MCQ attempt, artifact submit (L1/L2/L4), diff-question attempt, result view | frontend-developer | C2 | Risk: Medium | P0 | Phase: v1 (after Gate 1) | Started 2026-11-24: branch `T030-pass-test-screens`, worktree `../wt-t030` ([admin]); user scope: diff screen last, against T014's contract with mocks · Ready for Review 2026-11-25: 7 commits on `T030-pass-test-screens`; bun test -t T030 8 pass / 0 fail; Playwright T030 26 passed; code-review 0 P0/P1, 2 P2 open (diff submit error drops the questions; review-cards link filters on the client); security-review no findings; no migration; AC 4 and the L2 flow checked against mocks only until T014 lands (user decision 2026-11-25: verify now); 9 failures in other suites (2 Playwright T015 PWA, 7 bun timeouts) also fail on the base commit per the agent; auto verify started
 
 ### Blocked
 
