@@ -1,6 +1,6 @@
-# TASK_REVIEW — T[NNN]: [Short Title]
+# TASK_REVIEW — T033: Thin MCQ pools — top-up rounds before save-ladder
 
-> Sibling of `tasks/TASK_GUIDE_T[NNN].md`. Everything here is **filled by the reviewer at Stage
+> Sibling of `tasks/TASK_GUIDE_T033.md`. Everything here is **filled by the reviewer at Stage
 > 4/5** — it is deliberately NOT in the guide, because the implementing agent re-reads the guide on
 > every turn and never fills these two sections.
 >
@@ -47,12 +47,12 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass / ☐ fail | [test file path(s) — required before Done] |
-| Verification command run | ☐ pass / ☐ fail | [paste actual output] |
-| Negative cases hold | ☐ pass / ☐ fail | |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | Implementer (backend-developer), 2026-11-25. New: `tests/mcq-top-up.test.ts`, 17 tests in 5 describe blocks starting "T033": `levelsNeedingTopUp` step plan (AC 1, AC 6, SC 5), `topUpMcqPools` rounds (AC 1, 3, 5, 6: 7+1 stops after round 1; 0 gained runs exactly 2 rounds; ≥8 and L2/L4 get no round; more than needed all kept), `generateTopUpMcqs` (AC 2: MCQs only, kept questions in the prompt, citation check), `checkTopUp`/`solveTopUp` (AC 2: key-check-failed after 2 regenerations, duplicate vs kept ladder, blind-solve-mismatch), and the real `ladderGenerateFunction` with `@inngest/test` + test Postgres: SC 1, SC 2, SC 3 (+ `startMcqAttempt` 422 `pool-too-small`), SC 4 (blind-solve throws in a round, retry, top-up generator called once), SC 5, edge "generator throws". Output: `17 pass / 635 filtered out / 0 fail / 74 expect() calls / Ran 17 tests across 64 files. [5.11s]` (full paste in the next row). Updated (expect the new steps their thin test pools now trigger): `tests/blind-solver-step.test.ts`, `tests/save-ladder.test.ts`, `tests/chunk.test.ts`, `tests/level-generator-step.test.ts`. |
+| Verification command run | ☑ pass | 2026-11-25T05:06:03Z at eabe3da, `bun install --frozen-lockfile && bun run typecheck && bun run lint && bun test -t "T033"` → exit 0: `Checked 388 installs across 345 packages (no changes) [8.00ms]` / `$ tsc --noEmit` / `$ biome check . && bun scripts/check-tokens.ts` / `Checked 160 files in 96ms. No fixes applied.` / `check-tokens: 0 color literals outside src/client/tokens.css` / `bun test v1.4.4 (38afee6c8)` / ` 17 pass` / ` 635 filtered out` / ` 0 fail` / ` 74 expect() calls` / `Ran 17 tests across 64 files. [5.11s]` (stderr also holds the expected `top-up-generator-error` warn lines of the edge test and `job-cost-log-unreadable` lines of the default cost reader; omitted) |
+| Negative cases hold | ☑ pass | In the passing run above: SC 2 — a top-up key not in the chunk → `key-check-failed`, a copy of a kept question → `duplicate`, a question model B disagrees with → `blind-solve-mismatch`; none saved (`topUp.dropped` = `{"key-check-failed":1,"duplicate":1,"blind-solve-mismatch":1}`). SC 3 — still 7 after 2 rounds → flag `insufficient-pool`, `startMcqAttempt` → `{ status: 422, error: "pool-too-small" }` (no bypass; `MIN_MCQ_POOL` unchanged, `src/server/mcq-test.ts` untouched). Edge — the top-up generator throws → round counted, 0 added, job `done`. |
 | verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
 | Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
-| Full smoke suite still green (no regression) | ☐ pass / ☐ fail | |
+| Full smoke suite still green (no regression) | ☐ pass / ☐ fail | Implementer note, not a verdict: `bun test` (all files) at eabe3da → `650 pass / 2 fail / Ran 652 tests across 64 files. [112.73s]`. The 2 fails are `tests/offline-sync.test.ts` "batch limits and bodies…" [5051.98ms] and "at most 200 cards…" [5042.47ms]: 5 s timeouts under full-suite load on the shared test database; that file imports none of the changed modules and passes alone (`22 pass / 0 fail / Ran 22 tests across 1 file. [9.45s]`). An earlier full run also showed hook timeouts `(fail) (unnamed) [5000ms]` in unrelated files (progress, review-api, settings-page, start-ladder, push, start-ladder-limit, diff-questions); those 7 files then passed together: `92 pass / 0 fail / Ran 92 tests across 7 files. [22.56s]` (diff-questions not re-run alone). |
 | **Companion score (easy-verifier)** | ☐ pass / ☐ fail / ☐ N/A | [`overall` and `change_risk` as the tool returned them, the scope, the ref, and the absolute path of the verifier report after a literal `report:` label — e.g. "overall 86 (>= 80), change_risk pass, scope changes, ref `main...HEAD`, report: `/home/me/.easy-verifier-reports/kit/score_changes_20261028T0530Z.html`". The gate reads the path that follows `report:` and nothing else, so with no label, or a path that is absent, the row is unscored — write ☑ N/A instead. ☑ N/A with a reason when neither companion tool was run: the merge gate blocks on ☑ fail only, never on an absent or N/A row] |
 | **UI: Visual regression (diff or verdict pasted)** | ☐ pass / ☐ fail / ☐ N/A | [screenshot path or LLM verdict — required for UI tasks, Hard-Stop Gate 6] |
 | **UI: Design-system compliance (tokens/colors/typography verified)** | ☐ pass / ☐ fail / ☐ N/A | [method used + output] |
@@ -86,9 +86,23 @@ error: regex "T033" matched 0 tests. Searched 63 files (skipping 635 tests) [203
 keeps fewer than 8 MCQs after check-and-dedupe and blind-solve goes straight to `save-ladder` as
 `insufficient-pool`.
 
-**AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
+**AFTER**: 2026-11-25T05:06:03Z at eabe3da, the same command, exit 0:
 
-**DELTA**: [one sentence — what a user can now do that they could not before]
+```
+Checked 388 installs across 345 packages (no changes) [8.00ms]
+$ tsc --noEmit
+$ biome check . && bun scripts/check-tokens.ts
+Checked 160 files in 96ms. No fixes applied.
+check-tokens: 0 color literals outside src/client/tokens.css
+bun test v1.4.4 (38afee6c8)
+ 17 pass
+ 635 filtered out
+ 0 fail
+ 74 expect() calls
+Ran 17 tests across 64 files. [5.11s]
+```
+
+**DELTA**: A ladder whose L0, L1 or L3 generation kept fewer than 8 checked MCQs now gets up to 2 top-up rounds (each question through the same key check, duplicate check and blind solve), so fewer levels end at `pool-too-small`; a level still thin is saved `insufficient-pool` as before.
 
 **WITNESS**: [who ran it and when — derived from `memory/event-trace/T033.jsonl`, never the
 implementing agent alone]
