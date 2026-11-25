@@ -58,4 +58,18 @@ describe("T014 diff hunks", () => {
     expect(dropped).toBe(2);
     expect(capHunks(hunks.slice(0, 1))).toEqual({ kept: hunks.slice(0, 1), dropped: 0 });
   });
+
+  test("a single hunk over the whole budget is truncated to the budget, not dropped", () => {
+    const budgetChars = DIFF_TOKEN_BUDGET * 4;
+    const huge = { id: "big.ts#0", path: "big.ts", text: "y".repeat(budgetChars + 500) };
+    const { kept, dropped } = capHunks([huge]);
+    expect(dropped).toBe(0);
+    expect(kept).toHaveLength(1);
+    expect(kept[0]?.id).toBe("big.ts#0");
+    expect(kept[0]?.text).toBe(huge.text.slice(0, budgetChars));
+    // two oversized hunks: the first fills the budget, the second is dropped (no room left)
+    const two = capHunks([huge, { ...huge, id: "big.ts#1" }]);
+    expect(two.kept.map((h) => h.id)).toEqual(["big.ts#0"]);
+    expect(two.dropped).toBe(1);
+  });
 });

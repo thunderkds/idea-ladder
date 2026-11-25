@@ -38,14 +38,19 @@ export function splitHunks(files: DiffFile[]): Hunk[] {
   return out;
 }
 
-/** Keeps the largest hunks that fit DIFF_TOKEN_BUDGET (largest first), returned in diff order; counts the rest. */
+/**
+ * Keeps the largest hunks that fit DIFF_TOKEN_BUDGET (largest first), returned in diff order; counts the rest. A hunk
+ * longer than the whole budget is first cut to the budget, so a diff of oversized hunks still has one to ask about.
+ */
 export function capHunks(hunks: Hunk[]): { kept: Hunk[]; dropped: number } {
-  let left = DIFF_TOKEN_BUDGET * CHARS_PER_TOKEN;
+  const budget = DIFF_TOKEN_BUDGET * CHARS_PER_TOKEN;
+  const cut = hunks.map((h) => (h.text.length > budget ? { ...h, text: h.text.slice(0, budget) } : h));
+  let left = budget;
   const keep = new Set<string>();
-  for (const h of [...hunks].sort((a, b) => b.text.length - a.text.length)) {
+  for (const h of [...cut].sort((a, b) => b.text.length - a.text.length)) {
     if (h.text.length > left) continue;
     keep.add(h.id);
     left -= h.text.length;
   }
-  return { kept: hunks.filter((h) => keep.has(h.id)), dropped: hunks.length - keep.size };
+  return { kept: cut.filter((h) => keep.has(h.id)), dropped: hunks.length - keep.size };
 }
