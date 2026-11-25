@@ -8,7 +8,7 @@ import { type Inngest, NonRetriableError, RetryAfterError } from "inngest";
 import { z } from "zod";
 import { checkAnswerKey, normalise } from "./answer-key-check.ts";
 import { L2_ARTIFACT_EVENT } from "./artifacts.ts";
-import { blindSolveMcq } from "./blind-solver.ts";
+import { BLIND_CHUNK_CHARS, blindSolveMcq } from "./blind-solver.ts";
 import { keepDistinct } from "./dedupe.ts";
 import {
   attemptLimitedUntil,
@@ -133,7 +133,10 @@ async function fetchDiff(
     throw err; // 5xx, timeout, network: this step is retried alone
   }
   if (!files) return await finish(deps.sql, set.setId, "diff-not-testable", "sha-gone");
-  const { kept, dropped } = capHunks(splitHunks(files));
+  // Model B sees only the first BLIND_CHUNK_CHARS of a hunk: model A and the code check get the same text, so no
+  // question can rest on text model B never saw.
+  const hunks = splitHunks(files).map((h) => ({ ...h, text: h.text.slice(0, BLIND_CHUNK_CHARS) }));
+  const { kept, dropped } = capHunks(hunks);
   if (kept.length === 0) return await finish(deps.sql, set.setId, "diff-not-testable", "no-code-change");
   if (dropped > 0) console.warn(JSON.stringify({ event: "diff-questions", setId: set.setId, droppedHunks: dropped }));
   return { status: "fetched", hunks: kept };

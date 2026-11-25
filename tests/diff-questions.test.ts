@@ -3,9 +3,11 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { dirname, resolve } from "node:path";
 import { InngestTestEngine } from "@inngest/test";
+import { APICallError } from "ai";
 import { createApp } from "../src/server/app.ts";
 import { L2_ARTIFACT_EVENT } from "../src/server/artifacts.ts";
 import { signInUser } from "../src/server/auth.ts";
+import { BLIND_CHUNK_CHARS } from "../src/server/blind-solver.ts";
 import { loadConfig } from "../src/server/config.ts";
 import {
   DIFF_PASS_MIN,
@@ -231,6 +233,45 @@ describe("T014 generateDiffQuestions (AC 1-4)", () => {
     expect(await storedQuestions((await sets(w.artifactId))[0].id)).toHaveLength(5);
   });
 
+  test("SC 4 (provider): a retryable APICallError from model B once -> the run ends ready, model A called once", async () => {
+    const w = await world();
+    const a = scriptedModelA([GOOD]);
+    let calls = 0;
+    const overloaded = () =>
+      new APICallError({
+        message: "Overloaded",
+        url: "https://api.anthropic.com/v1/messages",
+        requestBodyValues: {},
+        statusCode: 529,
+        isRetryable: true,
+      });
+    const b = mockModelB((d) => (calls++ === 0 ? overloaded() : knows(d)));
+    const { t } = engine(l2Event(w), { modelA: a.modelA, modelB: apiModelB(b) });
+    const { result } = await t.execute();
+    expect(result).toMatchObject({ status: "ready" });
+    expect(a.calls()).toBe(1);
+    expect(b.seen).toHaveLength(6); // 5 questions + 1 retried call
+    expect(await storedQuestions((await sets(w.artifactId))[0].id)).toHaveLength(5);
+  }, 20_000);
+
+  test("P2: model A sees each hunk cut to BLIND_CHUNK_CHARS; a key only after the cut fails the code check", async () => {
+    const w = await world();
+    const filler = Array.from({ length: 120 }, (_, i) => `+// filler line number ${i}`).join("\n");
+    const patch = `@@ -1,1 +1,121 @@\n${filler}\n+export const lateConstant = 7;`;
+    expect(patch.indexOf("lateConstant")).toBeGreaterThan(BLIND_CHUNK_CHARS);
+    const late = q("Which constant did you add at the end?", "lateConstant", "src/big.ts#0", ["early", "mid", "none"]);
+    const a = scriptedModelA([[late] as never]);
+    const b = mockModelB(knows);
+    const files = [{ filename: "src/big.ts", status: "modified", patch }];
+    const { t } = engine(l2Event(w), { modelA: a.modelA, modelB: apiModelB(b), files });
+    const { result } = await t.execute();
+    expect(result).toMatchObject({ status: "diff-questions-unavailable", reason: "too-few-verified" });
+    const hunk = JSON.parse(a.prompts[0]?.split("\n")[1] ?? "{}").hunks[0];
+    expect(hunk.text).toHaveLength(BLIND_CHUNK_CHARS);
+    expect(hunk.text).not.toContain("lateConstant");
+    expect(b.seen).toHaveLength(0); // rejected by the code check, never blind-solved
+  });
+
   test("SC 6: a diff that changes only bun.lock -> diff-not-testable before any LLM call", async () => {
     const w = await world();
     const a = scriptedModelA([GOOD]);
@@ -443,6 +484,110 @@ describe("T014 submitDiffAnswers (AC 5, 6)", () => {
       reason: "too-many-attempts",
     });
     expect(a2.calls()).toBe(0);
+  });
+});
+
+/** A set row in a given state, created at NOW (the attempt-limit window). */
+async function seedSet(artifactId: string, attempt: number, status: string, reason: string | null = null) {
+  const done = status === "passed" || status === "failed";
+  await db.sql`
+    INSERT INTO diff_question_sets (artifact_id, attempt, status, reason, created_at, submitted_at, correct)
+    VALUES (${artifactId}, ${attempt}, ${status}, ${reason}, ${NOW}, ${done ? NOW : null}, ${done ? 0 : null})`;
+}
+const noEmit = async () => {};
+
+/** The app with a session for the learner of `w`; retake events go to `retakes`. */
+async function routeApp(w: World, retakes: DiffRetakeEvent[] = []) {
+  const config = loadConfig({
+    DATABASE_URL: db.url,
+    GITHUB_CLIENT_ID: "id",
+    GITHUB_CLIENT_SECRET: "secret",
+    GITHUB_APP_TOKEN: "token",
+    SESSION_SECRET: "x".repeat(48),
+    ANTHROPIC_API_KEY: "sk-ant-test",
+    MODEL_A_ID: "test-model",
+    NODE_ENV: "test",
+  });
+  const app = createApp({
+    config,
+    sql: db.sql,
+    clientDir: "tests/fixtures/client",
+    emitDiffRetake: async (e) => {
+      retakes.push(e);
+    },
+  });
+  const [u] = await db.sql`SELECT github_id FROM users WHERE id = ${w.userId}`;
+  const cookie = `il_session=${await signInUser(db.sql, "x".repeat(48), { id: Number(u.github_id), login: w.login })}`;
+  const post = (path: string) =>
+    app.request(`http://localhost${path}`, {
+      method: "POST",
+      headers: { "content-type": "application/json", cookie },
+      body: "{}",
+    });
+  return { post };
+}
+
+describe("T014 retake after a system failure (Stage 4 P1)", () => {
+  test("(a) a retake after `queue-unavailable` returns 202 and sends the retake event", async () => {
+    const w = await world();
+    await seedSet(w.artifactId, 1, "diff-questions-unavailable", "queue-unavailable");
+    const retakes: DiffRetakeEvent[] = [];
+    const { post } = await routeApp(w, retakes);
+    const res = await post(`/api/artifacts/${w.artifactId}/diff-questions`);
+    expect(res.status).toBe(202);
+    const body = await res.json();
+    expect(body).toEqual({ status: "generating", setId: expect.any(String) });
+    expect(retakes.map((e) => e.data)).toEqual([{ setId: body.setId, artifactId: w.artifactId }]);
+    expect((await sets(w.artifactId)).at(-1)).toMatchObject({ attempt: 2, status: "generating" });
+  });
+
+  test("(b) a retake after `generation-failed` and after `too-few-verified` is allowed", async () => {
+    for (const reason of ["generation-failed", "too-few-verified"]) {
+      const w = await world();
+      await seedSet(w.artifactId, 1, "diff-questions-unavailable", reason);
+      expect(await retakeDiffQuestions(db.sql, w.userId, w.artifactId, NOW, noEmit)).toEqual({
+        status: "generating",
+        setId: expect.any(String),
+      });
+    }
+  });
+
+  test("(c) 409 retake-not-allowed stays for generating, ready, passed, diff-not-testable and too-many-attempts", async () => {
+    const states: [string, string | null][] = [
+      ["generating", null],
+      ["ready", null],
+      ["passed", null],
+      ["diff-not-testable", "no-code-change"],
+      ["diff-not-testable", "sha-gone"],
+      ["diff-questions-unavailable", "too-many-attempts"],
+    ];
+    for (const [status, reason] of states) {
+      const w = await world();
+      await seedSet(w.artifactId, 1, status, reason);
+      expect(await retakeDiffQuestions(db.sql, w.userId, w.artifactId, NOW, noEmit)).toEqual({
+        status: 409,
+        error: "retake-not-allowed",
+      });
+      expect(await sets(w.artifactId)).toHaveLength(1);
+    }
+  });
+
+  test("(d) queue-unavailable and generation-failed sets are not counted toward 3 per 24 h; too-few-verified is", async () => {
+    const w = await world();
+    await seedSet(w.artifactId, 1, "diff-questions-unavailable", "queue-unavailable");
+    await seedSet(w.artifactId, 2, "diff-questions-unavailable", "generation-failed");
+    await seedSet(w.artifactId, 3, "diff-questions-unavailable", "too-few-verified");
+    await seedSet(w.artifactId, 4, "failed");
+    // counted: attempts 3 and 4 only (2 < 3), so this retake is allowed
+    expect(await retakeDiffQuestions(db.sql, w.userId, w.artifactId, NOW, noEmit)).toMatchObject({
+      status: "generating",
+    });
+    await db.sql`UPDATE diff_question_sets SET status = 'failed', correct = 0, submitted_at = ${NOW} WHERE artifact_id = ${w.artifactId} AND attempt = 5`;
+    // counted now: 3, 4 and 5 -> the limit holds (too-few-verified counts as an attempt)
+    expect(await retakeDiffQuestions(db.sql, w.userId, w.artifactId, NOW, noEmit)).toMatchObject({
+      status: 429,
+      error: "too-many-attempts",
+    });
   });
 });
 

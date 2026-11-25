@@ -12,6 +12,10 @@ export const DIFF_QUESTION_COUNT = 5;
 export const DIFF_PASS_MIN = 4;
 /** Reason of a set refused by the attempt limit; such a set is not counted as an attempt. */
 export const TOO_MANY_ATTEMPTS = "too-many-attempts";
+/** Reasons of a set the system failed (queue down, workflow out of retries): not counted as an attempt. */
+const SYSTEM_FAILURES = ["queue-unavailable", "generation-failed"];
+/** `diff-questions-unavailable` reasons a retake may follow (besides a `failed` set). */
+const RETAKE_AFTER = new Set([...SYSTEM_FAILURES, "too-few-verified"]);
 
 export const DIFF_RETAKE_EVENT = "ladder/diff-questions.retake";
 export type DiffRetakeEvent = {
@@ -43,7 +47,7 @@ export async function attemptLimitedUntil(tx: SQL, learnerId: string, ladderId: 
   const recent: { created_at: Date }[] = await tx`
     SELECT s.created_at FROM diff_question_sets s JOIN artifacts a ON a.id = s.artifact_id
     WHERE a.learner_id = ${learnerId} AND a.ladder_id = ${ladderId} AND s.created_at > ${new Date(now.getTime() - DAY_MS)}
-      AND s.reason IS DISTINCT FROM ${TOO_MANY_ATTEMPTS}
+      AND (s.reason IS NULL OR s.reason NOT IN (SELECT jsonb_array_elements_text(${[TOO_MANY_ATTEMPTS, ...SYSTEM_FAILURES]}::jsonb)))
     ORDER BY s.created_at, s.id`;
   if (recent.length < MCQ_ATTEMPTS_PER_DAY) return undefined;
   const oldest = recent[recent.length - MCQ_ATTEMPTS_PER_DAY] as { created_at: Date };
@@ -99,8 +103,11 @@ export async function retakeDiffQuestions(
       // Serialises this learner's attempts (as T012 does), so two parallel retakes cannot both pass the limit.
       await tx`SELECT 1 FROM users WHERE id = ${userId} FOR UPDATE`;
       const [latest] = await tx`
-      SELECT attempt, status FROM diff_question_sets WHERE artifact_id = ${artifactId} ORDER BY attempt DESC LIMIT 1`;
-      if (latest?.status !== "failed") return { status: 409, error: "retake-not-allowed" };
+      SELECT attempt, status, reason FROM diff_question_sets WHERE artifact_id = ${artifactId} ORDER BY attempt DESC LIMIT 1`;
+      const allowed =
+        latest?.status === "failed" ||
+        (latest?.status === "diff-questions-unavailable" && RETAKE_AFTER.has(latest.reason));
+      if (!allowed) return { status: 409, error: "retake-not-allowed" };
       const retryAt = await attemptLimitedUntil(tx, userId, artifact.ladder_id, now);
       if (retryAt) return { status: 429, error: TOO_MANY_ATTEMPTS, retryAt };
       const [row] = await tx`
