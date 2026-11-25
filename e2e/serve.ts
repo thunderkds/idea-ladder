@@ -7,17 +7,21 @@ import { SQL } from "bun";
 import webpush from "web-push";
 import { createApp } from "../src/server/app.ts";
 import { loadConfig } from "../src/server/config.ts";
+import { generateDiffQuestions } from "../src/server/diff-questions.ts";
 import { evidencePassedLevels } from "../src/server/evidence.ts";
 import { type GithubRepoClient, githubRepoClient } from "../src/server/github-repo.ts";
 import { createInngest, LADDER_GENERATE_EVENT, ladderGenerateFunction } from "../src/server/ladder-generate.ts";
 import type { PassedLevels } from "../src/server/ladder-view.ts";
 import { migrateUp } from "../src/server/migrate.ts";
+import { createModelA } from "../src/server/model-a.ts";
 import { type PushTarget, reminderTick } from "../src/server/reminders.ts";
 import { adminUrl } from "../tests/support/db.ts";
 import { fixtureFetch, loadFixture, rateLimited, V0_REPOS, type V0Repo } from "../tests/support/github-fixtures.ts";
 import { startGithubStub } from "../tests/support/github-stub.ts";
 import { seedPool } from "../tests/support/mcq-seed.ts";
 import { testModelA, testModelB, testReader } from "../tests/support/mock-model.ts";
+import { BRANCH, FORK, LEARNER, PINNED, t013Fixture, UPSTREAM } from "../tests/support/t013-github.ts";
+import { diffFixture, GOOD, KEYS, knows, mockModelB, scriptedModelA } from "../tests/support/t014-diff.ts";
 
 export const APP_PORT = 54401;
 const STUB_PORT = 54400;
@@ -159,6 +163,21 @@ await sql`INSERT INTO repo_snapshots (repo_full_name, commit_sha, default_branch
 await seedPool(sql, { ladderId: passLadder, repo: PASS_REPO, sha: PASS_SHA }, "L0", 10);
 const passSeeds = { learner: { githubId: 47, login: "passer" }, ladderId: passLadder };
 
+// T030 seeds (e2e/pass-test.e2e.ts, Success Criterion 9 for L2): `learner-a` (T013 fixture identity) on a ladder of
+// the T013 upstream repo pinned to PINNED, with L0 and L1 passed through the injected seam below. The L2 branch on the
+// learner's fork is verified by the real T013 handler (recorded fixtures) and the real T014 workflow makes the 5
+// questions (recorded diff fixture, scripted model A, mock model B; no network).
+const [differ] =
+  await sql`INSERT INTO users (github_id, github_login) VALUES (${LEARNER.githubId}, ${LEARNER.login}) RETURNING id::text AS id`;
+const diffLadder = await seedLadder(UPSTREAM.fullName, PINNED, true, differ.id);
+const diffSeeds = {
+  learner: LEARNER,
+  ladderId: diffLadder,
+  branchUrl: `https://github.com/${FORK.fullName}/tree/${BRANCH}`,
+  /** Test-only: question -> key of the fixture questions, so the e2e test can answer 4 of 5 right. */
+  keys: Object.fromEntries(KEYS),
+};
+
 const DAY_MS = 86_400_000;
 // T015: the fake push sender records every call and always succeeds (no push service is ever contacted).
 type PushCall = { endpoint: string; payload: unknown };
@@ -219,7 +238,7 @@ const RATE_LIMITED_REPO = "developit/mitt"; // fetch-repo hits the rate limit
 const RESET_EPOCH_S = Date.UTC(2030, 0, 1, 12) / 1000;
 
 const fixtures = await Promise.all(Object.keys(V0_REPOS).map((r) => loadFixture(r as V0Repo)));
-const gh = fixtureFetch(fixtures, (path) =>
+const gh = fixtureFetch([...fixtures, t013Fixture(), diffFixture()], (path) =>
   path.startsWith(`/repos/${RATE_LIMITED_REPO}`) && !path.endsWith("/commits?per_page=1")
     ? rateLimited(RESET_EPOCH_S)
     : // T008 chunk reads dependency and core files: the fixtures hold no file contents.
@@ -261,13 +280,36 @@ const fn = ladderGenerateFunction(createInngest(), {
 // integration test sees its pass. No other seeded ladder has an evidence record, so their levels are unchanged.
 const realPassed = evidencePassedLevels(sql);
 const passedLevels: PassedLevels = async (ladderId, userId) =>
-  ladderId === seeded.klona ? ["L0", "L1"] : realPassed(ladderId, userId);
+  ladderId === seeded.klona
+    ? ["L0", "L1"]
+    : ladderId === diffLadder
+      ? ["L0", "L1", ...(await realPassed(ladderId, userId))]
+      : realPassed(ladderId, userId);
+
+// T014 in-process (as the ladder workflow above): the L2 event and a retake run generateDiffQuestions through
+// @inngest/test after QUEUE_DELAY_MS, so the PWA first sees `generating`.
+const diffFn = generateDiffQuestions(createInngest(), {
+  sql,
+  github,
+  modelA: scriptedModelA([GOOD]).modelA,
+  modelB: createModelA({ backend: "api", model: mockModelB(knows).model }),
+  dedupeJaccard: 0.8,
+});
+const runDiffQuestions = async (event: { name: string; data: unknown }) => {
+  setTimeout(() => {
+    new InngestTestEngine({ function: diffFn, events: [event as never] })
+      .execute()
+      .catch((err) => console.error("e2e: in-process diff-question run failed:", err));
+  }, QUEUE_DELAY_MS);
+};
 const app = createApp({
   config,
   passedLevels,
   sql,
   clientDir: "dist/client",
   github,
+  emitArtifact: runDiffQuestions,
+  emitDiffRetake: runDiffQuestions,
   enqueue: async (data) => {
     if (data.repo === HELD_REPO) return;
     setTimeout(() => {
@@ -302,6 +344,7 @@ Bun.serve({
     if (url.pathname === "/review-seeds") return Response.json(reviewSeeds);
     if (url.pathname === "/sync-seeds") return Response.json(syncSeeds);
     if (url.pathname === "/pass-seeds") return Response.json(passSeeds);
+    if (url.pathname === "/diff-seeds") return Response.json(diffSeeds);
     if (url.pathname === "/push-sent") return Response.json(pushSent);
     if (url.pathname === "/reminder-tick") {
       const now = new Date(url.searchParams.get("now") ?? "");

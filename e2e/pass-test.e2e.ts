@@ -901,3 +901,48 @@ test("T030 AC 4 retake: a 409 `retake-not-allowed` is shown in words", async ({ 
   await expect(page.getByRole("alert")).toContainText("New questions are not allowed for this branch now");
   await expect(page.getByRole("alert")).not.toContainText("retake-not-allowed");
 });
+
+test.describe("T030 real server (no mocks), L2", () => {
+  test("T030 SC 9 L2: a branch against the real T013/T014 handlers: waiting, 5 questions, 4 of 5 passes, L3 opens", async ({
+    page,
+  }) => {
+    test.setTimeout(60_000);
+    const seeds = (await (await page.request.get(`${CONTROL}/diff-seeds`)).json()) as {
+      learner: { githubId: number; login: string };
+      ladderId: string;
+      branchUrl: string;
+      keys: Record<string, string>;
+    };
+    await page.request.get(`${CONTROL}/set-user?id=${seeds.learner.githubId}&login=${seeds.learner.login}`);
+    try {
+      await signIn(page);
+      await page.goto(`/ladders/${seeds.ladderId}`);
+      await expect(page.locator("#level-L2")).toHaveClass(/level-open/);
+      await expect(page.locator("#level-L3")).toHaveClass(/level-locked/);
+      await page.locator("#level-L2").getByRole("link", { name: "Take the test" }).click();
+      await urlField(page).fill(seeds.branchUrl);
+      await page.getByRole("button", { name: "Check my branch" }).click();
+      await expect(page.getByText("Making 5 questions on your code")).toBeVisible();
+      const groups = page.locator("fieldset.question");
+      await expect(groups).toHaveCount(5, { timeout: 20_000 });
+      expect(await page.content()).not.toContain('"key"');
+      // The test knows the fixture keys (tests/support/t014-diff.ts, via the control port); the client does not. 4 right, 1 wrong.
+      for (let i = 0; i < 5; i++) {
+        const legend = (await groups.nth(i).locator("legend").textContent()) ?? "";
+        const key = seeds.keys[legend.replace(/^\d+\.\s*/, "")] as string;
+        expect(key, `fixture key for "${legend}"`).toBeTruthy();
+        if (i < 4) await groups.nth(i).getByRole("radio", { name: key, exact: true }).check();
+        else await groups.nth(i).locator("label").filter({ hasNotText: key }).first().locator("input").check();
+      }
+      await submit(page).click();
+      const result = page.locator("[aria-live=polite]");
+      await expect(result).toContainText("Level passed");
+      await expect(result).toContainText("4 of 5 correct");
+      await page.getByRole("link", { name: "Go to L3 Understand" }).click();
+      await expect(page.locator("#level-L2")).toHaveClass(/level-passed/);
+      await expect(page.locator("#level-L3")).toHaveClass(/level-open/);
+    } finally {
+      await page.request.get(`${CONTROL}/set-user?id=42&login=octo`);
+    }
+  });
+});
