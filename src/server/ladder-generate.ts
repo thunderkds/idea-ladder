@@ -4,7 +4,7 @@ import type { SQL } from "bun";
 import { Inngest, NonRetriableError } from "inngest";
 import type { Totals } from "../../eval/src/cost.ts";
 import { LEVEL_IDS, type LevelId } from "../shared/levels.ts";
-import { BLIND_SOLVE_STEP, blindSolveLevels } from "./blind-solver.ts";
+import { BLIND_SOLVE_STEP, blindSolveLevels, isModelFailure } from "./blind-solver.ts";
 import { CHECK_AND_DEDUPE_STEP, checkAndDedupe, DEFAULT_DEDUPE_JACCARD, type LadderLevel } from "./check-and-dedupe.ts";
 import { chunkFiles, type SourceFile } from "./chunker.ts";
 import { pickCoreFilesClaudeCode, ReaderNotInstalledError } from "./claude-code-reader.ts";
@@ -566,7 +566,10 @@ async function topUpCheckStep(
       onUsage,
     });
   } catch (err) {
-    // The top-up is best effort: the round counts as run with 0 added; the level is saved thin, the job goes on.
+    // Not a model failure (a cost-log fault, a bug): rethrown, so Inngest retries this step.
+    if (!isModelFailure(err))
+      throw new Error(`${step}: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
+    // A model failure: the top-up is best effort; the round counts as run with 0 added, the level is saved thin.
     console.warn(
       JSON.stringify({ event: "top-up-generator-error", jobId, repo, sha, level, round, error: String(err) }),
     );

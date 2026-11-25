@@ -22,7 +22,7 @@ import {
   topUpStepId,
 } from "../src/server/mcq-top-up.ts";
 import { migrateUp } from "../src/server/migrate.ts";
-import type { Generate, GenerateInput, ModelADeps } from "../src/server/model-a.ts";
+import { type Generate, type GenerateInput, type ModelADeps, ModelAFailedError } from "../src/server/model-a.ts";
 import { MCQ_TOP_UP_ROUNDS, MIN_MCQ_POOL } from "../src/server/save-ladder.ts";
 import type { LevelId } from "../src/shared/levels.ts";
 import { createTestDatabase } from "./support/db.ts";
@@ -309,7 +309,13 @@ function poolModelB(override: (question: string) => "wrong" | "throw" | undefine
   };
 }
 
-function engine(jobId: string, a: ModelADeps, b: ModelADeps, costs: CostEntry[] = []) {
+function engine(
+  jobId: string,
+  a: ModelADeps,
+  b: ModelADeps,
+  costs: CostEntry[] = [],
+  logCost: (e: CostEntry) => void = (e) => costs.push(e),
+) {
   const gh = fixtureFetch(fixtures, (path) => {
     const m = path.match(/^\/repos\/developit\/mitt\/contents\/([^?]+)\?ref=/);
     return m ? new Response(fileText(decodeURIComponent(m[1] as string))) : undefined;
@@ -317,7 +323,7 @@ function engine(jobId: string, a: ModelADeps, b: ModelADeps, costs: CostEntry[] 
   const fn = ladderGenerateFunction(createInngest(), {
     sql: db.sql,
     github: githubRepoClient({ baseUrl: "https://api.github.com", token: "t", fetch: gh.impl }),
-    reader: { ...testReader(), logCost: (e) => costs.push(e) },
+    reader: { ...testReader(), logCost },
     modelA: a,
     modelB: b,
     stepCosts: () => null,
@@ -461,15 +467,35 @@ describe("T033 top-up in ladder-generate (Success Criteria 1 to 5)", () => {
     expect(s.level("L1")?.topUp).toEqual({ rounds: 0, added: 0, dropped: {} });
   });
 
-  test("edge: the top-up generator throws: the round counts as run with 0 added, the level is saved thin, job done", async () => {
+  test("edge: the top-up generator has a model failure: the round counts as run with 0 added, the level is saved thin, job done", async () => {
     const jobId = await newJob();
     const a = poolModelA(FULL, () => {
-      throw new Error("model down");
+      throw new ModelAFailedError("claude -p timeout");
     });
     const { result } = await engine(jobId, a.deps, poolModelB()).execute();
     expect(result).toMatchObject({ status: "done" });
     const s = await saved();
     expect(s.level("L1")?.flags).toEqual(["insufficient-pool"]);
     expect(s.level("L1")?.topUp).toEqual({ rounds: 2, added: 0, dropped: {} });
+  });
+
+  test("edge: a non-model error in the top-up generator call (cost-log fault) is rethrown; the retried step succeeds", async () => {
+    const jobId = await newJob();
+    const a = poolModelA(FULL, (_l, d) => WORDS.slice(0, 4).map((w) => valid(d, `Top-up ${w} question?`)));
+    const steps = await memoBeforeTopUp(jobId, a, poolModelB());
+    const faulty = (e: CostEntry) => {
+      if (e.step === "top-up-L1-1") throw new Error("cost log unwritable");
+    };
+    const failed = await engine(jobId, a.deps, poolModelB(), [], faulty).execute({ steps });
+    expect(failed.ctx.step.run.mock.calls.map((c) => c[0] as string).at(-1)).toBe("top-up-L1-1");
+    expect((failed as { error?: Error }).error?.message).toMatch(/top-up-L1-1: cost log unwritable/);
+    expect((await db.sql`SELECT count(*)::int AS n FROM ladders`)[0].n).toBe(0);
+    // Inngest retries the failed step with every earlier step memoized.
+    const memo = await memoBefore(failed, (id) => id === "top-up-L1-1");
+    const retry = await engine(jobId, a.deps, poolModelB()).execute({ steps: memo });
+    expect(retry.result).toMatchObject({ status: "done" });
+    const s = await saved();
+    expect(await s.questions("L1")).toHaveLength(9);
+    expect(s.level("L1")?.topUp).toEqual({ rounds: 1, added: 4, dropped: {} });
   });
 });

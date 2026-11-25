@@ -109,7 +109,7 @@ export async function blindSolve(input: BlindSolveInput): Promise<BlindSolveResu
 }
 
 /** Only these errors mean "the model did not give a usable answer"; anything else is a bug or a setup fault and is rethrown. */
-function isModelFailure(err: unknown): boolean {
+export function isModelFailure(err: unknown): boolean {
   return (
     err instanceof ModelAInvalidOutputError ||
     err instanceof ModelAFailedError ||
