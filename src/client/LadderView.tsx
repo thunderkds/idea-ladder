@@ -16,7 +16,7 @@ function LockIcon() {
   );
 }
 
-function Level({ level }: { level: LevelView }) {
+function Level({ ladderId, level }: { ladderId: string; level: LevelView }) {
   const open = level.lock === "open";
   const locked = level.lock === "locked";
   return (
@@ -38,6 +38,14 @@ function Level({ level }: { level: LevelView }) {
         {level.passTest.description}
       </p>
       {open ? <p className="level-state">Open now</p> : null}
+      {/* T030: the pass test of the open (unlocked, not passed) level; locked and passed levels have none. */}
+      {open ? (
+        <p className="level-action">
+          <a className="button" href={`/ladders/${encodeURIComponent(ladderId)}?test=${level.id}`}>
+            Take the test
+          </a>
+        </p>
+      ) : null}
       {level.lock === "passed" ? <p className="level-state">Passed</p> : null}
       {locked ? (
         <p className="level-state level-lock">
@@ -163,7 +171,7 @@ export function LadderPage({ ladderId }: { ladderId: string }) {
       </header>
       <ol className="levels">
         {ladder.levels.map((level) => (
-          <Level key={level.id} level={level} />
+          <Level key={level.id} ladderId={ladderId} level={level} />
         ))}
       </ol>
     </main>

@@ -19,6 +19,7 @@ import {
   refresh,
   syncBeforeReview,
 } from "./offline-store.ts";
+import { reviewCardsFilter } from "./pass-test.ts";
 import { installAvailable, onInstallChange, promptInstall } from "./pwa.ts";
 
 const LABELS: Record<Rating, string> = { again: "Again", hard: "Hard", good: "Good", easy: "Easy" };
@@ -182,7 +183,10 @@ export function ReviewPage() {
 
   useEffect(() => {
     let stopped = false;
-    const begin = (body: ReviewQueue) => {
+    // T030: `/review?cards=1,2` (a failed pass test's linked cards) shows only those cards of the queue.
+    const only = reviewCardsFilter(window.location.search);
+    const begin = (full: ReviewQueue) => {
+      const body = only ? { ...full, cards: full.cards.filter((c) => only.has(c.cardId)) } : full;
       setQueue(body);
       if (body.cards.length === 0) return;
       const start = Date.now();
