@@ -47,12 +47,12 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | Written in this task: `tests/diff-questions.test.ts` (16 tests: SC 1-6, AC 1-7, edge cases sha-gone / rate limit / substring key / duplicate options / >500 chars / duplicate event, retake + rate limit, routes, migration 0015 up/down/up), `tests/diff-hunks.test.ts` (4 unit tests: splitter ids, lockfile/binary/dist-build-vendor filter, deleted-only diff, DIFF_TOKEN_BUDGET cap), fixtures + mocks `tests/support/t014-diff.ts`. Updated for 0015: `tests/migrate.test.ts`, `tests/artifacts-migration.test.ts`. Output: see next row (`20 pass, 0 fail`). |
-| Verification command run | ☑ pass | backend-developer, 2026-11-24T05:18:43Z on `444c808`: `bun install --frozen-lockfile && bun run typecheck && bun run lint && bun test -t "T014"` → `Checked 388 installs across 345 packages (no changes)` / `$ tsc --noEmit` (no errors) / `Checked 158 files in 92ms. No fixes applied.` / `check-tokens: 0 color literals outside src/client/tokens.css` / `20 pass  608 filtered out  0 fail  172 expect() calls  Ran 20 tests across 63 files. [4.43s]`. The two `Inngest step error` blocks in the log are the intended failures of SC 4 (blind-solve throws once) and the rate-limit edge case (`RetryAfterError: github rate limit`, `retryAfter: "2026-11-24T09:10:00.000Z"`). |
-| Negative cases hold | ☑ pass | In the run above: hunk id not in the diff, B disagreement, B disagrees in all 3 rounds (`diff-questions-unavailable`/`too-few-verified`, 0 served), lockfile-only diff (`diff-not-testable`, model mocks called 0 times), SHA gone (`sha-gone`), GitHub rate limit (RetryAfterError, set stays `generating`, no partial set), substring key / duplicate options / >500 chars rejected, invalid model A output spends one round, duplicate L2 event (1 set, 0 LLM calls), another learner's set 404, unknown question id 422, bad body 400, second submit 409 (nothing stored on any of them), retake on a non-failed set 409, 4th attempt in 24 h 429 + retryAt, new branch over the limit `too-many-attempts` with 0 LLM calls, scoring module imports no model module and no `ai`/`@ai-sdk` package, `fetch` spied to throw during scoring and never called. |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | Written in this task: `tests/diff-questions.test.ts` (22 tests: SC 1-6, SC 4 with a plain Error and with a retryable `APICallError` (529) from model B, AC 1-7, edge cases sha-gone / rate limit / substring key / duplicate options / >500 chars / duplicate event / key after the BLIND_CHUNK_CHARS cut, retake + rate limit, Stage 4 P1 retake (a)-(d), routes, migration 0015 up/down/up), `tests/diff-hunks.test.ts` (5 unit tests: splitter ids, lockfile/binary/dist-build-vendor filter, deleted-only diff, DIFF_TOKEN_BUDGET cap, one hunk over the budget is cut, not dropped), fixtures + mocks `tests/support/t014-diff.ts`. Updated for 0015: `tests/migrate.test.ts`, `tests/artifacts-migration.test.ts`. Output: see next row (`27 pass, 0 fail`). |
+| Verification command run | ☑ pass | backend-developer, 2026-11-25T03:49:27Z on `18359e0` (after the Stage 4 P1/P2 fixes): `bun install --frozen-lockfile && bun run typecheck && bun run lint && bun test -t "T014"` → `Checked 388 installs across 345 packages (no changes) [1043.00ms]` / `$ tsc --noEmit` (no errors) / `Checked 158 files in 208ms. No fixes applied.` / `check-tokens: 0 color literals outside src/client/tokens.css` / `27 pass  608 filtered out  0 fail  207 expect() calls  Ran 27 tests across 63 files. [7.51s]`. The `error: socket hang up (not a model answer)` and `RetryAfterError: github rate limit` lines in the log are the intended failures of SC 4 (blind-solve step throws once) and the rate-limit edge case. |
+| Negative cases hold | ☑ pass | In the run above: hunk id not in the diff, B disagreement, B disagrees in all 3 rounds (`diff-questions-unavailable`/`too-few-verified`, 0 served), lockfile-only diff (`diff-not-testable`, model mocks called 0 times), SHA gone (`sha-gone`), GitHub rate limit (RetryAfterError, set stays `generating`, no partial set), substring key / duplicate options / >500 chars rejected, a key that is only after the first BLIND_CHUNK_CHARS (2,000) chars of its hunk rejected by the code check (model A's hunk text is 2,000 chars; model B never called), invalid model A output spends one round, duplicate L2 event (1 set, 0 LLM calls), another learner's set 404, unknown question id 422, bad body 400, second submit 409 (nothing stored on any of them), retake 409 `retake-not-allowed` for generating / ready / passed / diff-not-testable (no-code-change, sha-gone) / too-many-attempts, retake allowed (202 via the route) after failed, queue-unavailable, generation-failed, too-few-verified; queue-unavailable and generation-failed sets not counted toward 3 per 24 h while too-few-verified is (4th counted attempt → 429 + retryAt); new branch over the limit `too-many-attempts` with 0 LLM calls; scoring module imports no model module and no `ai`/`@ai-sdk` package, `fetch` spied to throw during scoring and never called. |
 | verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
 | Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
-| Full smoke suite still green (no regression) | ☑ pass | backend-developer, 2026-11-24T05:17:13Z on `444c808`: `bun test` → `628 pass  0 fail  Ran 628 tests across 63 files. [82.21s]`. One earlier full run showed `T015 offline pack (AC 2) > at most 200 cards` timing out at 5 s (410 sequential inserts) plus an `Unhandled error between tests` from the background level-generator runs; re-run 2 of 2 green on this branch with the same 4 files, and green alone: a load-timing flake, not caused by this change (the test touches no T014 table). |
+| Full smoke suite still green (no regression) | ☑ pass | No regression, but the suite is NOT fully green on this machine. backend-developer, 2026-11-25T03:49:41Z and 03:52:06Z on `18359e0`: `bun test` → `634 pass  2 fail  Ran 636 tests across 63 files. [140.35s]` / `[147.63s]`, both runs: `(fail) T015 offline pack (AC 2) > at most 200 cards, earliest due first [5034.09ms]` and `# Unhandled error between tests` / `(fail) (unnamed) [5000.17ms]` (background `generate-level-L2/L3/L4: model-a-failed: timeout` runs of the T008 step tests). Same two failures on the base commit `3b34b16` (no T014 code, `git archive` copy), 2026-11-25T03:55:28Z: `606 pass  2 fail`, `(fail) T015 offline pack (AC 2) > at most 200 cards ... [5024.30ms]`, `# Unhandled error between tests`, `error: generate-level-L4: model-a-failed: timeout` (the copy's third failure, `git ignores .env`, is because the copy has no `.git`). The offline test alone fails on base too (2 of 2, ~5,020 ms: 410 sequential inserts against a 5 s timeout); `tests/offline-sync.test.ts` and `src/server/offline.ts` are unchanged by T014. On 2026-11-24 the full suite ran `628 pass 0 fail`. |
 | **Companion score (easy-verifier)** | ☐ pass / ☐ fail / ☐ N/A | [`overall` and `change_risk` as the tool returned them, the scope, the ref, and the absolute path of the verifier report after a literal `report:` label — e.g. "overall 86 (>= 80), change_risk pass, scope changes, ref `main...HEAD`, report: `/home/me/.easy-verifier-reports/kit/score_changes_20261028T0530Z.html`". The gate reads the path that follows `report:` and nothing else, so with no label, or a path that is absent, the row is unscored — write ☑ N/A instead. ☑ N/A with a reason when neither companion tool was run: the merge gate blocks on ☑ fail only, never on an absent or N/A row] |
 | **UI: Visual regression (diff or verdict pasted)** | ☑ N/A | Backend only: the answer screen is T030 (guide § Out of scope "Answer screen UI (server handlers only)"). |
 | **UI: Design-system compliance (tokens/colors/typography verified)** | ☑ N/A | Backend only (no client file changed). |
@@ -95,25 +95,28 @@ No T014 test, no diff-question migration, no `/api/artifacts/:artifactId/diff-qu
 `/api/diff-question-sets/:setId/submit` route: a verified L2 branch (T013) sends `ladder/l2-artifact.verified`
 and nothing consumes it, so L2 can never pass and L3 never unlocks.
 
-**AFTER**: same command, 2026-11-24T05:18:43Z on `444c808`:
+**AFTER**: same command, 2026-11-25T03:49:27Z on `18359e0` (after the Stage 4 P1/P2 fixes):
 
 ```
 $ bun install --frozen-lockfile && bun run typecheck && bun run lint && bun test -t "T014"
-Checked 388 installs across 345 packages (no changes) [6.00ms]
+Checked 388 installs across 345 packages (no changes) [1043.00ms]
 $ tsc --noEmit
 $ biome check . && bun scripts/check-tokens.ts
-Checked 158 files in 92ms. No fixes applied.
+Checked 158 files in 208ms. No fixes applied.
 check-tokens: 0 color literals outside src/client/tokens.css
-bun test v1.4.4 (38afee6c8)
- 20 pass
+ 27 pass
  608 filtered out
  0 fail
- 172 expect() calls
-Ran 20 tests across 63 files. [4.43s]
+ 207 expect() calls
+Ran 27 tests across 63 files. [7.51s]
 $ ls migrations | tail -2
 0015_diff_questions.down.sql
 0015_diff_questions.up.sql
 ```
+
+Full `bun test`, 2026-11-25T03:49:41Z: `634 pass  2 fail  Ran 636 tests across 63 files. [140.35s]`; the 2 failures
+(`T015 offline pack (AC 2) > at most 200 cards`, `Unhandled error between tests`) reproduce on the base commit
+`3b34b16` (see the Evidence row "Full smoke suite").
 
 **DELTA**: after T013 verifies an L2 branch, the learner now gets 5 checked questions on their own diff, and 4 of 5 correct (scored in code) writes the L2 evidence record and unlocks L3; before, nothing consumed the L2 event and L2 could never pass.
 
