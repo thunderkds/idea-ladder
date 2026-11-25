@@ -12,8 +12,10 @@ import {
   DIFF_POLL_MS,
   DIFF_STATUS_TEXT,
   diffPollStep,
+  diffRetakeProblemText,
   diffStatusPath,
   diffSubmitPath,
+  diffSubmitProblemText,
   localTime,
   mcqProblemText,
   reviewCardsHref,
@@ -122,8 +124,9 @@ function ProblemBox({ title, children }: { title: string; children?: ReactNode }
 }
 
 /**
- * A question set the learner answers and submits once (MCQ attempt or diff questions). `send` posts the answers and
- * returns the server's result, a problem, or "not-sent" on a network error (the same answers can be sent again).
+ * A question set the learner answers and submits once (MCQ attempt or diff questions). `send` posts the answers; it
+ * returns a problem text to show next to the form (the questions and answers stay, so the same answers can be sent
+ * again), or undefined when the server's result (or a screen-level problem) took over.
  */
 function AnswerForm({
   questions,
@@ -132,11 +135,11 @@ function AnswerForm({
 }: {
   questions: Question[];
   disabled: boolean;
-  send: (answers: Record<string, number>) => Promise<"not-sent" | undefined>;
+  send: (answers: Record<string, number>) => Promise<string | undefined>;
 }) {
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState(false);
-  const [notSent, setNotSent] = useState(false);
+  const [problem, setProblem] = useState<string>();
   const sending = useRef(false);
   const online = useOnline();
   const answered = questions.filter((q) => answers[q.id] !== undefined).length;
@@ -154,9 +157,9 @@ function AnswerForm({
     if (!complete || sending.current) return;
     sending.current = true; // a double click sends one request
     setBusy(true);
-    setNotSent(false);
+    setProblem(undefined);
     try {
-      if ((await send(answers)) === "not-sent") setNotSent(true);
+      setProblem(await send(answers));
     } finally {
       sending.current = false;
       setBusy(false);
@@ -181,7 +184,7 @@ function AnswerForm({
         disabled={disabled || busy}
         onAnswer={(id, choice) => setAnswers((a) => ({ ...a, [id]: choice }))}
       />
-      {notSent ? <ProblemBox title={NOT_SENT} /> : null}
+      {problem ? <ProblemBox title={problem} /> : null}
       {online ? (
         <button className="button test-submit" type="submit" disabled={!complete || busy || disabled}>
           Submit answers
@@ -261,7 +264,7 @@ function McqTest({
       onResult(fromMcqResult(json as unknown as McqResult));
       return undefined;
     } catch {
-      return "not-sent" as const;
+      return NOT_SENT;
     }
   };
 
@@ -488,8 +491,9 @@ function ArtifactTest({
 type DiffState = { status: string; reason?: string; setId?: string; questions?: Question[] };
 
 /**
- * T014 (mocked until it lands): after the L2 branch is verified, polls the question status every 5 s, pauses while
- * the page is hidden, and stops on a final status or after 10 min. `ready` shows the 5 questions; the server scores.
+ * T014: after the L2 branch is verified, polls the question status every 5 s, pauses while the page is hidden, and
+ * stops on a final status or after 10 min. `ready` shows the 5 questions; the server scores. A `failed` set offers a
+ * retake (new questions on the same branch).
  */
 function DiffTest({
   artifactId,
@@ -563,11 +567,12 @@ function DiffTest({
     try {
       const { res, json } = await postJson(diffSubmitPath(state.setId), { answers });
       if (res.status === 401) return void expireSession();
-      if (!res.ok) return void setState({ status: "problem", reason: String(json.error ?? "") });
+      // The 5 questions and the answers stay on screen; only the reason is shown next to them.
+      if (!res.ok) return diffSubmitProblemText(String(json.error ?? ""));
       onResult(fromMcqResult(json as unknown as McqResult));
       return undefined;
     } catch {
-      return "not-sent" as const;
+      return NOT_SENT;
     }
   };
 
@@ -577,6 +582,21 @@ function DiffTest({
         <h2>5 questions on your code</h2>
         <AnswerForm questions={state.questions} disabled={false} send={send} />
       </>
+    );
+  }
+  if (state.status === "failed") {
+    return (
+      <section className="test-problem" aria-label="Your last set">
+        <p className="test-problem-title">Not passed yet</p>
+        <p className="status-detail">Your last 5 questions on this branch were not passed.</p>
+        <RetakeButton
+          artifactId={artifactId}
+          onStarted={() => {
+            setState({ status: "generating" });
+            setRound((r) => r + 1);
+          }}
+        />
+      </section>
     );
   }
   if (state.status === "generating") {
@@ -608,8 +628,66 @@ function DiffTest({
   );
 }
 
+/** T014 retake after a failed set: a new set of questions on the same branch, within T012's attempt limit. */
+function RetakeButton({ artifactId, onStarted }: { artifactId: string; onStarted: () => void }) {
+  const [problem, setProblem] = useState<Problem>();
+  const [busy, setBusy] = useState(false);
+  const online = useOnline();
+  const retake = async () => {
+    setBusy(true);
+    setProblem(undefined);
+    try {
+      const { res, json } = await postJson(diffStatusPath(artifactId));
+      if (res.status === 401) return void expireSession();
+      if (res.ok) return onStarted();
+      setProblem({ error: String(json.error ?? ""), retryAt: json.retryAt as string | undefined });
+    } catch {
+      setProblem({ error: "not-sent" });
+    } finally {
+      setBusy(false);
+    }
+  };
+  if (problem?.retryAt) {
+    return (
+      <div className="test-problem" role="alert">
+        <p className="test-problem-title">You used today's attempts</p>
+        <p className="status-detail">
+          Next attempt at <time dateTime={problem.retryAt}>{localTime(problem.retryAt)}</time>
+        </p>
+      </div>
+    );
+  }
+  return (
+    <>
+      {problem ? (
+        <ProblemBox title={problem.error === "not-sent" ? NOT_SENT : diffRetakeProblemText(problem.error)} />
+      ) : null}
+      {online ? (
+        <p>
+          <button className="button" type="button" disabled={busy} onClick={() => void retake()}>
+            Try again with new questions
+          </button>
+        </p>
+      ) : (
+        <OfflineNotice />
+      )}
+    </>
+  );
+}
+
 /** One result view for every test type: pass shows the newly open level; fail the score and the linked cards. */
-function ResultView({ ladderId, ladder, result }: { ladderId: string; ladder: LadderView; result: TestResult }) {
+function ResultView({
+  ladderId,
+  ladder,
+  result,
+  retake,
+}: {
+  ladderId: string;
+  ladder: LadderView;
+  result: TestResult;
+  /** L2 only: the retake control shown after a failed diff set. */
+  retake?: ReactNode;
+}) {
   const next = ladder.levels.find((l) => l.id === result.unlockedLevel);
   return (
     <section className={`result ${result.pass ? "result-pass" : "result-fail"}`} aria-labelledby="result-title">
@@ -645,6 +723,7 @@ function ResultView({ ladderId, ladder, result }: { ladderId: string; ladder: La
         </>
       ) : null}
       {!result.pass && result.reviewCardIds.length === 0 ? <p>Study this level, then try again.</p> : null}
+      {!result.pass ? retake : null}
       <p>
         <a className="back-link" href={`/ladders/${enc(ladderId)}`}>
           Back to the ladder
@@ -660,6 +739,8 @@ export function PassTestPage({ ladderId, level }: { ladderId: string; level: Lev
   const [result, setResult] = useState<TestResult>();
   /** L2: the verified branch whose diff questions are shown (T014), and its URL for `Submit another branch`. */
   const [branch, setBranch] = useState<{ artifactId?: string; url: string }>({ url: "" });
+  /** Counts L2 retakes: a new count remounts the diff screen in its waiting state. */
+  const [retakes, setRetakes] = useState(0);
 
   const load = useCallback(async () => {
     try {
@@ -738,7 +819,26 @@ export function PassTestPage({ ladderId, level }: { ladderId: string; level: Lev
         {level} {view?.title}: pass test
       </h1>
       {view ? <p className="muted long-text">{view.passTest.description}</p> : null}
-      <div aria-live="polite">{result ? <ResultView ladderId={ladderId} ladder={ladder} result={result} /> : null}</div>
+      <div aria-live="polite">
+        {result ? (
+          <ResultView
+            ladderId={ladderId}
+            ladder={ladder}
+            result={result}
+            retake={
+              branch.artifactId && !result.pass ? (
+                <RetakeButton
+                  artifactId={branch.artifactId}
+                  onStarted={() => {
+                    setResult(undefined);
+                    setRetakes((n) => n + 1);
+                  }}
+                />
+              ) : undefined
+            }
+          />
+        ) : null}
+      </div>
       {result ? null : lock === "passed" ? (
         <p className="status-detail">You already passed this level.</p>
       ) : kind === "mcq" ? (
@@ -747,7 +847,12 @@ export function PassTestPage({ ladderId, level }: { ladderId: string; level: Lev
           {level === "L1" ? <RunFeedback ladderId={ladderId} /> : null}
         </>
       ) : branch.artifactId ? (
-        <DiffTest artifactId={branch.artifactId} onResult={onResult} onAnother={() => setBranch({ url: branch.url })} />
+        <DiffTest
+          key={retakes}
+          artifactId={branch.artifactId}
+          onResult={onResult}
+          onAnother={() => setBranch({ url: branch.url })}
+        />
       ) : (
         <ArtifactTest
           ladderId={ladderId}

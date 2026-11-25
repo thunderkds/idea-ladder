@@ -83,12 +83,32 @@ export const DIFF_STATUS_TEXT: Record<string, string> = {
 };
 
 /**
- * T014 routes, ASSUMED: the T014 guide names the status values and `submitDiffAnswers` but no paths. T014 is not
- * built (user 2026-11-24: build this screen against the guide with mocks); align these two paths when it lands.
- * GET status -> { status, reason?, setId?, questions? }; POST submit { answers } -> T012's result shape.
+ * T014 routes (real since T014 merged, src/server/app.ts): GET status -> { status, reason?, setId?, questions? };
+ * POST the same path -> a retake (202 { status: "generating", setId }, 409 retake-not-allowed, 429 with retryAt);
+ * POST submit { answers } -> T012's result shape (src/server/diff-answers.ts).
  */
 export const diffStatusPath = (artifactId: string) => `/api/artifacts/${encodeURIComponent(artifactId)}/diff-questions`;
 export const diffSubmitPath = (setId: string) => `/api/diff-question-sets/${encodeURIComponent(setId)}/submit`;
+
+const DIFF_SUBMIT_PROBLEMS: Record<string, string> = {
+  "already-submitted": "Already submitted",
+  "not-ready": "These questions are not ready yet. Wait a moment, then submit again.",
+};
+
+/** T014 submitDiffAnswers problems, shown next to the 5 questions (which stay on screen). */
+export function diffSubmitProblemText(error: string): string {
+  return DIFF_SUBMIT_PROBLEMS[error] ?? GENERIC;
+}
+
+const DIFF_RETAKE_PROBLEMS: Record<string, string> = {
+  "retake-not-allowed": "New questions are not allowed for this branch now. Submit another branch instead.",
+  "queue-unavailable": "The new questions could not be started. Try again in a few minutes.",
+};
+
+/** T014 retake problems (429 is shown with its `retryAt`, see the screen). */
+export function diffRetakeProblemText(error: string): string {
+  return DIFF_RETAKE_PROBLEMS[error] ?? GENERIC;
+}
 
 export const REVIEW_CARDS_PARAM = "cards";
 const CARD_ID = /^[1-9][0-9]{0,17}$/;

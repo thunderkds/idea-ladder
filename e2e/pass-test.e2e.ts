@@ -689,17 +689,31 @@ type DiffStatus = { status: string; reason?: string; setId?: string; questions?:
 async function openDiff(
   page: Page,
   statuses: (n: number) => DiffStatus,
-  submitJson: McqResult = { ...passResult, asked: 5, correct: 4, unlockedLevel: "L3" },
+  submitJson: McqResult | ((n: number) => { status: number; json: unknown }) = {
+    ...passResult,
+    asked: 5,
+    correct: 4,
+    unlockedLevel: "L3",
+  },
+  retake: () => { status: number; json: unknown } = () => ({
+    status: 202,
+    json: { status: "generating", setId: "56" },
+  }),
 ) {
   const polls: number[] = [];
   const submits: unknown[] = [];
+  const retakes: number[] = [];
   await page.route("**/api/artifacts/77/diff-questions", (route) => {
+    if (route.request().method() === "POST") {
+      retakes.push(Date.now());
+      return route.fulfill(retake());
+    }
     polls.push(Date.now());
     return route.fulfill({ json: statuses(polls.length) });
   });
   await page.route("**/api/diff-question-sets/*/submit", (route) => {
     submits.push(route.request().postDataJSON());
-    return route.fulfill({ json: submitJson });
+    return route.fulfill(typeof submitJson === "function" ? submitJson(submits.length) : { json: submitJson });
   });
   const { calls } = await openTest(page, "L2", {
     ladder: L2_OPEN,
@@ -707,7 +721,7 @@ async function openDiff(
   });
   await urlField(page).fill("https://github.com/octo/next.js/tree/feature/retry");
   await page.getByRole("button", { name: "Check my branch" }).click();
-  return { polls, submits, calls };
+  return { polls, submits, calls, retakes };
 }
 
 test("T030 SC 5: `Making 5 questions on your code`, polled at most every 5 s, then 5 questions; 4 of 5 passes", async ({
@@ -796,4 +810,94 @@ test("T030 design: diff-question waiting state and 5-question screen", async ({ 
   await page.clock.fastForward(5_000);
   await expect(page.locator("fieldset.question")).toHaveCount(5);
   await designCheck(page, "diff-questions");
+});
+
+const READY_55: DiffStatus = { status: "ready", setId: "55", questions: diffQuestions };
+const failedDiff: McqResult = { ...failResult, asked: 5, correct: 3 };
+
+test("T030 P2: a failed diff submit keeps the 5 questions and answers, shows the reason, no `Submit another branch`", async ({
+  page,
+}) => {
+  const { submits } = await openDiff(
+    page,
+    () => READY_55,
+    (n) => (n === 1 ? { status: 409, json: { error: "not-ready" } } : { status: 200, json: failedDiff }),
+  );
+  await expect(page.locator("fieldset.question")).toHaveCount(5);
+  await answer(page, 5, 2);
+  await submit(page).click();
+  const alert = page.getByRole("alert");
+  await expect(alert).toContainText("These questions are not ready yet");
+  await expect(alert).not.toContainText("not-ready");
+  await expect(page.locator("fieldset.question")).toHaveCount(5);
+  await expect(page.locator("fieldset.question").nth(4).getByRole("radio").nth(2)).toBeChecked();
+  await expect(page.getByRole("button", { name: "Submit another branch" })).toHaveCount(0);
+  await expect(page.getByText("Change something else on a branch")).toHaveCount(0);
+  await submit(page).click();
+  await expect(page.locator("[aria-live=polite]")).toContainText("3 of 5 correct");
+  expect(submits).toHaveLength(2);
+  expect(submits[1]).toEqual(submits[0]);
+});
+
+test("T030 AC 4 retake: after a failed set, `Try again with new questions` starts a retake and goes back to waiting", async ({
+  page,
+}) => {
+  let retaken = false;
+  const { retakes, polls } = await openDiff(
+    page,
+    () => (retaken ? { status: "generating", setId: "56" } : READY_55),
+    () => ({ status: 200, json: failedDiff }),
+    () => {
+      retaken = true;
+      return { status: 202, json: { status: "generating", setId: "56" } };
+    },
+  );
+  await answer(page, 5);
+  await submit(page).click();
+  const result = page.locator("[aria-live=polite]");
+  await expect(result).toContainText("Not passed yet");
+  await expect(result).toContainText("3 of 5 correct");
+  const before = polls.length;
+  await page.getByRole("button", { name: "Try again with new questions" }).click();
+  await expect(page.getByText("Making 5 questions on your code")).toBeVisible();
+  await expect(page.locator(".result")).toHaveCount(0);
+  expect(retakes).toHaveLength(1);
+  await expect.poll(() => polls.length).toBeGreaterThan(before);
+  await expectNoSeriousAxeViolations(page, "diff-retake-waiting");
+});
+
+test.describe("T030 diff retake limit in local time (UTC+14)", () => {
+  test.use({ timezoneId: "Pacific/Kiritimati" });
+  test("T030 AC 4 retake: a polled `failed` set offers the retake; a 429 shows `Next attempt at` and no button", async ({
+    page,
+  }) => {
+    const retryAt = "2026-11-24T11:00:00.000Z";
+    const { retakes } = await openDiff(
+      page,
+      () => ({ status: "failed", setId: "55" }),
+      undefined,
+      () => ({ status: 429, json: { error: "too-many-attempts", retryAt } }),
+    );
+    await expect(page.getByText("Not passed yet")).toBeVisible();
+    await page.getByRole("button", { name: "Try again with new questions" }).click();
+    const alert = page.getByRole("alert");
+    await expect(alert).toContainText("Next attempt at");
+    const local = await page.evaluate((iso) => new Date(iso).toLocaleString(), retryAt);
+    await expect(alert.locator("time")).toHaveText(local);
+    await expect(page.getByRole("button", { name: "Try again with new questions" })).toHaveCount(0);
+    expect(retakes).toHaveLength(1);
+    await expectNoSeriousAxeViolations(page, "diff-retake-429");
+  });
+});
+
+test("T030 AC 4 retake: a 409 `retake-not-allowed` is shown in words", async ({ page }) => {
+  await openDiff(
+    page,
+    () => ({ status: "failed", setId: "55" }),
+    undefined,
+    () => ({ status: 409, json: { error: "retake-not-allowed" } }),
+  );
+  await page.getByRole("button", { name: "Try again with new questions" }).click();
+  await expect(page.getByRole("alert")).toContainText("New questions are not allowed for this branch now");
+  await expect(page.getByRole("alert")).not.toContainText("retake-not-allowed");
 });

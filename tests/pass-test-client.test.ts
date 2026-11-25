@@ -6,6 +6,8 @@ import {
   DIFF_POLL_MS,
   DIFF_SLOW_MS,
   diffPollStep,
+  diffRetakeProblemText,
+  diffSubmitProblemText,
   mcqProblemText,
   REVIEW_CARDS_PARAM,
   reviewCardsFilter,
@@ -88,5 +90,20 @@ describe("T030 diff-question poll rules", () => {
     expect(DIFF_SLOW_MS).toBe(600_000);
     expect(diffPollStep({ status: "generating", elapsedMs: DIFF_SLOW_MS - 1, hidden: false })).toBe("poll");
     expect(diffPollStep({ status: "generating", elapsedMs: DIFF_SLOW_MS, hidden: false })).toBe("slow");
+  });
+});
+
+describe("T030 diff submit and retake problems in plain words (T014 codes)", () => {
+  test("a failed diff submit keeps a plain-words reason, never the raw code", () => {
+    expect(diffSubmitProblemText("already-submitted")).toBe("Already submitted");
+    expect(diffSubmitProblemText("not-ready")).toContain("not ready");
+    for (const code of ["unknown-question", "invalid-request", "brand-new-code"])
+      expect(diffSubmitProblemText(code)).not.toContain(code);
+  });
+
+  test("a refused retake: 409 retake-not-allowed and 503 queue-unavailable in words", () => {
+    expect(diffRetakeProblemText("retake-not-allowed")).toContain("Submit another branch");
+    expect(diffRetakeProblemText("queue-unavailable")).toContain("Try again in a few minutes");
+    expect(diffRetakeProblemText("brand-new-code")).not.toContain("brand-new-code");
   });
 });
