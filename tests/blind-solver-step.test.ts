@@ -239,7 +239,9 @@ function regeneratingModelA(): ModelADeps & { regenerations: () => number; gener
           usage,
         };
       }
-      if (promptData(input.prompt)?.level) gen++;
+      // A T033 top-up call has the same data line; only the generate-level-* calls count.
+      if (promptData(input.prompt)?.level && !input.system?.startsWith("You write more multiple-choice questions"))
+        gen++;
       return await base.generate(input);
     },
   };
@@ -278,11 +280,9 @@ describe("step blind-solve in ladder-generate (AC 3, AC 4, Success Criterion 5)"
     const a = regeneratingModelA();
     const costs: CostEntry[] = [];
     const { result, ctx } = await engine(jobId, a, testModelB(), costs).execute();
-    expect(ctx.step.run.mock.calls.map((c) => c[0]).slice(-3)).toEqual([
-      "check-and-dedupe",
-      "blind-solve",
-      "save-ladder",
-    ]);
+    // T033 top-up steps (thin test pools) run between blind-solve and save-ladder.
+    const ran = ctx.step.run.mock.calls.map((c) => String(c[0])).filter((id) => !id.startsWith("top-up-"));
+    expect(ran.slice(-3)).toEqual(["check-and-dedupe", "blind-solve", "save-ladder"]);
     expect(result).toMatchObject({ status: "done" });
     expect(a.regenerations()).toBe(0);
     const bCosts = costs.filter((c) => c.step === "blind-solve");
@@ -301,8 +301,10 @@ describe("step blind-solve in ladder-generate (AC 3, AC 4, Success Criterion 5)"
     expect(result).toMatchObject({ status: "done" });
     const [ladder] = await db.sql`SELECT id::text AS id FROM ladders`;
     const [{ report }] = await db.sql`SELECT report FROM generation_reports WHERE ladder_id = ${ladder.id}`;
+    // The step blind-solve's drops: the report also counts those of the T033 top-up rounds (in topUp.dropped).
     const total = report.levels.reduce(
-      (n: number, l: { dropped: Record<string, number> }) => n + (l.dropped["blind-solve-mismatch"] ?? 0),
+      (n: number, l: { dropped: Record<string, number>; topUp?: { dropped: Record<string, number> } }) =>
+        n + (l.dropped["blind-solve-mismatch"] ?? 0) - (l.topUp?.dropped["blind-solve-mismatch"] ?? 0),
       0,
     );
     expect(total).toBeGreaterThan(0);

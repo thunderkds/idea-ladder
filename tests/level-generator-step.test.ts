@@ -55,7 +55,8 @@ function levelModelA(fail?: (level: string) => Error | undefined) {
     backend: "api",
     generate: async (input) => {
       const data = promptData(input.prompt);
-      if (data?.level) {
+      // A T033 top-up call has the same data line; only the generate-level-* calls are recorded here.
+      if (data?.level && !input.system?.startsWith("You write more multiple-choice questions")) {
         const list = calls[data.level] ?? [];
         calls[data.level] = list;
         list.push(data);
@@ -106,6 +107,8 @@ describe("Inngest steps generate-level-L0..L4 (AC 2, AC 3)", () => {
       ...LEVEL_STEPS,
       "check-and-dedupe",
       "blind-solve",
+      // T033: testModelA keeps 1 MCQ per pool level, so L0, L1 and L3 each get both top-up rounds.
+      ...[1, 2].flatMap((r) => ["L0", "L1", "L3"].map((l) => `top-up-${l}-${r}`)),
       "save-ladder",
     ]);
     const sources: Record<string, string[]> = {
