@@ -5,6 +5,7 @@ import { loadPrices } from "../../eval/src/cost.ts";
 import { createApp } from "./app.ts";
 import { ConfigError, loadConfig, modelBWarning } from "./config.ts";
 import { readerCostLogger } from "./cost-wiring.ts";
+import { generateDiffQuestions } from "./diff-questions.ts";
 import { evidencePassedLevels } from "./evidence.ts";
 import { REGENERATE_EVENT } from "./flags.ts";
 import { githubRepoClient } from "./github-repo.ts";
@@ -107,12 +108,18 @@ const app = createApp({
   emitArtifact: async (event) => {
     await inngest.send(event);
   },
+  // T014: event id diff-retake-<setId>, so a re-send for the same retake is one event.
+  emitDiffRetake: async (event) => {
+    await inngest.send(event);
+  },
   inngestHandler: serve({
     client: inngest,
     functions: [
       ladderGenerateFunction(inngest, { sql, github, reader, modelA, modelB, dedupeJaccard: config.dedupeJaccard }),
       questionRegenerateFunction(inngest, { sql, modelA, modelB, dedupeJaccard: config.dedupeJaccard }),
       reminders,
+      // T014: model A writes and model B blind-solves the diff questions; both from the shared model config.
+      generateDiffQuestions(inngest, { sql, github, modelA, modelB, dedupeJaccard: config.dedupeJaccard }),
     ],
     // Never derive the callback origin from the request Host header (required in production by loadConfig).
     ...(config.inngestServeOrigin ? { serveOrigin: config.inngestServeOrigin } : {}),
